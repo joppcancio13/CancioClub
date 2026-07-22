@@ -55,6 +55,23 @@ const SUPABASE_URL = "https://xyeydcgohqylaytpeabk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5ZXlkY2dvaHF5bGF5dHBlYWJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMDU1NzksImV4cCI6MjA5ODc4MTU3OX0.s4hwY7FNr6Nbmxv_mPFMAdDbz6XXNkWgkDSZqrYhdRk";
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }) : null;
 function withTimeout(promise, ms) { return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]); }
+// Tudo que é ação do ALUNO (login por código, salvar carga/reps) passa por essa Edge Function em vez
+// de falar direto com a tabela `cancio` — o aluno nunca autentica de verdade, então a única forma de
+// não expor a ficha de TODOS os alunos pra anon key é validar o código no servidor, com a service
+// role key, e só então tocar na linha certa. O professor continua indo direto pra tabela (linha
+// abaixo em saveGlobalToCloud/saveStudentToCloud/loadData) porque ele autentica de verdade e a RLS
+// já cobre esse caso.
+async function callStudentApi(action, payload) {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/student`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ action, ...payload }),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok)
+        throw new Error((body && body.error) || `erro ${res.status}`);
+    return body;
+}
 const LS_KEY = "cancio:v9";
 function loadLocal() { try {
     const raw = localStorage.getItem(LS_KEY);
@@ -2249,8 +2266,18 @@ function CancioClub() {
     // salvamento agora é imperativo e granular — cada função avisa explicitamente o que mudou,
     // em vez de um efeito genérico observar `data` inteiro e decidir sozinho o que sincronizar
     const syncGlobalToCloud = (next) => { saveGlobalToCloud(splitGlobalForCloud(next)).then((ok) => setCloudSynced(ok !== false)); };
-    const syncStudentToCloud = (next, sid) => { const student = (next.students || []).find((s) => s.id === sid); if (student)
-        saveStudentToCloud(splitStudentForCloud(next, student), next.isSeed).then((ok) => setCloudSynced(ok !== false)); };
+    const syncStudentToCloud = (next, sid) => {
+        const student = (next.students || []).find((s) => s.id === sid);
+        if (!student)
+            return;
+        const payload = splitStudentForCloud(next, student);
+        // aluno nunca autentica -> grava só através da Edge Function, que confere o código antes de
+        // tocar no banco. professor autentica de verdade -> continua indo direto pra tabela (RLS cobre).
+        const p = role === "aluno"
+            ? callStudentApi("sync", { code: student.code, data: payload }).then(() => true).catch((e) => { console.error("Cancio: falha ao sincronizar aluno (edge function):", e); return false; })
+            : saveStudentToCloud(payload, next.isSeed);
+        p.then((ok) => setCloudSynced(ok !== false));
+    };
     // Auto-Sync Agressivo: se o aluno anotou carga e fechou o app / perdeu sinal antes do
     // syncStudentToCloud imperativo terminar, o dado fica só no localStorage (cloudSynced=false).
     // Aqui a gente fica de olho pra reagir assim que a rede ou a tela voltarem, sem esperar o
@@ -2673,11 +2700,9 @@ function CancioClub() {
             // este aqui é um tablet da academia usado antes) — só atualiza se a nuvem for de fato mais nova.
             (async () => {
                 try {
-                    const { data: rows, error } = await sb.from("cancio").select("*").eq("data->>code", code);
-                    if (!error && rows && rows.length > 0) {
-                        const found = rows[0].data;
+                    const { data: found } = await callStudentApi("login", { code });
+                    if (found)
                         setData((p) => ((found.updatedAt || 0) > (p.updatedAt || 0) ? mergeFoundStudentInto(p, found) : p));
-                    }
                 }
                 catch (e) {
                     console.error("Cancio: falha ao conferir sincronização do aluno:", e);
@@ -2688,9 +2713,8 @@ function CancioClub() {
             // não achou local -> busca só ESSE aluno específico na nuvem pelo código (nunca baixa a lista inteira)
             setLoginBusy(true);
             try {
-                const { data: rows, error } = await sb.from("cancio").select("*").eq("data->>code", code);
-                if (!error && rows && rows.length > 0) {
-                    const found = rows[0].data;
+                const { data: found } = await callStudentApi("login", { code });
+                if (found) {
                     setData((p) => mergeFoundStudentInto(p, found));
                     s = { id: found.id, code: found.code };
                 }
