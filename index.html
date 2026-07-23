@@ -2211,6 +2211,13 @@ function CancioClub() {
     const [pickLib, setPickLib] = useState(false);
     const [libFilter, setLibFilter] = useState("");
     const [celebration, setCelebration] = useState(null);
+    // Trava da comemoração de recorde: o campo de carga salva sozinho a cada toque no +/- e a cada
+    // 800ms de digitação (auto-save), sempre comparando com o melhor histórico. Sem essa trava, ajustar
+    // o peso aos poucos (20 -> 21 -> 22 -> 23) reabre a animação em TELA CHEIA a cada toque, porque cada
+    // valor novo já é "recorde" em relação ao histórico — o que trava o aluno numa sequência infinita de
+    // comemorações e nunca deixa alcançar o botão "Finalizar Treino" embaixo. Só comemora uma vez por
+    // exercício por dia; some sozinha quando o dia muda (é só um Set em memória, não precisa persistir).
+    const celebratedRef = React.useRef(new Set());
     const [workoutStart, setWorkoutStart] = useState(null); // marcado sozinho na 1ª série do dia — sem botão, sem cronômetro visível
     const [pseModal, setPseModal] = useState(null);
     const [cardioForm, setCardioForm] = useState({ activity: "", minutes: "" });
@@ -2467,11 +2474,16 @@ function CancioClub() {
                     hist[idx] = todayEntry;
                 else
                     hist.push(todayEntry);
-                if (entry.checkPR && entry.kind !== "warmup") {
-                    if (maxLoad != null && entry.load > maxLoad)
+                const celKey = `${exId}|${entry.date}`;
+                if (entry.checkPR && entry.kind !== "warmup" && !celebratedRef.current.has(celKey)) {
+                    if (maxLoad != null && entry.load > maxLoad) {
                         cel = { kind: "load", name: e.name, value: `${entry.load} kg` };
-                    else if (typeof entry.reps === "number" && maxReps != null && entry.reps > maxReps)
+                        celebratedRef.current.add(celKey);
+                    }
+                    else if (typeof entry.reps === "number" && maxReps != null && entry.reps > maxReps) {
                         cel = { kind: "reps", name: e.name, value: `${entry.reps} reps` };
+                        celebratedRef.current.add(celKey);
+                    }
                 }
                 return { ...e, history: sortedHistory(hist) };
             });
