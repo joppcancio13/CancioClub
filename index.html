@@ -2664,6 +2664,68 @@ function CancioClub() {
         };
         r.readAsText(file);
     };
+    // Restaurar 1 aluno específico (diferente de "Importar", que troca TUDO): lê um backup antigo,
+    // mostra quem tem lá dentro, e junta só o aluno escolhido nos dados atuais — sem mexer em mais
+    // ninguém. Existe porque "remover aluno" apaga na hora, sem confirmação, e é fácil de apertar
+    // sem querer (o botão fica colado nos de "ficha"/"histórico").
+    const [restorePicker, setRestorePicker] = useState(null); // { backup, candidates } | null
+    const pickRestoreFile = (file) => {
+        if (!file)
+            return;
+        const r = new FileReader();
+        r.onload = () => {
+            try {
+                const d = JSON.parse(r.result);
+                if (!d || !Array.isArray(d.students) || !d.students.length) {
+                    alert("Esse arquivo não tem nenhum aluno pra restaurar.");
+                    return;
+                }
+                setRestorePicker({ backup: d, candidates: d.students });
+            }
+            catch (e) {
+                alert("Não foi possível ler este arquivo como backup do Cancio Club.");
+            }
+        };
+        r.readAsText(file);
+    };
+    const restoreStudentFromBackup = (oldId) => {
+        const backup = restorePicker && restorePicker.backup;
+        const src = backup && (backup.students || []).find((s) => s.id === oldId);
+        if (!src)
+            return;
+        const newId = uid();
+        const taken = new Set(students.map((s) => s.code));
+        let code = src.code;
+        const codeChanged = !code || taken.has(code);
+        if (codeChanged) {
+            code = genCode();
+            while (taken.has(code))
+                code = genCode();
+        }
+        const restored = { ...src, id: newId, code };
+        setData((p) => {
+            const next = {
+                ...p,
+                students: [...p.students, restored],
+                checkins: { ...(p.checkins || {}), [newId]: (backup.checkins && backup.checkins[oldId]) || [] },
+                bestStreak: { ...(p.bestStreak || {}), [newId]: (backup.bestStreak && backup.bestStreak[oldId]) || 0 },
+                archives: { ...(p.archives || {}), [newId]: (backup.archives && backup.archives[oldId]) || [] },
+                sessions: { ...(p.sessions || {}), [newId]: (backup.sessions && backup.sessions[oldId]) || [] },
+                dayNames: { ...(p.dayNames || {}), [newId]: (backup.dayNames && backup.dayNames[oldId]) || {} },
+                cardio: { ...(p.cardio || {}), [newId]: (backup.cardio && backup.cardio[oldId]) || {} },
+                cardioLog: { ...(p.cardioLog || {}), [newId]: (backup.cardioLog && backup.cardioLog[oldId]) || [] },
+                recoveryLog: { ...(p.recoveryLog || {}), [newId]: (backup.recoveryLog && backup.recoveryLog[oldId]) || {} },
+                freezes: { ...(p.freezes || {}), [newId]: (backup.freezes && backup.freezes[oldId]) || { month: "", used: 0 } },
+                workouts: { ...(p.workouts || {}), [newId]: (backup.workouts && backup.workouts[oldId]) || emptyWeek() },
+                messages: [...(p.messages || []), ...((backup.messages || []).filter((m) => m.studentId === oldId).map((m) => ({ ...m, studentId: newId })))],
+            };
+            syncGlobalToCloud(next);
+            syncStudentToCloud(next, newId);
+            return next;
+        });
+        setRestorePicker(null);
+        alert(codeChanged ? `${src.name} restaurado(a) com um novo código: ${code} (o código antigo já estava em uso por outro aluno).` : `${src.name} restaurado(a) com o código original: ${code}.`);
+    };
     const [loginBusy, setLoginBusy] = useState(false);
     // funde os dados de UM aluno vindos da nuvem no estado — usado tanto no login instantâneo
     // (checagem silenciosa em segundo plano) quanto no fallback de busca por código
@@ -2998,8 +3060,12 @@ function CancioClub() {
                                 "\u201D"),
                             React.createElement("div", { style: { display: "flex", gap: 14, marginTop: 12, alignItems: "center", flexWrap: "wrap" } },
                                 React.createElement("button", { onClick: () => { setFichaOpen((v) => !v); setHistOpen(false); }, style: { fontFamily: F.mono, fontSize: 11.5, color: C.silver, background: "none", border: "none", cursor: "pointer", padding: 0 } }, fichaOpen ? "fechar ficha ▴" : "ficha do aluno ▾"),
-                                React.createElement("button", { onClick: () => { setHistOpen((v) => !v); setFichaOpen(false); }, style: { fontFamily: F.mono, fontSize: 11.5, color: C.silver, background: "none", border: "none", cursor: "pointer", padding: 0 } }, histOpen ? "fechar histórico ▴" : "histórico ▾"),
-                                React.createElement("button", { onClick: () => removeStudent(profId), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } }, "remover aluno")),
+                                React.createElement("button", { onClick: () => { setHistOpen((v) => !v); setFichaOpen(false); }, style: { fontFamily: F.mono, fontSize: 11.5, color: C.silver, background: "none", border: "none", cursor: "pointer", padding: 0 } }, histOpen ? "fechar histórico ▴" : "histórico ▾")),
+                            // "remover aluno" fica longe e diferente dos toggles de cima (ficha/histórico) — de propósito,
+                            // pra não ser apertado sem querer — e sempre pede confirmação, já que apaga na nuvem na hora.
+                            React.createElement("div", { style: { marginTop: 18, paddingTop: 14, borderTop: `1px solid ${C.line}` } },
+                                React.createElement("button", { onClick: () => { if (window.confirm(`Remover ${profStudent.name}? Isso apaga a ficha, histórico e código dele(a) da nuvem. Não pode ser desfeito por aqui — só restaurando de um backup exportado antes.`))
+                                        removeStudent(profId); }, style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.warn, background: "none", border: `1px solid ${C.warn}55`, borderRadius: 8, padding: "7px 12px", cursor: "pointer" } }, "remover aluno")),
                             fichaOpen && React.createElement(FichaEditor, { student: profStudent, onSave: (patch) => updateStudent(profId, patch) }),
                             histOpen && (React.createElement("div", { style: { marginTop: 12, ...glassPanel, borderRadius: 20, padding: 14 } },
                                 React.createElement("div", { style: { display: "flex", gap: 8 } },
@@ -3178,6 +3244,14 @@ function CancioClub() {
                             "Importar",
                             React.createElement("input", { type: "file", accept: "application/json", onChange: (e) => { importData(e.target.files[0]); e.target.value = ""; }, style: { display: "none" } }))),
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 10, lineHeight: 1.5 } }, "Exporta tudo num arquivo .json. Importar substitui os dados atuais pelos do arquivo."),
+                    React.createElement("label", { style: { display: "inline-block", marginTop: 10, fontFamily: F.mono, fontSize: 12, color: C.muted, background: "none", border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 14px", cursor: "pointer" } },
+                        "Restaurar 1 aluno de um backup antigo",
+                        React.createElement("input", { type: "file", accept: "application/json", onChange: (e) => { pickRestoreFile(e.target.files[0]); e.target.value = ""; }, style: { display: "none" } })),
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 6, lineHeight: 1.5 } }, "Pra recuperar um aluno removido sem mexer nos outros — não substitui nada."),
+                    restorePicker && React.createElement("div", { style: { marginTop: 10, ...glassPanel, borderRadius: 16, padding: 14 } },
+                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.muted, marginBottom: 8 } }, "Quem restaurar deste backup?"),
+                        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, restorePicker.candidates.map((s) => React.createElement("button", { key: s.id, onClick: () => restoreStudentFromBackup(s.id), style: { textAlign: "left", fontFamily: F.body, fontSize: 13.5, color: C.text, background: C.panel2, border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, s.name))),
+                        React.createElement("button", { onClick: () => setRestorePicker(null), style: { marginTop: 10, fontFamily: F.mono, fontSize: 11.5, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } }, "cancelar")),
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, margin: "22px 0 10px" } }, "Marca"),
                     React.createElement("button", { onClick: () => setLogoCard(true), style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Selo Cancio Club"),
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 8, lineHeight: 1.5 } }, "Uma imagem do selo do app pra usar como perfil ou postar nas redes."))),
