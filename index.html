@@ -731,11 +731,14 @@ function PressStep({ value, onStep, onCommit, onTypeCommit, step, color, suffix,
     const endHold = () => { clearHold(); hapticTick(); onCommit(runningRef.current); };
     const openTyping = () => { setTypedVal(String(value)); setTyping(true); };
     if (typing) {
-        return (React.createElement("input", { autoFocus: true, inputMode: "decimal", value: typedVal, onChange: (e) => setTypedVal(e.target.value), onBlur: () => { hapticTick(); onTypeCommit(typedVal); setTyping(false); }, onKeyDown: (e) => { if (e.key === "Enter") {
-                hapticTick();
-                onTypeCommit(typedVal);
-                setTyping(false);
-            } }, style: { width: "100%", textAlign: "center", fontFamily: F.mono, fontWeight: 800, fontSize: size || 28, color, background: "transparent", border: "none", outline: "none", boxShadow: `inset 0 -2px 0 ${color}` } }));
+        // Enter só pede blur() de verdade no input, em vez de já desmontar ele aqui (setTyping(false)
+        // direto). O onBlur abaixo é quem faz o commit de fato — assim o navegador sempre dispara um
+        // blur/focusout de verdade ANTES do campo sumir da tela. Sem isso, em alguns navegadores
+        // (principalmente iOS/PWA) remover um input focado sem um blur() explícito pode não disparar
+        // o evento de "perdeu o foco", deixando o app achando que o aluno ainda está digitando pro
+        // resto da sessão — e a barra de "Finalizar Treino" fica escondida até fechar e reabrir o app.
+        return (React.createElement("input", { autoFocus: true, inputMode: "decimal", value: typedVal, onChange: (e) => setTypedVal(e.target.value), onBlur: () => { hapticTick(); onTypeCommit(typedVal); setTyping(false); }, onKeyDown: (e) => { if (e.key === "Enter")
+                e.target.blur(); }, style: { width: "100%", textAlign: "center", fontFamily: F.mono, fontWeight: 800, fontSize: size || 28, color, background: "transparent", border: "none", outline: "none", boxShadow: `inset 0 -2px 0 ${color}` } }));
     }
     return (React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 2 } },
         React.createElement("button", { disabled: disabled, onTouchStart: (e) => { e.preventDefault(); e.stopPropagation(); startHold(-1); }, onTouchEnd: (e) => { e.preventDefault(); e.stopPropagation(); endHold(); }, onTouchCancel: (e) => { e.preventDefault(); e.stopPropagation(); endHold(); }, onMouseDown: (e) => { e.stopPropagation(); startHold(-1); }, onMouseUp: (e) => { e.stopPropagation(); endHold(); }, onMouseLeave: () => { if (holdInterval.current || holdTimer.current)
