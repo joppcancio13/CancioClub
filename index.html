@@ -354,6 +354,9 @@ const fmtDate = (iso) => { const [, m, d] = iso.split("-"); return `${d}/${m}`; 
 const fmtDateTime = (iso) => { const d = new Date(iso); const p = (n) => String(n).padStart(2, "0"); return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 const mmss = (s) => { const m = Math.floor(s / 60); const r = s % 60; return `${m}:${String(r).padStart(2, "0")}`; };
 const fmtDur = (sec) => sec >= 60 ? `${Math.round(sec / 60)} min` : `${sec} s`;
+// tonelagem acima de 1000kg vira toneladas (1 casa decimal, vírgula) — mesmo padrão já usado no
+// canvas do ShareCard, só que reaproveitado aqui pros textos renderizados em React (chart, celebração)
+const fmtVolume = (kg) => kg >= 1000 ? `${(kg / 1000).toFixed(1).replace(".", ",")} TON` : `${Math.round(kg).toLocaleString("pt-BR")} kg`;
 const GREET_MANHA = ["Bom dia. Pista liberada,", "Bom dia. Primeiro play,", "Bom dia. Som na caixa,", "Bom dia. Set montado,"];
 const GREET_TARDE = ["Boa tarde. Ritmo de pico,", "Boa tarde. Salão on,", "Boa tarde. Fone no talo,", "Boa tarde. Ajusta o BPM,"];
 const GREET_NOITE = ["Boa noite. Sessão noturna,", "Boa noite. O Club é seu,", "Boa noite. Último drop,", "Boa noite. Fechando a pista,"];
@@ -751,28 +754,35 @@ function PressStep({ value, onStep, onCommit, onTypeCommit, step, color, suffix,
 }
 const FacetDot = (props) => { const { cx, cy } = props; if (cx == null || cy == null)
     return null; return React.createElement("rect", { x: cx - 3.4, y: cy - 3.4, width: 6.8, height: 6.8, transform: `rotate(45 ${cx} ${cy})`, fill: C.amber, stroke: C.ink, strokeWidth: 1.4 }); };
-function ChartTip({ active, payload, label, unit }) { if (!active || !payload || !payload.length)
+function ChartTip({ active, payload, label, unit, formatValue }) { if (!active || !payload || !payload.length)
     return null; return React.createElement("div", { style: { ...glassPanel, borderRadius: 8, padding: "7px 10px", fontFamily: F.mono, fontSize: 12 } },
     React.createElement("div", { style: { color: C.muted } }, label),
     React.createElement("div", { style: { color: C.amber } },
-        payload[0].value,
+        formatValue ? formatValue(payload[0].value) : payload[0].value,
         " ",
         unit)); }
 function ProgressChart({ ex, metric }) {
     const summarized = sortedHistory(ex.history).map((h) => ({ date: h.date, ...daySummary(h) }));
     const hist = summarized.filter((h) => (metric === "reps" ? typeof h.reps === "number" : metric === "volume" ? h.volume > 0 : typeof h.load === "number"));
-    const data = hist.map((h) => ({ date: fmtDate(h.date), v: metric === "reps" ? h.reps : metric === "volume" ? h.volume : h.load }));
-    const unit = metric === "reps" ? "reps" : "kg";
-    if (data.length < 2)
+    const rawData = hist.map((h) => ({ date: fmtDate(h.date), v: metric === "reps" ? h.reps : metric === "volume" ? h.volume : h.load }));
+    if (rawData.length < 2)
         return React.createElement("div", { style: { fontFamily: F.mono, fontSize: 12.5, color: C.muted, padding: "22px 0", textAlign: "center", lineHeight: 1.6 } }, metric === "reps" ? "Registre reps em 2+ sessões para ver a evolução." : metric === "volume" ? "Registre séries de trabalho em 2+ sessões para ver a tonelagem." : "Registre a carga em 2+ sessões para acender o gráfico.");
-    const vals = data.map((d) => d.v), dmin = Math.min(...vals), dmax = Math.max(...vals), pad = Math.max(2, (dmax - dmin) * 0.25);
+    // tonelagem alta fica mais legível em toneladas — decidido pela série inteira (não ponto a ponto),
+    // senão o eixo mistura "0,8" com "1200" quando um dia foge muito da média
+    const useTons = metric === "volume" && Math.max(...rawData.map((d) => d.v)) >= 1000;
+    const data = useTons ? rawData.map((d) => ({ ...d, v: Math.round((d.v / 1000) * 10) / 10 })) : rawData;
+    const unit = metric === "reps" ? "reps" : metric === "volume" ? (useTons ? "TON" : "kg") : "kg";
+    const fmtTon = (v) => v.toFixed(1).replace(".", ",");
+    const vals = data.map((d) => d.v), dmin = Math.min(...vals), dmax = Math.max(...vals);
+    const pad = useTons ? Math.max(0.2, (dmax - dmin) * 0.25) : Math.max(2, (dmax - dmin) * 0.25);
+    const domain = useTons ? [+(dmin - pad).toFixed(1), +(dmax + pad).toFixed(1)] : [Math.floor(dmin - pad), Math.ceil(dmax + pad)];
     return (React.createElement("div", { style: { height: 176, margin: "0 -6px 14px" } },
         React.createElement(ResponsiveContainer, { width: "100%", height: "100%" },
             React.createElement(LineChart, { data: data, margin: { top: 8, right: 12, bottom: 0, left: -18 } },
                 React.createElement(CartesianGrid, { stroke: C.line, strokeDasharray: "2 4", vertical: false }),
                 React.createElement(XAxis, { dataKey: "date", tick: { fill: C.muted, fontFamily: F.mono, fontSize: 11 }, tickLine: false, axisLine: { stroke: C.line } }),
-                React.createElement(YAxis, { domain: [Math.floor(dmin - pad), Math.ceil(dmax + pad)], tick: { fill: C.muted, fontFamily: F.mono, fontSize: 11 }, tickLine: false, axisLine: false, width: 40 }),
-                React.createElement(Tooltip, { content: React.createElement(ChartTip, { unit: unit }), cursor: { stroke: C.amberDim, strokeDasharray: "3 3" } }),
+                React.createElement(YAxis, { domain: domain, tick: { fill: C.muted, fontFamily: F.mono, fontSize: 11 }, tickLine: false, axisLine: false, width: 40, tickFormatter: useTons ? fmtTon : undefined }),
+                React.createElement(Tooltip, { content: React.createElement(ChartTip, { unit: unit, formatValue: useTons ? fmtTon : undefined }), cursor: { stroke: C.amberDim, strokeDasharray: "3 3" } }),
                 React.createElement(Line, { type: "monotone", dataKey: "v", stroke: C.amber, strokeWidth: 2, dot: React.createElement(FacetDot, null), activeDot: React.createElement(FacetDot, null) })))));
 }
 /* ----------------------- cronômetro descanso --------------------- */
@@ -1646,7 +1656,7 @@ function MediaEmbed({ url }) {
 }
 function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpdate, onDeleteRecord, onMove, isFirst, isLast, sessionDone, onToggleDone, tint, onNote, isNextUp }) {
     const [date, setDate] = useState(todayISO());
-    const [metric, setMetric] = useState("load");
+    const [metric, setMetric] = useState("volume");
     const [showVideo, setShowVideo] = useState(false);
     const [f, setF] = useState({ name: ex.name, rest: ex.rest ?? "", note: ex.note ?? "", url: ex.url ?? "" });
     useEffect(() => { setF({ name: ex.name, rest: ex.rest ?? "", note: ex.note ?? "", url: ex.url ?? "" }); setShowVideo(false); }, [ex.id]);
@@ -2645,7 +2655,7 @@ function CancioClub() {
             setCelebration({ title: "RITMO MANTIDO", subtitle: `Descanso também é treino, ${focusStudent.name}!`, value: "", accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
         }
         else {
-            setCelebration({ title: "PISTA DOMINADA", subtitle: `Treino concluído, ${focusStudent.name}!`, value: durationSec ? fmtDur(durationSec) : effort, volumeLabel: totalVolume > 0 ? `${Math.round(totalVolume).toLocaleString("pt-BR")} kg levantados hoje` : null, accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
+            setCelebration({ title: "PISTA DOMINADA", subtitle: `Treino concluído, ${focusStudent.name}!`, value: durationSec ? fmtDur(durationSec) : effort, volumeLabel: totalVolume > 0 ? `${fmtVolume(totalVolume)} levantados hoje` : null, accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
         }
     };
     const submitFeedback = (sid, text) => setData((p) => { const sess = { ...(p.sessions || {}) }; sess[focusId] = (sess[focusId] || []).map((s) => (s.id === sid ? { ...s, feedback: text } : s)); const next = { ...p, sessions: sess }; syncStudentToCloud(next, focusId); return next; });
