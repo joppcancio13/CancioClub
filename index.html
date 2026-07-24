@@ -443,6 +443,39 @@ function computeRecords(week) {
     });
     return Object.values(groups).filter((g) => g.best != null).sort((a, b) => (a.date < b.date ? 1 : -1));
 }
+// diário de treino: um "feed" por data, montado em cima do que já existe espalhado (sessions marca
+// os dias finalizados; workouts/cardioLog/recoveryLog dão o detalhe de cada um). isRecord olha se
+// aquela carga bateu tudo que veio ANTES daquela data — é o mesmo espírito do checkPR do addLoad,
+// só que revisitando o passado em vez de checar na hora.
+function buildDiary(data, studentId) {
+    const sessions = (data && data.sessions && data.sessions[studentId]) || [];
+    const workouts = (data && data.workouts && data.workouts[studentId]) || emptyWeek();
+    const cardioLog = (data && data.cardioLog && data.cardioLog[studentId]) || [];
+    const recoveryLog = (data && data.recoveryLog && data.recoveryLog[studentId]) || {};
+    const dayNames = (data && data.dayNames && data.dayNames[studentId]) || {};
+    return [...sessions].sort((a, b) => (a.date < b.date ? 1 : -1)).map((s) => {
+        const dayInfo = DAYS.find((d) => d.key === s.day);
+        const dayLabel = (dayNames && dayNames[s.day]) || (dayInfo ? dayInfo.full : s.day);
+        const exercises = (workouts[s.day] || []).map((ex) => {
+            const h = (ex.history || []).find((hh) => hh.date === s.date);
+            if (!h)
+                return null;
+            const { load, reps } = daySummary(h);
+            if (!load)
+                return null;
+            const priorBest = (ex.history || [])
+                .filter((hh) => hh.date < s.date)
+                .map((hh) => daySummary(hh).load)
+                .filter((v) => typeof v === "number")
+                .reduce((m, v) => (m == null || v > m ? v : m), null);
+            return { name: ex.name, load, reps, isRecord: priorBest != null && load > priorBest };
+        }).filter(Boolean);
+        const cardio = cardioLog.filter((c) => c.date === s.date);
+        const recovery = recoveryLog[s.date];
+        const hasRecovery = !!(recovery && (recovery.hydration || recovery.sleep || recovery.mobility));
+        return { ...s, dayLabel, exercises, cardio, recovery: hasRecovery ? recovery : null, hasRecord: exercises.some((e) => e.isRecord) };
+    });
+}
 const currentLoad = (ex) => { const h = sortedHistory(ex.history); return h.length ? daySummary(h[h.length - 1]).load : 0; };
 const lastReps = (ex) => { const h = sortedHistory(ex.history); for (let i = h.length - 1; i >= 0; i--) {
     const r = daySummary(h[i]).reps;
@@ -1671,6 +1704,46 @@ function RecordsModal({ records, onClose }) {
                         React.createElement("span", { style: { fontSize: 11, color: C.muted, fontWeight: 500 } }, " kg"))))),
             React.createElement("button", { onClick: onClose, style: { marginTop: 18, width: "100%", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Fechar"))));
 }
+const DIARY_EFFORT_LABELS = { facil: "Fácil", medida: "Na Medida", destruidor: "Destruidor", descanso: "Descanso" };
+// diário de treino: um cartão por dia finalizado, com o que foi feito, se bateu recorde, cardio e
+// recuperação daquele dia — complementa o Recordes (que só mostra o melhor de cada exercício) com
+// o "o que aconteceu no dia X", que hoje não tinha lugar nenhum pra aparecer.
+function DiaryModal({ entries, onClose }) {
+    return (React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": "Diário de treino", style: { position: "fixed", inset: 0, zIndex: 100, display: "grid", placeItems: "center", background: "rgba(8,9,12,.86)", padding: 18 }, onClick: onClose },
+        React.createElement("div", { style: { ...glassPanel, borderRadius: 26, maxWidth: 440, width: "100%", maxHeight: "84vh", overflowY: "auto", padding: "24px 20px" }, onClick: (e) => e.stopPropagation() },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 } },
+                React.createElement(DiscoBall, { size: 28, seedN: 51 }),
+                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 16, letterSpacing: "0.02em" } }, "Diário de treino")),
+            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginBottom: 18 } }, "O que rolou em cada treino finalizado."),
+            entries.length === 0
+                ? React.createElement(PremiumEmptyState, { icon: "calendar", compact: false, title: "Nenhum treino finalizado ainda.", sub: "Cada treino que você finalizar aparece aqui." })
+                : React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, entries.map((e) => React.createElement("div", { key: e.id, style: { background: C.panel2, borderRadius: 16, padding: "14px 16px" } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 } },
+                        React.createElement("div", null,
+                            React.createElement("div", { style: { fontFamily: F.body, fontWeight: 600, fontSize: 13.5, color: C.text } },
+                                fmtDate(e.date),
+                                " · ",
+                                e.dayLabel),
+                            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 2 } },
+                                DIARY_EFFORT_LABELS[e.effort] || e.effort,
+                                e.durationSec ? ` · ${fmtDur(e.durationSec)}` : "")),
+                        e.hasRecord && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 9.5, letterSpacing: "0.04em", color: C.ink, background: C.amber, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap", flexShrink: 0 } }, "recorde ★")),
+                    e.exercises.length > 0 && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: e.cardio.length || e.recovery || e.feedback ? 8 : 0 } },
+                        e.exercises.map((ex, i) => React.createElement("div", { key: i, style: { display: "flex", justifyContent: "space-between", gap: 10, fontFamily: F.mono, fontSize: 12, color: ex.isRecord ? C.amber : C.silver } },
+                            React.createElement("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ex.name),
+                            React.createElement("span", { style: { flexShrink: 0, whiteSpace: "nowrap" } },
+                                ex.load,
+                                "kg",
+                                ex.reps ? ` × ${ex.reps}` : "",
+                                ex.isRecord ? " ★" : "")))),
+                    e.cardio.length > 0 && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11.5, color: C.muted, marginBottom: e.recovery || e.feedback ? 6 : 0 } }, e.cardio.map((c) => `${c.activity} · ${c.minutes}min`).join(", ")),
+                    e.recovery && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginBottom: e.feedback ? 6 : 0 } }, [e.recovery.hydration && "hidratação", e.recovery.sleep && "sono", e.recovery.mobility && "mobilidade"].filter(Boolean).join(" · ")),
+                    e.feedback && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12.5, color: C.text, fontStyle: "italic", marginTop: 4 } },
+                        "“",
+                        e.feedback,
+                        "”")))),
+            React.createElement("button", { onClick: onClose, style: { marginTop: 18, width: "100%", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Fechar"))));
+}
 /* --------------------------- medalhas ---------------------------- */
 function Medals({ best }) {
     return (React.createElement("div", { style: { display: "flex", gap: 7, marginTop: 14, flexWrap: "wrap" } }, MILESTONES.map((m) => {
@@ -2292,6 +2365,7 @@ function CancioClub() {
     const [shareCard, setShareCard] = useState(null);
     const [logoCard, setLogoCard] = useState(false);
     const [recordsOpen, setRecordsOpen] = useState(false);
+    const [diaryOpen, setDiaryOpen] = useState(false);
     const [loadingRoster, setLoadingRoster] = useState(false);
     const [cloudSynced, setCloudSynced] = useState(true); // true = última gravação chegou na nuvem; false = só ficou salva localmente por enquanto
     const [isStandalone, setIsStandalone] = useState(true); // assume true até checar, pra não piscar o banner em quem já instalou
@@ -2421,6 +2495,7 @@ function CancioClub() {
     const focusId = role === "prof" ? profId : alunoId;
     const week = (data?.workouts && data.workouts[focusId]) || emptyWeek();
     const records = computeRecords(week);
+    const diary = buildDiary(data, focusId);
     const list = week[day] || [];
     const dayFull = DAYS.find((d) => d.key === day).full;
     const cardioFocus = (data?.cardio && data.cardio[focusId]) || {};
@@ -3072,6 +3147,7 @@ function CancioClub() {
         shareCard && React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) }),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         recordsOpen && React.createElement(RecordsModal, { records: records, onClose: () => setRecordsOpen(false) }),
+        diaryOpen && React.createElement(DiaryModal, { entries: diary, onClose: () => setDiaryOpen(false) }),
         role === "aluno" && alunoStudent && !alunoStudent.ackAt && React.createElement(Disclaimer, { onAccept: () => updateStudent(alunoId, { ackAt: new Date().toISOString() }) }),
         role === "aluno" && React.createElement(FloatingTimer, null),
         React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90, ...glassPanel, borderRadius: 0, borderLeft: "none", borderRight: "none", borderBottom: "none", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))" } },
@@ -3390,6 +3466,7 @@ function CancioClub() {
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 } },
                         React.createElement("div", { style: { flex: 1, fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted } }, "Const\u00E2ncia"),
                         React.createElement("button", { onClick: () => setRecordsOpen(true), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.04em", color: C.amber, background: "transparent", border: "none", cursor: "pointer", padding: 0 } }, "recordes \u203A"),
+                        React.createElement("button", { onClick: () => setDiaryOpen(true), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.04em", color: C.silver, background: "transparent", border: "none", cursor: "pointer", padding: 0 } }, "di\u00E1rio \u203A"),
                         React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11.5, color: tier.accent } },
                             "n\u00EDvel ",
                             tier.name)),
