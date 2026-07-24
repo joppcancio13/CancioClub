@@ -422,6 +422,27 @@ function daySummary(h) {
     const flatVolume = (h.load || 0) * (flatReps || 0);
     return { load: h.load || 0, reps: flatReps, volume: flatVolume };
 }
+// melhor carga já registrada por exercício (agrupado por nome, já que o mesmo exercício pode
+// aparecer em mais de um dia da semana como registros separados) — só olha a semana atual do
+// aluno, não os arquivos antigos, pra manter simples e sempre em dia com o plano vigente
+function computeRecords(week) {
+    const groups = {};
+    DAYS.forEach((d) => {
+        (week[d.key] || []).forEach((ex) => {
+            const key = ex.name.trim().toLowerCase();
+            if (!groups[key])
+                groups[key] = { name: ex.name, best: null, date: null };
+            sortedHistory(ex.history).forEach((h) => {
+                const { load } = daySummary(h);
+                if (typeof load === "number" && load > 0 && (groups[key].best == null || load > groups[key].best)) {
+                    groups[key].best = load;
+                    groups[key].date = h.date;
+                }
+            });
+        });
+    });
+    return Object.values(groups).filter((g) => g.best != null).sort((a, b) => (a.date < b.date ? 1 : -1));
+}
 const currentLoad = (ex) => { const h = sortedHistory(ex.history); return h.length ? daySummary(h[h.length - 1]).load : 0; };
 const lastReps = (ex) => { const h = sortedHistory(ex.history); for (let i = h.length - 1; i >= 0; i--) {
     const r = daySummary(h[i]).reps;
@@ -943,7 +964,7 @@ function Celebration({ title, subtitle, value, volumeLabel, accent, tint, sound,
         sound(); const t = setTimeout(onDone, 2900); return () => clearTimeout(t); }, []);
     const cols = [tint, accent, "#FFFFFF"];
     const parts = reduce ? [] : Array.from({ length: 36 }).map((_, i) => { const ang = Math.random() * Math.PI * 2, dist = 90 + Math.random() * 230; return { dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist, c: cols[i % 3], delay: Math.random() * 0.25, size: 6 + Math.random() * 7 }; });
-    return (React.createElement("div", { onClick: onDone, style: { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", overflow: "hidden", background: "rgba(5,6,9,.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", animation: "cc-fade .3s ease" } },
+    return (React.createElement("div", { onClick: onDone, role: "status", "aria-live": "polite", style: { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", overflow: "hidden", background: "rgba(5,6,9,.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", animation: "cc-fade .3s ease" } },
         !reduce && React.createElement("div", { style: { position: "absolute", width: 560, height: 560, borderRadius: "50%", background: `repeating-conic-gradient(from 0deg, transparent 0 10deg, ${accent}12 10deg 12deg)`, animation: "cc-rays 9s linear infinite" } }),
         // varredura de brilho metálico, esquerda -> direita, uma vez só — o "flare" do momento catártico
         !reduce && React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" } },
@@ -1631,6 +1652,25 @@ function LogoCard({ onClose }) {
                 React.createElement("button", { onClick: download, disabled: busy, style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "12px 14px", cursor: "pointer" } }, "Baixar"),
                 React.createElement("button", { onClick: share, disabled: busy, style: { flex: 1, fontFamily: F.mono, fontSize: 13.5, letterSpacing: "0.04em", color: C.ink, backgroundImage: `linear-gradient(135deg, ${C.amber}, #8F7EFF)`, background: C.amber, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Compartilhar")))));
 }
+// vitrine de recordes — motivo pra voltar e conferir, não só ser surpreendido na hora da comemoração
+function RecordsModal({ records, onClose }) {
+    return (React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": "Seus recordes", style: { position: "fixed", inset: 0, zIndex: 100, display: "grid", placeItems: "center", background: "rgba(8,9,12,.86)", padding: 18 }, onClick: onClose },
+        React.createElement("div", { style: { ...glassPanel, borderRadius: 26, maxWidth: 420, width: "100%", maxHeight: "82vh", overflowY: "auto", padding: "24px 20px" }, onClick: (e) => e.stopPropagation() },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 } },
+                React.createElement(DiscoBall, { size: 28, seedN: 33 }),
+                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 16, letterSpacing: "0.02em" } }, "Seus recordes")),
+            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginBottom: 18 } }, "Melhor carga já registrada em cada exercício da semana atual."),
+            records.length === 0
+                ? React.createElement(PremiumEmptyState, { icon: "dumbbell", compact: false, title: "Nenhum recorde ainda.", sub: "Registre cargas nos treinos e eles aparecem aqui." })
+                : React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, records.map((r) => React.createElement("div", { key: r.name, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: C.panel2, borderRadius: 14, padding: "12px 14px" } },
+                    React.createElement("div", { style: { minWidth: 0 } },
+                        React.createElement("div", { style: { fontFamily: F.body, fontSize: 14, fontWeight: 600, color: C.text } }, r.name),
+                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginTop: 2 } }, fmtDate(r.date))),
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 17, fontWeight: 800, color: C.amber, whiteSpace: "nowrap", flexShrink: 0 } },
+                        r.best,
+                        React.createElement("span", { style: { fontSize: 11, color: C.muted, fontWeight: 500 } }, " kg"))))),
+            React.createElement("button", { onClick: onClose, style: { marginTop: 18, width: "100%", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Fechar"))));
+}
 /* --------------------------- medalhas ---------------------------- */
 function Medals({ best }) {
     return (React.createElement("div", { style: { display: "flex", gap: 7, marginTop: 14, flexWrap: "wrap" } }, MILESTONES.map((m) => {
@@ -2251,6 +2291,8 @@ function CancioClub() {
     const [feedbackModal, setFeedbackModal] = useState(null);
     const [shareCard, setShareCard] = useState(null);
     const [logoCard, setLogoCard] = useState(false);
+    const [recordsOpen, setRecordsOpen] = useState(false);
+    const [loadingRoster, setLoadingRoster] = useState(false);
     const [cloudSynced, setCloudSynced] = useState(true); // true = última gravação chegou na nuvem; false = só ficou salva localmente por enquanto
     const [isStandalone, setIsStandalone] = useState(true); // assume true até checar, pra não piscar o banner em quem já instalou
     const [typingActive, setTypingActive] = useState(false);
@@ -2378,6 +2420,7 @@ function CancioClub() {
     const removeLibrary = (id) => setData((p) => { const next = { ...p, library: (p.library || []).filter((e) => e.id !== id) }; syncGlobalToCloud(next); return next; });
     const focusId = role === "prof" ? profId : alunoId;
     const week = (data?.workouts && data.workouts[focusId]) || emptyWeek();
+    const records = computeRecords(week);
     const list = week[day] || [];
     const dayFull = DAYS.find((d) => d.key === day).full;
     const cardioFocus = (data?.cardio && data.cardio[focusId]) || {};
@@ -2846,6 +2889,7 @@ function CancioClub() {
     // AUTENTICAÇÃO REAL DO SUPABASE — a senha é verificada de verdade pelo Supabase Auth (nunca
     // gravada no código; só o e-mail da conta única de professor é fixo).
     const fetchAllStudentsAfterAuth = async () => {
+        setLoadingRoster(true);
         try {
             const { data: rows, error } = await sb.from("cancio").select("*").like("id", "student_%");
             if (error)
@@ -2897,6 +2941,9 @@ function CancioClub() {
         catch (e) {
             console.error("Cancio: falha ao buscar todos os alunos:", e);
         }
+        finally {
+            setLoadingRoster(false);
+        }
     };
     const unlockProf = async () => {
         if (!sb)
@@ -2938,6 +2985,24 @@ function CancioClub() {
         setProfUnlocked(false); setRole(r); setExpanded(null); setAdding(false); setPickTpl(false); setSavingTpl(false); };
     const profStudent = students.find((s) => s.id === profId);
     const alunoStudent = students.find((s) => s.id === alunoId);
+    // dispara sozinho no domingo, uma vez por aluno por semana — antes dependia do aluno lembrar de
+    // abrir o app E apertar "Gerar Resumo da Semana"; um flag em localStorage evita repetir a cada
+    // vez que ele abre o app no mesmo domingo. Só pro aluno vendo o próprio resumo (não no modo aula
+    // do professor, que está no meio de uma sessão com o aluno, e não antes dele aceitar o termo).
+    useEffect(() => {
+        if (role !== "aluno" || !alunoStudent || !alunoStudent.ackAt)
+            return;
+        if (todayKey !== "dom" || freqWeek === 0)
+            return;
+        const flagKey = `cancio:weeklySummarySeen:${alunoId}:${todayISO()}`;
+        try {
+            if (localStorage.getItem(flagKey))
+                return;
+            localStorage.setItem(flagKey, "1");
+        }
+        catch (e) { }
+        buildWeeklySummary();
+    }, [role, alunoId, alunoStudent && alunoStudent.ackAt, todayKey, freqWeek]);
     const focusStudent = students.find((s) => s.id === focusId);
     const lockCard = { textAlign: "center", padding: "44px 22px", ...glassPanel, borderRadius: 26, maxWidth: 360, margin: "10px auto 0" };
     const keyInput = { display: "block", margin: "14px auto 0", width: 200, textAlign: "center", fontFamily: F.mono, fontSize: 18, letterSpacing: "0.2em", color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 12, padding: "12px", outline: "none", boxSizing: "border-box" };
@@ -3006,6 +3071,7 @@ function CancioClub() {
                 setShareCard(sd); } }),
         shareCard && React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) }),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
+        recordsOpen && React.createElement(RecordsModal, { records: records, onClose: () => setRecordsOpen(false) }),
         role === "aluno" && alunoStudent && !alunoStudent.ackAt && React.createElement(Disclaimer, { onAccept: () => updateStudent(alunoId, { ackAt: new Date().toISOString() }) }),
         role === "aluno" && React.createElement(FloatingTimer, null),
         React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90, ...glassPanel, borderRadius: 0, borderLeft: "none", borderRight: "none", borderBottom: "none", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))" } },
@@ -3150,7 +3216,7 @@ function CancioClub() {
                                             "\u201C",
                                             s.feedback,
                                             "\u201D"))))))))))),
-                    students.length === 0 ? React.createElement(PremiumEmptyState, { icon: "personPlus", compact: false, title: "Nenhum aluno na casa ainda.", sub: "Cadastre o primeiro e a pista come\u00E7a a girar." }) : (React.createElement(React.Fragment, null,
+                    students.length === 0 && loadingRoster ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, [0, 1, 2].map((i) => React.createElement(SkeletonCard, { key: i }))) : students.length === 0 ? React.createElement(PremiumEmptyState, { icon: "personPlus", compact: false, title: "Nenhum aluno na casa ainda.", sub: "Cadastre o primeiro e a pista come\u00E7a a girar." }) : (React.createElement(React.Fragment, null,
                         profStudent && profStudent.obs && obsChip(profStudent.obs),
                         profStudent && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } },
                             React.createElement("button", { onClick: () => setProfViewMode("edit"), style: { flex: 1, fontFamily: F.mono, fontSize: 12, letterSpacing: "0.04em", color: profViewMode === "edit" ? C.ink : C.muted, background: profViewMode === "edit" ? C.silver : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo Edi\u00E7\u00E3o"),
@@ -3321,8 +3387,9 @@ function CancioClub() {
                         React.createElement("button", { onClick: () => setLogoCard(true), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.04em", color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 999, padding: "7px 14px", cursor: "pointer" } }, "Selo Cancio Club"))),
                 alunoStudent.obs && obsChip(alunoStudent.obs),
                 React.createElement("div", { style: { ...glassPanel, borderRadius: 22, padding: 20, marginBottom: 18 } },
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", marginBottom: 12 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 } },
                         React.createElement("div", { style: { flex: 1, fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted } }, "Const\u00E2ncia"),
+                        React.createElement("button", { onClick: () => setRecordsOpen(true), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.04em", color: C.amber, background: "transparent", border: "none", cursor: "pointer", padding: 0 } }, "recordes \u203A"),
                         React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11.5, color: tier.accent } },
                             "n\u00EDvel ",
                             tier.name)),
