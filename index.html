@@ -484,6 +484,10 @@ const lastReps = (ex) => { const h = sortedHistory(ex.history); for (let i = h.l
 } return null; };
 const isWithin7 = (iso) => { const d = new Date(iso + "T00:00:00"); const now = new Date(); now.setHours(0, 0, 0, 0); const diff = (now - d) / 86400000; return diff >= 0 && diff < 7; };
 function emptyWeek() { const w = {}; DAYS.forEach((d) => (w[d.key] = [])); return w; }
+// referência estável pros props de ação que a view do aluno não usa (onRemove/onMove/onDeleteRecord)
+// — module-scope em vez de `() => {}` inline, senão vira uma prop nova a cada render e derruba
+// o React.memo do ExerciseCard mesmo quando nada relevante mudou
+const noop = () => { };
 function trainingWds(wk, cardio) { return new Set(DAYS.filter((d) => (wk[d.key] || []).length > 0 || (cardio && cardio[d.key])).map((d) => d.wd)); }
 function computeStreak(twd, set) {
     if (!twd.size)
@@ -1716,6 +1720,7 @@ function DiaryEntryCard({ entry: e }) {
             e.feedback,
             "”")));
 }
+DiaryEntryCard = React.memo(DiaryEntryCard);
 // diário em forma de calendário, separado por mês — cada dia com marcação vira um cartão ao tocar.
 // os recordes ficam junto, como uma fileira de chips acima do mês, em vez de uma tela à parte.
 function DiaryCalendar({ diary, records, month, onMonthChange }) {
@@ -2117,6 +2122,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                             React.createElement("button", { onClick: () => onMove(ex.id, 1), disabled: isLast, style: { fontFamily: F.mono, fontSize: 12, color: isLast ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isLast ? "default" : "pointer" } }, "\u2193 Descer"),
                             React.createElement("button", { onClick: () => onRemove(ex.id), style: { marginLeft: "auto", fontFamily: F.mono, fontSize: 12, color: C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Remover")))))))));
 }
+ExerciseCard = React.memo(ExerciseCard);
 function DayTabs({ week, day, onPick, cardio, dock }) { return React.createElement("div", { style: { display: "flex", gap: 7, overflowX: "auto", paddingBottom: dock ? 0 : 4, marginBottom: dock ? 0 : 18 } }, DAYS.map((d) => { const c = (week[d.key] || []).length; const cd = cardio && cardio[d.key]; return React.createElement(Pill, { key: d.key, active: d.key === day, onClick: () => onPick(d.key), title: d.full },
     d.short,
     c > 0 ? ` · ${c}` : (cd ? " · c" : "")); })); }
@@ -2215,6 +2221,7 @@ function TemplateCard({ tpl, targetLabel, onApply, onRemove }) {
                 targetLabel),
             React.createElement("button", { onClick: onRemove, style: { fontFamily: F.mono, fontSize: 11, color: C.muted, background: C.panel2, borderRadius: 999, padding: "8px 12px", cursor: "pointer" } }, "remover"))));
 }
+TemplateCard = React.memo(TemplateCard);
 function LibItem({ item, onUpdate, onRemove }) {
     const [name, setName] = useState(item.name || "");
     const [url, setUrl] = useState(item.url || "");
@@ -2338,6 +2345,7 @@ function CancioClub() {
     const [codeErr, setCodeErr] = useState(false);
     const [day, setDay] = useState(JS2KEY[new Date().getDay()]);
     const [expanded, setExpanded] = useState(null);
+    const toggleExpanded = React.useCallback((id) => setExpanded((p) => (p === id ? null : id)), []);
     const [adding, setAdding] = useState(false);
     // swipe horizontal troca o dia — só dispara se o gesto for bem mais horizontal que vertical,
     // pra não atrapalhar a rolagem normal da lista
@@ -2443,8 +2451,10 @@ function CancioClub() {
     const profId = data?.activeStudentId;
     // salvamento agora é imperativo e granular — cada função avisa explicitamente o que mudou,
     // em vez de um efeito genérico observar `data` inteiro e decidir sozinho o que sincronizar
-    const syncGlobalToCloud = (next) => { saveGlobalToCloud(splitGlobalForCloud(next)).then((ok) => setCloudSynced(ok !== false)); };
-    const syncStudentToCloud = (next, sid) => {
+    // useCallback aqui não é só micro-otimização: são a base de que addLoad/updateExercise/etc.
+    // dependem — sem serem estáveis, nenhum React.memo nos cards de exercício segura nada.
+    const syncGlobalToCloud = React.useCallback((next) => { saveGlobalToCloud(splitGlobalForCloud(next)).then((ok) => setCloudSynced(ok !== false)); }, []);
+    const syncStudentToCloud = React.useCallback((next, sid) => {
         const student = (next.students || []).find((s) => s.id === sid);
         if (!student)
             return;
@@ -2455,7 +2465,7 @@ function CancioClub() {
             ? callStudentApi("sync", { code: student.code, data: payload }).then(() => true).catch((e) => { console.error("Cancio: falha ao sincronizar aluno (edge function):", e); return false; })
             : saveStudentToCloud(payload, next.isSeed);
         p.then((ok) => setCloudSynced(ok !== false));
-    };
+    }, [role]);
     // Auto-Sync Agressivo: se o aluno anotou carga e fechou o app / perdeu sinal antes do
     // syncStudentToCloud imperativo terminar, o dado fica só no localStorage (cloudSynced=false).
     // Aqui a gente fica de olho pra reagir assim que a rede ou a tela voltarem, sem esperar o
@@ -2521,9 +2531,12 @@ function CancioClub() {
     const updateLibrary = (id, patch) => setData((p) => { const next = { ...p, library: (p.library || []).map((e) => (e.id === id ? { ...e, ...patch } : e)) }; syncGlobalToCloud(next); return next; });
     const removeLibrary = (id) => setData((p) => { const next = { ...p, library: (p.library || []).filter((e) => e.id !== id) }; syncGlobalToCloud(next); return next; });
     const focusId = role === "prof" ? profId : alunoId;
-    const week = (data?.workouts && data.workouts[focusId]) || emptyWeek();
-    const records = computeRecords(week);
-    const diary = buildDiary(data, focusId);
+    // antes recalculavam em TODO render (inclusive digitação num campo sem relação nenhuma com
+    // treino) — computeRecords/buildDiary varrem o histórico inteiro do aluno, então memoizar por
+    // [data, focusId] evita esse custo sempre que a causa do render não foi uma mudança de dado
+    const week = React.useMemo(() => (data?.workouts && data.workouts[focusId]) || emptyWeek(), [data, focusId]);
+    const records = React.useMemo(() => computeRecords(week), [week]);
+    const diary = React.useMemo(() => buildDiary(data, focusId), [data, focusId]);
     const list = week[day] || [];
     const dayFull = DAYS.find((d) => d.key === day).full;
     const cardioFocus = (data?.cardio && data.cardio[focusId]) || {};
@@ -2620,7 +2633,18 @@ function CancioClub() {
     };
     const addExercise = () => { const name = form.name.trim(); if (!name || !focusId)
         return; const loadN = parseFloat(String(form.load).replace(",", ".")); const restN = parseInt(form.rest); const ex = { id: uid(), name, sets: parseInt(form.sets) || 1, reps: form.reps || "1", rest: isNaN(restN) ? undefined : restN, note: form.note.trim() || undefined, url: form.url.trim() || undefined, setPlan: defaultSetPlan(form.sets, form.reps), history: isNaN(loadN) ? [] : [{ date: todayISO(), load: loadN }] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = [...(w[day] || []), ex]; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); setForm({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "" }); setAdding(false); setPickLib(false); setExpanded(ex.id); };
-    const addLoad = (exId, entry) => {
+    // marca o início do treino sozinho, na 1ª série do dia — sem botão, sem cronômetro visível (só guarda o horário pra calcular a duração depois)
+    const markWorkoutStarted = React.useCallback(() => {
+        if (workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO())
+            return;
+        const s = { studentId: focusId, date: todayISO(), startedAt: Date.now() };
+        setWorkoutStart(s);
+        try {
+            localStorage.setItem(SESS_KEY, JSON.stringify(s));
+        }
+        catch (e) { }
+    }, [workoutStart, focusId]);
+    const addLoad = React.useCallback((exId, entry) => {
         if (role === "aluno")
             markWorkoutStarted();
         let cel = null;
@@ -2670,9 +2694,9 @@ function CancioClub() {
             else
                 setCelebration({ title: "RECORDE DE REPS", subtitle: cel.name, value: cel.value, accent: "#C7C7CC", tint: "#C7C7CC", sound: soundOn ? playDisco : null });
         }
-    };
+    }, [role, focusId, day, syncStudentToCloud, soundOn, markWorkoutStarted]);
     // nota do aluno específica daquele exercício naquele dia — some junto com o registro de séries, o professor vê no histórico
-    const updateExerciseNote = (exId, dateStr, note) => {
+    const updateExerciseNote = React.useCallback((exId, dateStr, note) => {
         setData((p) => {
             const w = { ...p.workouts[focusId] };
             w[day] = w[day].map((e) => {
@@ -2690,12 +2714,12 @@ function CancioClub() {
             syncStudentToCloud(next, focusId);
             return next;
         });
-    };
-    const removeExercise = (exId) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].filter((e) => e.id !== exId); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; });
-    const updateExercise = (exId, patch) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, ...patch } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; });
-    const deleteRecord = (exId, historyItem) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, history: e.history.filter((x) => x !== historyItem) } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; });
-    const moveExercise = (exId, dir) => setData((p) => { const w = { ...p.workouts[focusId] }; const arr = [...(w[day] || [])]; const i = arr.findIndex((e) => e.id === exId); const j = i + dir; if (i < 0 || j < 0 || j >= arr.length)
-        return p; [arr[i], arr[j]] = [arr[j], arr[i]]; w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; });
+    }, [focusId, day, syncStudentToCloud]);
+    const removeExercise = React.useCallback((exId) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].filter((e) => e.id !== exId); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
+    const updateExercise = React.useCallback((exId, patch) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, ...patch } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
+    const deleteRecord = React.useCallback((exId, historyItem) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, history: e.history.filter((x) => x !== historyItem) } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
+    const moveExercise = React.useCallback((exId, dir) => setData((p) => { const w = { ...p.workouts[focusId] }; const arr = [...(w[day] || [])]; const i = arr.findIndex((e) => e.id === exId); const j = i + dir; if (i < 0 || j < 0 || j >= arr.length)
+        return p; [arr[i], arr[j]] = [arr[j], arr[i]]; w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
     const applyTemplate = (tpl, targetDay) => { setData((p) => { const w = { ...(p.workouts[profId] || emptyWeek()) }; const adds = tpl.exercises.map((e) => ({ id: uid(), name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, note: e.note, url: e.url, setPlan: (e.setPlan && e.setPlan.length ? e.setPlan : defaultSetPlan(e.sets, e.reps)).map((s) => ({ ...s, id: uidShort() })), history: [] })); w[targetDay] = [...(w[targetDay] || []), ...adds]; const dn = { ...(p.dayNames || {}) }; const sd = { ...(dn[profId] || {}) }; sd[targetDay] = tpl.name; dn[profId] = sd; const next = { ...p, workouts: { ...p.workouts, [profId]: w }, dayNames: dn }; syncStudentToCloud(next, profId); return next; }); };
     const saveDayAsTemplate = () => { const name = tplName.trim(); const exs = (week[day] || []).map((e) => ({ name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, note: e.note, url: e.url, setPlan: e.setPlan })); if (!name || !exs.length)
         return; setData((p) => { const next = { ...p, templates: [...(p.templates || []), { id: uid(), name, exercises: exs }] }; syncGlobalToCloud(next); return next; }); setTplName(""); setSavingTpl(false); };
@@ -2713,17 +2737,6 @@ function CancioClub() {
         const ns = computeStreak(twd, new Set(checkins));
         const nb = Math.max((p.bestStreak && p.bestStreak[sid]) || 0, ns);
         return { checkins: { ...(p.checkins || {}), [sid]: checkins }, bestStreak: { ...(p.bestStreak || {}), [sid]: nb } };
-    };
-    // marca o início do treino sozinho, na 1ª série do dia — sem botão, sem cronômetro visível (só guarda o horário pra calcular a duração depois)
-    const markWorkoutStarted = () => {
-        if (workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO())
-            return;
-        const s = { studentId: focusId, date: todayISO(), startedAt: Date.now() };
-        setWorkoutStart(s);
-        try {
-            localStorage.setItem(SESS_KEY, JSON.stringify(s));
-        }
-        catch (e) { }
     };
     const addCardio = (activity, minutes) => {
         const act = activity.trim();
@@ -3336,8 +3349,8 @@ function CancioClub() {
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 } },
                             list.length === 0 && !adding && React.createElement(PremiumEmptyState, { icon: "dumbbell", title: `Nenhum treino em ${dayFull} \u2014 a ficha t\u00E1 em branco.`, sub: "Monte um exerc\u00EDcio do zero ou aplique um modelo salvo." }),
                             list.map((ex, i) => profViewMode === "aula"
-                                ? React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: (id) => setExpanded((p) => (p === id ? null : id)), onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: () => { }, onUpdate: updateExercise, onDeleteRecord: () => { }, onMove: () => { }, isFirst: true, isLast: true, tint: tier.tint })
-                                : React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "prof", expanded: expanded === ex.id, onToggle: (id) => setExpanded((p) => (p === id ? null : id)), onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExercise, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint }))),
+                                ? React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint })
+                                : React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "prof", expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExercise, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint }))),
                         profViewMode === "edit" && (React.createElement(React.Fragment, null,
                             React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 } },
                                 templates.length > 0 && React.createElement("button", { onClick: () => { setPickTpl((v) => !v); setSavingTpl(false); }, style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Aplicar modelo"),
@@ -3528,7 +3541,7 @@ function CancioClub() {
                 dayName && list.length > 0 && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 17, letterSpacing: "0.02em", marginBottom: 12, marginTop: -6 } }, dayName),
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 } },
                     list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema \u2014 registre seu cardio abaixo, se fez." }),
-                    list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: (id) => setExpanded((p) => (p === id ? null : id)), isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: () => { }, onUpdate: updateExercise, onDeleteRecord: () => { }, onMove: () => { }, isFirst: true, isLast: true, tint: tier.tint }))),
+                    list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint }))),
                 day === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
                 React.createElement(CardioSection, { entries: todayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                 list.length === 0 && React.createElement(RecoverySection, { state: todayRecovery, onToggle: toggleRecovery }),
