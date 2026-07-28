@@ -6,15 +6,15 @@
 // tabela `cancio` para o fluxo do aluno: isso exigiria liberar leitura/escrita de TODAS as fichas
 // pra qualquer pessoa com a anon key (que fica exposta no index.html, como é normal).
 //
-// Esta função roda no servidor com a service role key (nunca exposta ao navegador — fica só como
-// secret do projeto), confere o código antes de tocar no banco, e só lê/grava a ÚNICA linha que
-// combina com aquele código. A tabela `cancio` deve ficar fechada pra `anon` depois que isso
-// estiver no ar (ver instruções de deploy).
+// Esta função roda no servidor com a service role key auto-injetada pela própria Supabase em
+// toda Edge Function (SUPABASE_SERVICE_ROLE_KEY — nunca exposta ao navegador), confere o código
+// antes de tocar no banco, e só lê/grava a ÚNICA linha que combina com aquele código. A tabela
+// `cancio` fica fechada pra `anon` (ver RLS do projeto).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SERVICE_ROLE_KEY = Deno.env.get("SB_SERVICE_ROLE_KEY");
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
