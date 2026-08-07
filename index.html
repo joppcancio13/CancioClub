@@ -3625,7 +3625,200 @@ function SkeletonCard() {
         React.createElement("div", { className: "cc-shimmer", "aria-hidden": "true" })));
 }
 function AddButton({ onClick, label }) { return React.createElement("button", { onClick: onClick, style: { width: "100%", fontFamily: F.mono, fontSize: 13.5, letterSpacing: "0.04em", color: C.silver, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", border: "none", borderRadius: 18, padding: "16px", cursor: "pointer" } }, label); }
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(CancioClub, null));
+/* ============================== Assessment Inicial ============================== */
+// formulário de anamnese/onboarding do aluno — mesma linguagem visual do resto do app
+// (glassPanel, tokens C/F), mas com bordas sutis nos inputs em vez de fundo sólido e
+// glow de foco, conforme o padrão "dark luxury" pedido para essa tela específica.
+const ASSESSMENT_TEMPO_TREINO_OPTIONS = ["Nunca treinou", "Menos de 6 meses", "6 meses a 1 ano", "Mais de 1 ano", "Retornando agora"];
+const ASSESSMENT_OBJETIVO_OPTIONS = ["Hipertrofia", "Redução de percentual de gordura", "Força/Condicionamento"];
+const ASSESSMENT_DIAS_OPTIONS = [2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: String(n) }));
+const ASSESSMENT_TEMPO_SESSAO_OPTIONS = [{ value: "45min", label: "45 min" }, { value: "60min", label: "60 min" }, { value: "90min", label: "+1 hora" }];
+const ASSESSMENT_ESTRESSE_OPTIONS = ["Ruim", "Razoável", "Boa", "Excelente"].map((v) => ({ value: v, label: v }));
+const assessmentLabelStyle = { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted };
+const ASSESSMENT_CSS = `
+.cc-assess-choice:hover:not(.cc-assess-choice--active) { border-color:#3a3a3a; background:rgba(255,255,255,0.06); }
+.cc-assess-submit:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 14px 30px rgba(184,180,255,0.32); }
+.cc-assess-submit:active:not(:disabled) { transform:translateY(0); }
+.cc-assess-input:hover { border-color:#3a3a3a; }
+.cc-assess-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(10,10,12,0.35); border-top-color:#0A0A0C; animation: cc-boot-spin .7s linear infinite; flex-shrink:0; }
+`;
+function AssessmentField({ label, value, onChange, error, type, ...rest }) {
+    const [focused, setFocused] = useState(false);
+    return (React.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 5 } },
+        React.createElement("span", { style: assessmentLabelStyle }, label),
+        React.createElement("input", { ...rest, type: type || "text", value: value, className: "cc-assess-input", onChange: (e) => onChange(e.target.value), onFocus: () => setFocused(true), onBlur: () => setFocused(false), style: {
+                fontFamily: F.body, fontSize: 15, color: C.text, background: "rgba(255,255,255,0.03)",
+                border: `1px solid ${error ? C.warn : (focused ? C.amber : "#2a2a2a")}`, borderRadius: 14,
+                padding: "12px 14px", outline: "none", width: "100%", boxSizing: "border-box", colorScheme: "dark",
+                boxShadow: focused ? `0 0 0 3px ${C.amber}1f` : "none", transition: "border-color .18s ease, box-shadow .18s ease",
+            } }),
+        error && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.warn } }, error)));
+}
+function AssessmentTextArea({ label, value, onChange, error, ...rest }) {
+    const [focused, setFocused] = useState(false);
+    return (React.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 5 } },
+        React.createElement("span", { style: assessmentLabelStyle }, label),
+        React.createElement("textarea", { ...rest, value: value, className: "cc-assess-input", onChange: (e) => onChange(e.target.value), onFocus: () => setFocused(true), onBlur: () => setFocused(false), style: {
+                fontFamily: F.body, fontSize: 14, color: C.text, background: "rgba(255,255,255,0.03)",
+                border: `1px solid ${error ? C.warn : (focused ? C.amber : "#2a2a2a")}`, borderRadius: 14,
+                padding: "12px 14px", outline: "none", width: "100%", boxSizing: "border-box", resize: "vertical", lineHeight: 1.5,
+                boxShadow: focused ? `0 0 0 3px ${C.amber}1f` : "none", transition: "border-color .18s ease, box-shadow .18s ease",
+            } }),
+        error && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.warn } }, error)));
+}
+function AssessmentSelect({ label, value, onChange, options, placeholder, error }) {
+    const [focused, setFocused] = useState(false);
+    return (React.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 5 } },
+        React.createElement("span", { style: assessmentLabelStyle }, label),
+        React.createElement("div", { style: { position: "relative" } },
+            React.createElement("select", { value: value || "", className: "cc-assess-input", onChange: (e) => onChange(e.target.value), onFocus: () => setFocused(true), onBlur: () => setFocused(false), style: {
+                    fontFamily: F.body, fontSize: 15, color: value ? C.text : C.muted, background: "rgba(255,255,255,0.03)",
+                    border: `1px solid ${error ? C.warn : (focused ? C.amber : "#2a2a2a")}`, borderRadius: 14,
+                    padding: "12px 38px 12px 14px", outline: "none", width: "100%", boxSizing: "border-box",
+                    appearance: "none", WebkitAppearance: "none", colorScheme: "dark", cursor: "pointer",
+                    boxShadow: focused ? `0 0 0 3px ${C.amber}1f` : "none", transition: "border-color .18s ease, box-shadow .18s ease",
+                } },
+                React.createElement("option", { value: "", disabled: true }, placeholder || "Selecione..."),
+                options.map((opt) => React.createElement("option", { key: opt, value: opt }, opt))),
+            React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: C.muted, fontSize: 11 } }, "▾")),
+        error && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.warn } }, error)));
+}
+function AssessmentChoiceGroup({ label, value, onChange, options, error }) {
+    return (React.createElement("div", null,
+        React.createElement("span", { style: assessmentLabelStyle }, label),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 } }, options.map((opt) => {
+            const active = value === opt.value;
+            return React.createElement("button", { key: opt.value, type: "button", onClick: () => onChange(opt.value), className: "cc-assess-choice" + (active ? " cc-assess-choice--active" : ""), style: {
+                    flex: "0 1 84px", minWidth: 74, fontFamily: F.mono, fontSize: 13, fontWeight: active ? 700 : 500,
+                    letterSpacing: "0.03em", padding: "13px 10px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+                    color: active ? C.ink : C.text, background: active ? C.amber : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${active ? C.amber : "#2a2a2a"}`, transition: "all .18s ease",
+                } }, opt.label);
+        })),
+        error && React.createElement("span", { style: { display: "block", fontFamily: F.mono, fontSize: 10.5, color: C.warn, marginTop: 6 } }, error)));
+}
+function AssessmentSection({ index, title, children }) {
+    return (React.createElement("section", { style: { ...glassPanel, padding: "22px 18px", marginBottom: 18, display: "flex", flexDirection: "column", gap: 14 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+            React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, fontWeight: 800, color: C.ink, background: C.amber, width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, index),
+            React.createElement("h2", { style: { margin: 0, fontFamily: F.display, fontSize: 12.5, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: C.text } }, title)),
+        children));
+}
+function validateAssessment(data) {
+    const errors = {};
+    if (!data.nome.trim())
+        errors.nome = "Informe o nome completo";
+    if (!data.idade)
+        errors.idade = "Obrigatório";
+    else if (Number(data.idade) <= 0 || Number(data.idade) > 100)
+        errors.idade = "Idade inválida";
+    if (!data.peso)
+        errors.peso = "Obrigatório";
+    else if (Number(data.peso) <= 0)
+        errors.peso = "Peso inválido";
+    if (!data.altura)
+        errors.altura = "Obrigatório";
+    else if (Number(data.altura) <= 0)
+        errors.altura = "Altura inválida";
+    if (!data.tempoTreino)
+        errors.tempoTreino = "Selecione uma opção";
+    if (!data.diasSemana)
+        errors.diasSemana = "Selecione os dias disponíveis";
+    if (!data.tempoSessao)
+        errors.tempoSessao = "Selecione o tempo disponível";
+    if (!data.estresseSono)
+        errors.estresseSono = "Selecione uma opção";
+    if (!data.objetivo)
+        errors.objetivo = "Selecione o objetivo";
+    return errors;
+}
+// formulário de anamnese em 4 seções; onSubmit(data) é opcional e pode ser assíncrono (ex.: gravar
+// no Supabase) — o botão entra em estado de loading enquanto a promise não resolve.
+function AssessmentInicial({ onSubmit }) {
+    const [form, setForm] = useState({
+        nome: "", idade: "", peso: "", altura: "",
+        tempoTreino: "", lesoes: "", medicamentos: "",
+        diasSemana: "", tempoSessao: "", estresseSono: "",
+        objetivo: "", gruposEnfase: "",
+    });
+    const [errors, setErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState("");
+    const [done, setDone] = useState(false);
+    const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
+    async function handleSubmit(e) {
+        e.preventDefault();
+        const errs = validateAssessment(form);
+        setErrors(errs);
+        if (Object.keys(errs).length > 0)
+            return;
+        setSubmitError("");
+        setSubmitting(true);
+        try {
+            if (onSubmit)
+                await onSubmit(form);
+            setDone(true);
+        }
+        catch (err) {
+            setSubmitError((err && err.message) || "Não foi possível enviar. Tente novamente.");
+        }
+        finally {
+            setSubmitting(false);
+        }
+    }
+    if (done) {
+        return (React.createElement("div", { style: { ...glassPanel, padding: "48px 28px", textAlign: "center" } },
+            React.createElement("div", { style: { width: 52, height: 52, borderRadius: "50%", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center", background: `${C.amber}1f`, border: `1px solid ${C.amber}` } },
+                React.createElement("span", { style: { fontSize: 22, color: C.amber } }, "✓")),
+            React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 16, letterSpacing: "0.08em", textTransform: "uppercase", color: C.text } }, "Assessment recebido"),
+            React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.muted, marginTop: 10, lineHeight: 1.6 } }, "Sua ficha inicial foi enviada. Nossa equipe vai analisar suas respostas antes do primeiro ciclo.")));
+    }
+    return (React.createElement("form", { onSubmit: handleSubmit, noValidate: true, style: { display: "flex", flexDirection: "column" } },
+        React.createElement("style", null, ASSESSMENT_CSS),
+        React.createElement("div", { style: { marginBottom: 26, textAlign: "center" } },
+            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.24em", color: C.amber, textTransform: "uppercase" } }, "Cancio Club"),
+            React.createElement("h1", { style: { margin: "8px 0 0", fontFamily: F.display, fontWeight: 800, fontSize: 22, letterSpacing: "0.06em", textTransform: "uppercase", color: C.text } }, "Assessment Inicial"),
+            React.createElement("p", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.6 } }, "Preencha com precisão. Essas respostas definem a estrutura do seu ciclo de treino.")),
+        React.createElement(AssessmentSection, { index: 1, title: "Perfil Básico" },
+            React.createElement(AssessmentField, { label: "Nome completo", value: form.nome, onChange: set("nome"), error: errors.nome, placeholder: "Seu nome" }),
+            React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 14 } },
+                React.createElement("div", { style: { flex: "1 1 110px" } }, React.createElement(AssessmentField, { label: "Idade", inputMode: "numeric", value: form.idade, onChange: set("idade"), error: errors.idade, placeholder: "anos" })),
+                React.createElement("div", { style: { flex: "1 1 110px" } }, React.createElement(AssessmentField, { label: "Peso atual (kg)", inputMode: "decimal", value: form.peso, onChange: set("peso"), error: errors.peso, placeholder: "kg" })),
+                React.createElement("div", { style: { flex: "1 1 110px" } }, React.createElement(AssessmentField, { label: "Altura (cm)", inputMode: "numeric", value: form.altura, onChange: set("altura"), error: errors.altura, placeholder: "cm" })))),
+        React.createElement(AssessmentSection, { index: 2, title: "Histórico & Biomecânica" },
+            React.createElement(AssessmentSelect, { label: "Tempo contínuo de musculação", value: form.tempoTreino, onChange: set("tempoTreino"), options: ASSESSMENT_TEMPO_TREINO_OPTIONS, placeholder: "Selecione...", error: errors.tempoTreino }),
+            React.createElement(AssessmentTextArea, { label: "Lesão, dor articular ou restrição médica", value: form.lesoes, onChange: set("lesoes"), placeholder: "Descreva ou escreva “Nenhuma”", rows: 3 }),
+            React.createElement(AssessmentField, { label: "Uso contínuo de medicamento", value: form.medicamentos, onChange: set("medicamentos"), placeholder: "Descreva ou escreva “Nenhum”" })),
+        React.createElement(AssessmentSection, { index: 3, title: "Rotina & Capacidade de Treino" },
+            React.createElement(AssessmentChoiceGroup, { label: "Dias por semana disponíveis", value: form.diasSemana, onChange: set("diasSemana"), options: ASSESSMENT_DIAS_OPTIONS, error: errors.diasSemana }),
+            React.createElement(AssessmentChoiceGroup, { label: "Tempo médio por sessão", value: form.tempoSessao, onChange: set("tempoSessao"), options: ASSESSMENT_TEMPO_SESSAO_OPTIONS, error: errors.tempoSessao }),
+            React.createElement(AssessmentChoiceGroup, { label: "Estresse e qualidade do sono", value: form.estresseSono, onChange: set("estresseSono"), options: ASSESSMENT_ESTRESSE_OPTIONS, error: errors.estresseSono })),
+        React.createElement(AssessmentSection, { index: 4, title: "Objetivos" },
+            React.createElement(AssessmentSelect, { label: "Objetivo principal do ciclo trimestral", value: form.objetivo, onChange: set("objetivo"), options: ASSESSMENT_OBJETIVO_OPTIONS, placeholder: "Selecione...", error: errors.objetivo }),
+            React.createElement(AssessmentTextArea, { label: "Grupos musculares com dificuldade ou ênfase", value: form.gruposEnfase, onChange: set("gruposEnfase"), placeholder: "Ex: posterior de coxa, ombro...", rows: 3 })),
+        submitError && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 12, color: C.warn, textAlign: "center", marginBottom: 14 } }, submitError),
+        React.createElement("button", { type: "submit", disabled: submitting, className: "cc-assess-submit", style: {
+                width: "100%", fontFamily: F.mono, fontSize: 13.5, fontWeight: 700, letterSpacing: "0.14em",
+                textTransform: "uppercase", color: C.ink, background: submitting ? "#8f8bc9" : `linear-gradient(135deg, ${C.amber}, #8F7EFF)`,
+                border: "none", borderRadius: 14, padding: "18px", cursor: submitting ? "default" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                boxShadow: "0 10px 24px rgba(184,180,255,0.22)", transition: "transform .15s ease, box-shadow .15s ease",
+                opacity: submitting ? 0.85 : 1,
+            } },
+            submitting && React.createElement("span", { className: "cc-assess-spinner", "aria-hidden": "true" }),
+            submitting ? "Enviando..." : "Submeter Assessment")));
+}
+// tela cheia só pra visualizar/testar o formulário isolado, acessível via #assessment sem tocar
+// no fluxo principal do app (login por código, ficha do aluno etc.)
+function AssessmentInicialScreen() {
+    return (React.createElement("div", { style: { minHeight: "100vh", background: C.ink, padding: "32px 16px 64px", boxSizing: "border-box" } },
+        React.createElement("div", { style: { maxWidth: 540, margin: "0 auto" } },
+            React.createElement(AssessmentInicial, { onSubmit: async (data) => {
+                    console.log("Assessment Inicial:", data);
+                    await new Promise((r) => setTimeout(r, 900));
+                } }))));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(window.location.hash === "#assessment" ? AssessmentInicialScreen : CancioClub, null));
 }
 </script>
 <script>
