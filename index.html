@@ -2392,6 +2392,7 @@ function CancioClub() {
     const [feedbackModal, setFeedbackModal] = useState(null);
     const [shareCard, setShareCard] = useState(null);
     const [logoCard, setLogoCard] = useState(false);
+    const [assessmentJustDone, setAssessmentJustDone] = useState(false);
     const [alunoTab, setAlunoTab] = useState("treino");
     const [diaryMonth, setDiaryMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
     const changeDiaryMonth = (dir) => setDiaryMonth((m) => { let month = m.month + dir, year = m.year; if (month < 0) {
@@ -3188,6 +3189,13 @@ function CancioClub() {
         shareCard && React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) }),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         role === "aluno" && alunoStudent && !alunoStudent.ackAt && React.createElement(Disclaimer, { onAccept: () => updateStudent(alunoId, { ackAt: new Date().toISOString() }) }),
+        role === "aluno" && alunoStudent && alunoStudent.ackAt && (!alunoStudent.assessmentAt || assessmentJustDone) && (React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 95, overflowY: "auto", background: C.ink, padding: "32px 16px 64px", boxSizing: "border-box" } },
+            React.createElement("div", { style: { maxWidth: 540, margin: "0 auto" } },
+                React.createElement(AssessmentInicial, { defaultName: alunoStudent.name, onSubmit: (formData) => {
+                        updateStudent(alunoId, { assessment: formData, assessmentAt: new Date().toISOString() });
+                        setAssessmentJustDone(true);
+                        setTimeout(() => setAssessmentJustDone(false), 2200);
+                    } })))),
         role === "aluno" && React.createElement(FloatingTimer, null),
         React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90, ...glassPanel, borderRadius: 0, borderLeft: "none", borderRight: "none", borderBottom: "none", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))" } },
             React.createElement("div", { style: { maxWidth: 660, margin: "0 auto" } },
@@ -3734,9 +3742,9 @@ function validateAssessment(data) {
 }
 // formulário de anamnese em 4 seções; onSubmit(data) é opcional e pode ser assíncrono (ex.: gravar
 // no Supabase) — o botão entra em estado de loading enquanto a promise não resolve.
-function AssessmentInicial({ onSubmit }) {
+function AssessmentInicial({ onSubmit, defaultName }) {
     const [form, setForm] = useState({
-        nome: "", idade: "", peso: "", altura: "",
+        nome: defaultName || "", idade: "", peso: "", altura: "",
         tempoTreino: "", lesoes: "", medicamentos: "",
         diasSemana: "", tempoSessao: "", estresseSono: "",
         objetivo: "", gruposEnfase: "",
