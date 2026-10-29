@@ -13,7 +13,7 @@
 //   Isso teria que ficar sempre fresco da rede — cachear resultaria em ver
 //   dados desatualizados até muito tempo depois de a internet voltar.
 
-const CACHE_NAME = "cancio-club-v24";
+const CACHE_NAME = "cancio-club-v28";
 
 // Pré-cache do essencial assim que o Service Worker instala
 const PRECACHE_URLS = ["./", "./index.html", "./manifest.json"];
