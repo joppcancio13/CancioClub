@@ -463,17 +463,6 @@ const isoOf = (d) => {
 };
 const todayISO = () => isoOf(new Date());
 const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return isoOf(d); };
-// data real (ISO) do dia-da-semana `wd` (0=dom..6=sáb) dentro da semana ATUAL — não "hoje". A
-// semana do app é seg->dom (ver DAYS), então isso ancora em "quantos dias depois da segunda-feira
-// desta semana" cada dia cai, e não em cima do dia real de hoje. Existe especificamente pra
-// ExerciseCard não gravar um toque acidental na aba de Segunda, feito numa Terça, como se fosse
-// treino de terça — sem isso, `date` do card sempre defaultava pra todayISO() nesse cenário.
-const mondayOffset = (wd) => (wd === 0 ? 6 : wd - 1);
-const dateForWeekday = (wd) => {
-    const d = new Date();
-    d.setDate(d.getDate() + (mondayOffset(wd) - mondayOffset(d.getDay())));
-    return isoOf(d);
-};
 const fmtDate = (iso) => { const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 const fmtDateTime = (iso) => { const d = new Date(iso); const p = (n) => String(n).padStart(2, "0"); return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 const mmss = (s) => { const m = Math.floor(s / 60); const r = s % 60; return `${m}:${String(r).padStart(2, "0")}`; };
@@ -481,6 +470,9 @@ const fmtDur = (sec) => sec >= 60 ? `${Math.round(sec / 60)} min` : `${sec} s`;
 // tonelagem acima de 1000kg vira toneladas (1 casa decimal, vírgula) — mesmo padrão já usado no
 // canvas do ShareCard, só que reaproveitado aqui pros textos renderizados em React (chart, celebração)
 const fmtVolume = (kg) => kg >= 1000 ? `${(kg / 1000).toFixed(1).replace(".", ",")} TON` : `${Math.round(kg).toLocaleString("pt-BR")} kg`;
+// extrai a meta numérica do campo livre "Frequência semanal" da ficha (ex.: "4x na semana" -> 4).
+// Sem número reconhecível (campo vazio, texto sem dígito) -> null, e quem usa cai pro número cru.
+const parseWeeklyTarget = (freqWeeklyText) => { const m = String(freqWeeklyText || "").match(/\d+/); return m ? parseInt(m[0], 10) : null; };
 const GREET_MANHA = ["Bom dia. Pista liberada,", "Bom dia. Primeiro play,", "Bom dia. Som na caixa,", "Bom dia. Set montado,"];
 const GREET_TARDE = ["Boa tarde. Ritmo de pico,", "Boa tarde. Salão on,", "Boa tarde. Fone no talo,", "Boa tarde. Ajusta o BPM,"];
 const GREET_NOITE = ["Boa noite. Sessão noturna,", "Boa noite. O Club é seu,", "Boa noite. Último drop,", "Boa noite. Fechando a pista,"];
@@ -652,14 +644,16 @@ function seedCheckins(wds) { const out = []; const d = new Date(); d.setHours(0,
         out.push(isoOf(d));
     d.setDate(d.getDate() - 1);
 } return out; }
+// limiares em TOTAL de treinos feitos (não mais sequência de dias seguidos — ver freqTotal em
+// CancioClub) — recalibrados pra uma contagem que só cresce, nunca "quebra"
 function streakTier(s) {
-    if (s >= 50)
+    if (s >= 120)
         return { name: "Lendário", tint: "#FFFFFF", accent: "#FFFFFF" };
-    if (s >= 20)
+    if (s >= 60)
         return { name: "Diamante", tint: "#F2F2F5", accent: "#F2F2F5" };
-    if (s >= 10)
+    if (s >= 30)
         return { name: "Ouro", tint: "#DDDDE2", accent: "#DDDDE2" };
-    if (s >= 5)
+    if (s >= 10)
         return { name: "Platina", tint: "#CACACF", accent: "#CACACF" };
     return { name: "Prata", tint: "#B8B8C0", accent: "#B8B8C0" };
 }
@@ -2556,6 +2550,34 @@ function ActiveSetBar() {
 function DayTabs({ week, day, onPick, cardio, dock }) { return React.createElement("div", { style: { display: "flex", gap: 7, overflowX: "auto", paddingBottom: dock ? 0 : 4, marginBottom: dock ? 0 : 18 } }, DAYS.map((d) => { const c = (week[d.key] || []).length; const cd = cardio && cardio[d.key]; return React.createElement(Pill, { key: d.key, active: d.key === day, onClick: () => onPick(d.key), title: d.full },
     d.short,
     c > 0 ? ` · ${c}` : (cd ? " · c" : "")); })); }
+// Seletor da semana pro aluno: a divisão continua sendo por dia da semana (o plano do professor),
+// mas em vez de só a abreviação ("Seg"), mostra o nome do treino daquele dia (se o professor deu
+// um) pra escolha ficar visível de cara, sem precisar abrir aba por aba pra descobrir o que tem em
+// cada dia. O dia de hoje ganha um marcador — é a sugestão do professor pra hoje, não uma trava.
+function DayChoiceDock({ week, day, dayNames, todayKey, onPick, cardio }) {
+    return React.createElement("div", { style: { display: "flex", gap: 6, overflowX: "auto" } }, DAYS.map((d) => {
+        const c = (week[d.key] || []).length;
+        const cd = cardio && cardio[d.key];
+        const name = dayNames && dayNames[d.key];
+        const sub = name || (c > 0 ? `${c} ex.` : (cd ? "cardio" : "livre"));
+        const active = d.key === day;
+        const isToday = d.key === todayKey;
+        return React.createElement("button", {
+            key: d.key, className: "cc-pill", onClick: () => { haptic("tick"); onPick(d.key); }, title: d.full,
+            style: {
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 60,
+                padding: "7px 9px", borderRadius: 14, border: "none", cursor: "pointer", flexShrink: 0,
+                background: active ? "linear-gradient(150deg,#EEF3FB,#B9C6D9)" : "rgba(255,255,255,0.045)",
+                color: active ? "#05060A" : C.muted,
+                transition: `transform .18s ${EASE.spring}, background .15s ease, color .15s ease`,
+            },
+        },
+            React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: F.display, fontWeight: 700, fontSize: 12 } },
+                d.short,
+                isToday && React.createElement("span", { "aria-hidden": "true", style: { width: 4, height: 4, borderRadius: "50%", background: active ? "#05060A" : C.amber, flexShrink: 0 } })),
+            React.createElement("span", { style: { fontFamily: F.mono, fontSize: 8.5, opacity: 0.85, maxWidth: 66, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, sub));
+    }));
+}
 // FichaEditor só é usado dentro da visão do Professor (único call site é no profTab "alunos") —
 // por isso o campo de alerta clínico abaixo é seguro aqui: nunca é renderizado pro aluno.
 function FichaEditor({ student, onSave }) {
@@ -3000,9 +3022,13 @@ function CancioClub() {
     const records = React.useMemo(() => computeRecords(week), [week]);
     const diary = React.useMemo(() => buildDiary(data, focusId), [data, focusId]);
     const list = week[day] || [];
-    // data real (ISO) do dia-da-semana que a aba `day` representa NESTA semana — não "hoje". Só
-    // recalcula quando a aba muda (ver dateForWeekday); ver ExerciseCard.
-    const dayDate = React.useMemo(() => dateForWeekday(DAYS.find((d) => d.key === day).wd), [day]);
+    // `day` escolhe QUAL lista de exercícios usar (o treino sugerido pro dia, definido pelo
+    // professor) — mas o registro em si (série, check-in, volume, sessão) sempre cai na data real
+    // de hoje, não numa data "teórica" do dia da semana escolhido. Se o treino de terça acaba sendo
+    // feito numa quinta, grava na quinta mesmo. Por isso dayDate é sempre todayISO(), não
+    // dateForWeekday(day) — o nome ficou do jeito que já é usado em cascata (ExerciseCard,
+    // finalizeWorkout, checkInTodayFor, addCardio, toggleRecovery, hasSetOnDay/...).
+    const dayDate = todayISO();
     const dayFull = DAYS.find((d) => d.key === day).full;
     const cardioFocus = (data?.cardio && data.cardio[focusId]) || {};
     const dayName = (data?.dayNames && data.dayNames[focusId] && data.dayNames[focusId][day]) || "";
@@ -3014,24 +3040,19 @@ function CancioClub() {
     const freqTotal = focusCheckins.length;
     const freqWeek = focusCheckins.filter(isWithin7).length;
     const bestStreak = Math.max((data?.bestStreak && data.bestStreak[focusId]) || 0, streak);
-    const tier = streakTier(streak);
+    // a cor/"patente" das celebrações e do ShareCard vem do total de treinos (freqTotal), não mais
+    // da sequência de dias seguidos — um número que só sobe, nunca "quebra" (ver streakTier)
+    const tier = streakTier(freqTotal);
     const todayKey = JS2KEY[new Date().getDay()];
     const todayIsTraining = (week[todayKey] || []).length > 0;
-    const todayDone = checkinSet.has(todayISO());
-    // mesma ideia de todayDone, mas pro dia que a aba `day` representa — não necessariamente hoje.
-    // É o que de fato controla "Finalizar Treino"/"Partilhar Treino": sem isso, registrar um treino
-    // atrasado numa aba de outro dia nunca contava (o botão ficava preso olhando pra hoje).
+    // dayDate é sempre hoje agora (ver comentário acima), então isso já cobre tanto "o dia de hoje
+    // está feito" quanto "o dia que a aba representa está feito" — é o que controla "Finalizar
+    // Treino"/"Partilhar Treino".
     const dayDone = checkinSet.has(dayDate);
     const todayDayName = (data?.dayNames && data.dayNames[focusId] && data.dayNames[focusId][todayKey]) || "";
     const todayCardioOn = !!cardioFocus[todayKey];
     const greetWord = greeting(focusId, todayIsTraining);
     const greetLine = pickDailyPhrase(todayIsTraining ? TRAIN_PHRASES : REST_PHRASES, todayISO() + focusId);
-    const missedYesterday = (() => {
-        const y = new Date();
-        y.setDate(y.getDate() - 1);
-        const yIso = isoOf(y);
-        return trainingWeekdays.has(y.getDay()) && !checkinSet.has(yIso) && !todayDone;
-    })();
     // mapa de calor da semana atual (segunda a domingo) — visão rápida do esforço da semana
     const weekHeatDates = (() => {
         const now = new Date();
@@ -3630,6 +3651,12 @@ function CancioClub() {
         buildWeeklySummary();
     }, [role, alunoId, alunoStudent && alunoStudent.ackAt, todayKey, freqWeek]);
     const focusStudent = students.find((s) => s.id === focusId);
+    // meta semanal (do campo "Frequência semanal" da ficha) no lugar da sequência de dias seguidos
+    const weeklyTarget = parseWeeklyTarget(focusStudent && focusStudent.freqWeekly);
+    const weeklyLine = weeklyTarget != null ? `${freqWeek} de ${weeklyTarget} essa semana` : `${freqWeek} ${freqWeek === 1 ? "treino" : "treinos"} essa semana`;
+    // aviso suave só quando a semana já está avançada (sex/sáb/dom) e ainda falta bater a meta —
+    // sem travar nada, sem Salva-Vidas
+    const weeklyBehind = weeklyTarget != null && freqWeek < weeklyTarget && ["sex", "sab", "dom"].includes(todayKey);
     const lockCard = { textAlign: "center", padding: "52px 24px", ...glassPanel, borderRadius: 28, maxWidth: 360, margin: "10px auto 0" };
     useEffect(() => { if (role === "aluno" && codeInput.length === 4 && !loginBusy && !codeErr) { const t = setTimeout(() => doLogin(), 250); return () => clearTimeout(t); } }, [codeInput]);
     const keyInput = { display: "block", margin: "16px auto 0", width: 220, textAlign: "center", fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: "0.28em", color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 12, padding: "12px", outline: "none", boxSizing: "border-box" };
@@ -3718,7 +3745,7 @@ function CancioClub() {
         role === "aluno" && React.createElement(ActiveSetBar, null),
         role === "aluno" && alunoStudent && React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90, ...glassPanel, borderRadius: 0, borderLeft: "none", borderRight: "none", borderBottom: "none", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))" } },
             React.createElement("div", { style: { maxWidth: 660, margin: "0 auto" } },
-                role === "aluno" && alunoStudent && alunoTab === "treino" && React.createElement(DayTabs, { week: week, day: day, onPick: (k) => { setDay(k); setExpanded(null); }, cardio: cardioFocus, dock: true }))),
+                role === "aluno" && alunoStudent && alunoTab === "treino" && React.createElement(DayChoiceDock, { week: week, day: day, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, todayKey: todayKey, onPick: (k) => { setDay(k); setExpanded(null); }, cardio: cardioFocus }))),
         role === "aluno" && !isStandalone && (React.createElement("div", { style: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 10, background: C.panel2, padding: "9px 16px" } },
             React.createElement("span", { style: { flex: 1, fontFamily: F.mono, fontSize: 10.5, color: C.silver, lineHeight: 1.5 } }, "Para experi\u00EAncia VIP em tela cheia, adicione o Cancio Club \u00E0 sua Tela de In\u00EDcio (Compartilhar \u2192 Adicionar \u00E0 Tela de In\u00EDcio)"),
             React.createElement("button", { onClick: () => setIsStandalone(true), "aria-label": "Dispensar", style: { flexShrink: 0, fontFamily: F.mono, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px" } }, "\u00D7"))),
@@ -3963,7 +3990,7 @@ function CancioClub() {
                                     React.createElement("button", { onClick: addExercise, style: { flex: 1, fontFamily: F.mono, fontSize: 13.5, letterSpacing: "0.04em", color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Adicionar exerc\u00EDcio"),
                                     React.createElement("button", { onClick: () => { setAdding(false); setPickLib(false); }, style: { fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "12px 16px", cursor: "pointer" } }, "Cancelar")))) : React.createElement(AddButton, { onClick: () => setAdding(true), label: `+ Adicionar exercício em ${DAYS.find((d) => d.key === day).short}` }))),
                         profViewMode === "aula" && profStudent && (React.createElement(React.Fragment, null,
-                            day === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
+                            todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
                             React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                             list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
                             React.createElement("button", { className: "cc-tap", onClick: () => { flushAllPendingSaves(); if (!hasLoggedSomething || dayDone)
@@ -4040,11 +4067,11 @@ function CancioClub() {
                         React.createElement(MirrorGlobe, { size: 108, tile: 9, mask: `linear-gradient(0deg,#000 ${prog.pct}%,transparent ${prog.pct}%)` }),
                         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 } },
-                                React.createElement("span", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted } }, String(alunoStudent.name || "").split(" ")[0] + (streak > 0 ? " \u00B7 " + streak + (streak === 1 ? " dia seguido" : " dias seguidos") : "")),
+                                React.createElement("span", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted } }, String(alunoStudent.name || "").split(" ")[0] + " \u00B7 " + weeklyLine),
                                 React.createElement("button", { onClick: logout, style: tiny }, "Sair")),
                             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 28, lineHeight: 0.95, marginTop: 6, color: "#FFFFFF" } }, title),
                             React.createElement("div", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.silver, marginTop: 5 } }, sub),
-                            missedYesterday && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12, color: C.muted, marginTop: 6 } }, "Ontem n\u00E3o rolou \u2014 hoje \u00E9 um novo dia."),
+                            weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`),
                             React.createElement("button", { onClick: () => setLogoCard(true), style: { ...tiny, padding: "6px 0 0" } }, "Selo Cancio Club \u203A")));
                 })(),
                 alunoStudent.obs && obsChip(alunoStudent.obs),
@@ -4052,16 +4079,11 @@ function CancioClub() {
                     React.createElement(Pill, { active: alunoTab === "treino", onClick: () => setAlunoTab("treino") }, "Treino"),
                     React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio")),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
-                streak === 0 && missedYesterday && (React.createElement("div", { style: { background: "linear-gradient(145deg, #101012, rgba(232,121,75,0.08))", border: "1px solid rgba(232,121,75,0.2)", boxShadow: "0 8px 32px rgba(232,121,75,0.1)", borderRadius: 14, padding: "16px 18px", marginBottom: 18 } },
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9, fontFamily: F.body, fontSize: 14, color: C.amber, fontWeight: 700 } },
-                        React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: C.warn, flexShrink: 0 } }),
-                        "Sequ\u00EAncia em perigo! (Faltou ontem)"),
-                    React.createElement("button", { onClick: useFreeze, disabled: freezesLeft <= 0, style: { marginTop: 12, width: "100%", fontFamily: F.mono, fontSize: 12.5, letterSpacing: "0.02em", color: freezesLeft > 0 ? C.ink : C.muted, background: freezesLeft > 0 ? C.amber : C.panel2, border: "none", borderRadius: 10, padding: "11px", cursor: freezesLeft > 0 ? "pointer" : "default" } }, freezesLeft > 0 ? `Usar Salva-Vidas (Restam ${freezesLeft} de 3 este mês)` : "Sem Salva-Vidas este mês"))),
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
                         list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema \u2014 registre seu cardio abaixo, se fez." }),
                         list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })))),
-                day === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
+                todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
                 React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                 list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
                 React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: "calc(98px + env(safe-area-inset-bottom))", zIndex: 85, padding: "0 18px", pointerEvents: (typingActive || barBusy) ? "none" : "auto", opacity: (typingActive || barBusy) ? 0 : 1, transform: (typingActive || barBusy) ? "translateY(12px)" : "translateY(0)", transition: "opacity .2s ease, transform .2s ease" } },
