@@ -1413,7 +1413,7 @@ function ShareCard({ data, onClose }) {
     // Card "Pastilhas" (padrão): topo espelhado + cada exercício feito com uma pastilha acesa por
     // série de TRABALHO (aquecimento/reconhecimento não contam, igual tonelagem e recorde). ★ = PR do dia.
     function drawPastilhaCard(ctx) {
-        const S = 3, lx = 24 * S, rx = W - 24 * S, today = todayISO();
+        const S = 3, lx = 24 * S, rx = W - 24 * S, today = data.targetDate || todayISO();
         ctx.fillStyle = "#05060A";
         ctx.fillRect(0, 0, W, H);
         const hh = 195 * S, cell = 15 * S, joint = 2 * S;
@@ -2118,19 +2118,34 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     const lr = lastReps(ex);
     const first = hist.length ? daySummary(hist[0]).load : 0;
     const delta = cur - first;
-    // Progressão dupla: olha as séries de trabalho registradas HOJE (ignora aquecimento) e vê se todas bateram o teto da meta de reps
-    const todayHistEntry = hist.find((h) => h.date === todayISO() && Array.isArray(h.entries));
+    // Progressão dupla: olha as séries de trabalho registradas no dia sendo editado (ignora
+    // aquecimento) e vê se todas bateram o teto da meta de reps. Usa `date` (o dia da aba atual),
+    // não todayISO() — senão essa checagem nunca via nada ao registrar um treino atrasado.
+    const todayHistEntry = hist.find((h) => h.date === date && Array.isArray(h.entries));
     const hasAnySetToday = !!todayHistEntry;
     const workingToday = todayHistEntry ? todayHistEntry.entries.filter((e) => !NON_COUNTING_KINDS.has(e.kind) && parseReps(e.reps) != null) : [];
     const ceilingHit = workingToday.length > 0 && workingToday.every((e) => { const c = repsCeiling(e.targetReps); return c != null && parseReps(e.reps) >= c; });
-    const lastEntries = (() => { for (let i = hist.length - 1; i >= 0; i--)
+    // sessão anterior de VERDADE: a última registrada ANTES do dia que está sendo preenchido agora
+    // (não simplesmente a última do array — com treino atrasado registrado fora de ordem, a entrada
+    // mais recente do histórico pode ser de um dia posterior ao que está na tela)
+    const lastEntries = (() => { for (let i = hist.length - 1; i >= 0; i--) {
+        if (hist[i].date >= date)
+            continue;
         if (Array.isArray(hist[i].entries))
-            return hist[i].entries; return null; })();
-    const rowsFromLast = () => plan.map((s, i) => ({
-        setId: s.id, kind: s.kind, targetReps: s.reps,
-        load: lastEntries && lastEntries[i] && typeof lastEntries[i].load === "number" ? String(lastEntries[i].load) : "",
-        reps: lastEntries && lastEntries[i] && typeof lastEntries[i].reps === "number" ? String(lastEntries[i].reps) : "",
-    }));
+            return hist[i].entries;
+    } return null; })();
+    // casa pelo setId (identidade estável da série), nunca pela posição no array — a ordem em que as
+    // séries foram SALVAS na sessão anterior pode não bater com a ordem do plano atual (ex.: aluno
+    // corrigiu a série 1 depois da 2), e casar por índice mostrava "o que fiz na sessão passada" da
+    // série errada — isso é o que estava deixando as séries bagunçadas entre sessões
+    const rowsFromLast = () => plan.map((s) => {
+        const match = lastEntries && lastEntries.find((e) => e.setId === s.id);
+        return {
+            setId: s.id, kind: s.kind, targetReps: s.reps,
+            load: match && typeof match.load === "number" ? String(match.load) : "",
+            reps: match && typeof match.reps === "number" ? String(match.reps) : "",
+        };
+    });
     const [rows, setRows] = useState(rowsFromLast);
     useEffect(() => { setRows(rowsFromLast()); }, [ex.id]);
     const [restTrigger, setRestTrigger] = useState(0);
@@ -2165,10 +2180,10 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
         }
         prevFullyLoggedRef.current = isFullyLogged;
     }, [isFullyLogged]);
-    // Pulso do Recorde: compara a melhor carga de HOJE contra o histórico anterior — no instante em
-    // que ultrapassa, acende um brilho âmbar efêmero no cartão (reforço visual imediato e local,
-    // separado da comemoração de tela cheia que já existe pra recordes)
-    const priorSummaries = hist.filter((h) => h.date !== todayISO()).map(daySummary);
+    // Pulso do Recorde: compara a melhor carga do dia sendo editado contra o histórico anterior —
+    // no instante em que ultrapassa, acende um brilho âmbar efêmero no cartão (reforço visual
+    // imediato e local, separado da comemoração de tela cheia que já existe pra recordes)
+    const priorSummaries = hist.filter((h) => h.date !== date).map(daySummary);
     const priorBestLoad = priorSummaries.map((s) => s.load).filter((v) => typeof v === "number").reduce((m, v) => (m == null || v > m ? v : m), null);
     const todaySummary = todayHistEntry ? daySummary(todayHistEntry) : null;
     const isNewPR = priorBestLoad != null && todaySummary && typeof todaySummary.load === "number" && todaySummary.load > priorBestLoad;
@@ -3003,6 +3018,10 @@ function CancioClub() {
     const todayKey = JS2KEY[new Date().getDay()];
     const todayIsTraining = (week[todayKey] || []).length > 0;
     const todayDone = checkinSet.has(todayISO());
+    // mesma ideia de todayDone, mas pro dia que a aba `day` representa — não necessariamente hoje.
+    // É o que de fato controla "Finalizar Treino"/"Partilhar Treino": sem isso, registrar um treino
+    // atrasado numa aba de outro dia nunca contava (o botão ficava preso olhando pra hoje).
+    const dayDone = checkinSet.has(dayDate);
     const todayDayName = (data?.dayNames && data.dayNames[focusId] && data.dayNames[focusId][todayKey]) || "";
     const todayCardioOn = !!cardioFocus[todayKey];
     const greetWord = greeting(focusId, todayIsTraining);
@@ -3053,18 +3072,21 @@ function CancioClub() {
     const unread = messages.filter((m) => !m.read).length;
     const archives = (data?.archives && data.archives[profId]) || [];
     const focusSessions = (data?.sessions && data.sessions[focusId]) || [];
-    const todaySession = focusSessions.filter((s) => s.date === todayISO()).slice(-1)[0];
+    const daySession = focusSessions.filter((s) => s.date === dayDate).slice(-1)[0];
     const lastProfSession = (((data?.sessions && data.sessions[profId]) || [])).slice(-1)[0];
     const profSessions = (data?.sessions && data.sessions[profId]) || [];
     const focusCardioLog = (data?.cardioLog && data.cardioLog[focusId]) || [];
-    const todayCardioEntries = focusCardioLog.filter((c) => c.date === todayISO());
-    const hasCardioToday = todayCardioEntries.length > 0;
-    const hasSetToday = list.some((ex) => sortedHistory(ex.history).some((h) => h.date === todayISO()));
+    // os quatro abaixo eram todos `=== todayISO()`: certo pra aba de hoje, mas isso é o que fazia o
+    // app "não contar" nada registrado numa aba de outro dia (ver dayDate) — sets ficavam gravados
+    // certinho, só não apareciam pra ninguém, inclusive pro próprio botão de finalizar.
+    const dayCardioEntries = focusCardioLog.filter((c) => c.date === dayDate);
+    const hasCardioOnDay = dayCardioEntries.length > 0;
+    const hasSetOnDay = list.some((ex) => sortedHistory(ex.history).some((h) => h.date === dayDate));
     const focusRecoveryLog = (data?.recoveryLog && data.recoveryLog[focusId]) || {};
-    const todayRecovery = focusRecoveryLog[todayISO()] || { hydration: false, sleep: false, mobility: false };
-    const hasRecoveryToday = !!(todayRecovery.hydration || todayRecovery.sleep || todayRecovery.mobility);
-    const hasLoggedSomething = hasSetToday || hasCardioToday || hasRecoveryToday;
-    const isRestDay = list.length === 0 && !hasCardioToday && hasRecoveryToday;
+    const dayRecovery = focusRecoveryLog[dayDate] || { hydration: false, sleep: false, mobility: false };
+    const hasRecoveryOnDay = !!(dayRecovery.hydration || dayRecovery.sleep || dayRecovery.mobility);
+    const hasLoggedSomething = hasSetOnDay || hasCardioOnDay || hasRecoveryOnDay;
+    const isRestDay = list.length === 0 && !hasCardioOnDay && hasRecoveryOnDay;
     const buildWeeklySummary = () => {
         let weeklyVolume = 0;
         DAYS.forEach((d) => {
@@ -3082,7 +3104,7 @@ function CancioClub() {
         setShareCard({ isWeeklySummary: true, name: focusStudent.name, freqWeek, streak, tint: tier.tint, dateLabel: "Nesta semana", weeklyVolume, weeklyTime: timeStr });
     };
     const addExercise = () => { const name = form.name.trim(); if (!name || !focusId)
-        return; const loadN = parseFloat(String(form.load).replace(",", ".")); const restN = parseInt(form.rest); const ex = { id: uid(), name, sets: parseInt(form.sets) || 1, reps: form.reps || "1", rest: isNaN(restN) ? undefined : restN, note: form.note.trim() || undefined, url: form.url.trim() || undefined, setPlan: defaultSetPlan(form.sets, form.reps), history: isNaN(loadN) ? [] : [{ date: todayISO(), load: loadN }] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = [...(w[day] || []), ex]; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); setForm({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "" }); setAdding(false); setPickLib(false); setExpanded(ex.id); };
+        return; const loadN = parseFloat(String(form.load).replace(",", ".")); const restN = parseInt(form.rest); const ex = { id: uid(), name, sets: parseInt(form.sets) || 1, reps: form.reps || "1", rest: isNaN(restN) ? undefined : restN, note: form.note.trim() || undefined, url: form.url.trim() || undefined, setPlan: defaultSetPlan(form.sets, form.reps), history: isNaN(loadN) ? [] : [{ date: dayDate, load: loadN }] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = [...(w[day] || []), ex]; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); setForm({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "" }); setAdding(false); setPickLib(false); setExpanded(ex.id); };
     // marca o início do treino sozinho, na 1ª série do dia — sem botão, sem cronômetro visível (só guarda o horário pra calcular a duração depois)
     const markWorkoutStarted = React.useCallback(() => {
         if (workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO())
@@ -3179,8 +3201,10 @@ function CancioClub() {
     const archiveWorkout = () => { const label = archLabel.trim() || `Treino ${fmtDate(todayISO())}`; const snap = JSON.parse(JSON.stringify((data.workouts && data.workouts[profId]) || emptyWeek())); setData((p) => { const next = { ...p, archives: { ...(p.archives || {}), [profId]: [...(((p.archives || {})[profId]) || []), { id: uid(), label, date: new Date().toISOString(), week: snap }] } }; syncStudentToCloud(next, profId); return next; }); setArchLabel(""); };
     const restoreArchive = (arc) => { const wk = JSON.parse(JSON.stringify(arc.week)); DAYS.forEach((d) => (wk[d.key] || []).forEach((e) => { e.id = uid(); })); setData((p) => { const next = { ...p, workouts: { ...p.workouts, [profId]: wk } }; syncStudentToCloud(next, profId); return next; }); };
     const deleteArchive = (id) => setData((p) => { const next = { ...p, archives: { ...(p.archives || {}), [profId]: (((p.archives || {})[profId]) || []).filter((a) => a.id !== id) } }; syncStudentToCloud(next, profId); return next; });
-    const checkInTodayFor = (p, sid) => {
-        const t = todayISO();
+    // nome ficou de antes de aceitar uma data explícita — hoje também cobre o check-in de um dia
+    // atrasado (ver dayDate), não só "hoje" no sentido literal
+    const checkInTodayFor = (p, sid, dt) => {
+        const t = dt || todayISO();
         const cur = (p.checkins && p.checkins[sid]) || [];
         const checkins = cur.includes(t) ? cur : [...cur, t];
         const wk = (p.workouts && p.workouts[sid]) || emptyWeek();
@@ -3195,7 +3219,7 @@ function CancioClub() {
         if (!act || isNaN(min) || min <= 0)
             return;
         markWorkoutStarted();
-        setData((p) => { const cl = { ...(p.cardioLog || {}) }; const list = [...(cl[focusId] || [])]; list.push({ id: uid(), date: todayISO(), activity: act, minutes: min }); cl[focusId] = list; const next = { ...p, cardioLog: cl }; syncStudentToCloud(next, focusId); return next; });
+        setData((p) => { const cl = { ...(p.cardioLog || {}) }; const list = [...(cl[focusId] || [])]; list.push({ id: uid(), date: dayDate, activity: act, minutes: min }); cl[focusId] = list; const next = { ...p, cardioLog: cl }; syncStudentToCloud(next, focusId); return next; });
         setCardioForm({ activity: "", minutes: "" });
     };
     // recuperação ativa (dias sem treino de força): 3 marcações simples do dia, guardadas por data — igual ao espírito do cardioLog
@@ -3204,9 +3228,9 @@ function CancioClub() {
         setData((p) => {
             const rl = { ...(p.recoveryLog || {}) };
             const forId = { ...(rl[focusId] || {}) };
-            const today = { ...(forId[todayISO()] || { hydration: false, sleep: false, mobility: false }) };
+            const today = { ...(forId[dayDate] || { hydration: false, sleep: false, mobility: false }) };
             today[key] = !today[key];
-            forId[todayISO()] = today;
+            forId[dayDate] = today;
             rl[focusId] = forId;
             const next = { ...p, recoveryLog: rl };
             syncStudentToCloud(next, focusId);
@@ -3238,21 +3262,28 @@ function CancioClub() {
         setActiveSet(null);
         const sid = uid();
         const isRest = effort === "descanso";
-        const durationSec = workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO() ? Math.max(1, Math.round((Date.now() - workoutStart.startedAt) / 1000)) : null;
+        // o cronômetro de sessão (workoutStart) mede tempo real de telefone na mão — só faz sentido
+        // como "duração do treino" quando o dia sendo finalizado é hoje mesmo. Registrando um treino
+        // atrasado (dayDate de outro dia), o tempo decorrido é só "quanto levei digitando agora", e
+        // mostrar isso como duração do treino é o que parecia "bugado, tipo em segundos".
+        const isToday = dayDate === todayISO();
+        const durationSec = isToday && workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO() ? Math.max(1, Math.round((Date.now() - workoutStart.startedAt) / 1000)) : null;
         const sWorkoutName = dayName || dayFull;
-        const sStreak = computeStreak(trainingWeekdays, new Set([...focusCheckins, todayISO()]));
+        const sStreak = computeStreak(trainingWeekdays, new Set([...focusCheckins, dayDate]));
         // daySummary já lida com os dois formatos de histórico (achatado antigo / entries novo) —
-        // acessar h.entries direto quebra em qualquer registro de hoje que ainda esteja no formato antigo
+        // acessar h.entries direto quebra em qualquer registro que ainda esteja no formato antigo.
+        // Filtra por dayDate (o dia sendo finalizado), não por hoje — senão um treino atrasado fecha
+        // mostrando 0kg porque procurou o volume na data errada.
         const totalVolume = list.reduce((sum, e) => {
-            const h = (e.history || []).find((hh) => hh.date === todayISO());
+            const h = (e.history || []).find((hh) => hh.date === dayDate);
             if (!h)
                 return sum;
             return sum + daySummary(h).volume;
         }, 0);
         setData((p) => {
             const sess = { ...(p.sessions || {}) };
-            sess[focusId] = [...(sess[focusId] || []), { id: sid, date: todayISO(), day, durationSec, effort }];
-            const next = { ...p, sessions: sess, ...checkInTodayFor(p, focusId) };
+            sess[focusId] = [...(sess[focusId] || []), { id: sid, date: dayDate, day, durationSec, effort }];
+            const next = { ...p, sessions: sess, ...checkInTodayFor(p, focusId, dayDate) };
             syncStudentToCloud(next, focusId);
             return next;
         });
@@ -3262,12 +3293,12 @@ function CancioClub() {
         }
         catch (e) { }
         setPseModal(null);
-        const shareData = { name: focusStudent.name, workoutName: sWorkoutName, durationLabel: durationSec ? fmtDur(durationSec) : "—", dateLabel: fmtDate(todayISO()), streak: sStreak, tint: tier.tint, isRestDay: isRest, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) };
+        const shareData = { name: focusStudent.name, workoutName: sWorkoutName, durationLabel: durationSec ? fmtDur(durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak: sStreak, tint: tier.tint, isRestDay: isRest, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) };
         if (isRest) {
             setCelebration({ title: "RITMO MANTIDO", subtitle: `Descanso também é treino, ${focusStudent.name}!`, value: "", accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
         }
         else {
-            setCelebration({ title: "PISTA DOMINADA", subtitle: `Treino concluído, ${focusStudent.name}!`, value: durationSec ? fmtDur(durationSec) : effort, volumeLabel: totalVolume > 0 ? `${fmtVolume(totalVolume)} levantados hoje` : null, accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
+            setCelebration({ title: "PISTA DOMINADA", subtitle: `Treino concluído, ${focusStudent.name}!`, value: durationSec ? fmtDur(durationSec) : effort, volumeLabel: totalVolume > 0 ? `${fmtVolume(totalVolume)} levantados no treino` : null, accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
         }
     };
     const submitFeedback = (sid, text) => setData((p) => { const sess = { ...(p.sessions || {}) }; sess[focusId] = (sess[focusId] || []).map((s) => (s.id === sid ? { ...s, feedback: text } : s)); const next = { ...p, sessions: sess }; syncStudentToCloud(next, focusId); return next; });
@@ -3933,14 +3964,14 @@ function CancioClub() {
                                     React.createElement("button", { onClick: () => { setAdding(false); setPickLib(false); }, style: { fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "12px 16px", cursor: "pointer" } }, "Cancelar")))) : React.createElement(AddButton, { onClick: () => setAdding(true), label: `+ Adicionar exercício em ${DAYS.find((d) => d.key === day).short}` }))),
                         profViewMode === "aula" && profStudent && (React.createElement(React.Fragment, null,
                             day === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
-                            React.createElement(CardioSection, { entries: todayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
-                            list.length === 0 && React.createElement(RecoverySection, { state: todayRecovery, onToggle: toggleRecovery }),
-                            React.createElement("button", { className: "cc-tap", onClick: () => { flushAllPendingSaves(); if (!hasLoggedSomething || todayDone)
+                            React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
+                            list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
+                            React.createElement("button", { className: "cc-tap", onClick: () => { flushAllPendingSaves(); if (!hasLoggedSomething || dayDone)
                                     return; haptic("confirm"); if (isRestDay)
                                     finalizeWorkout("descanso");
                                 else
-                                    setPseModal(true); }, disabled: !hasLoggedSomething || todayDone, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: hasLoggedSomething && !todayDone ? C.amber : C.muted, background: hasLoggedSomething && !todayDone ? "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)" : C.panel2, boxShadow: hasLoggedSomething && !todayDone ? "inset 0 0 0 1px rgba(255,255,255,0.06)" : "none", border: "none", borderRadius: 18, padding: "17px", cursor: hasLoggedSomething && !todayDone ? "pointer" : "default", marginBottom: 6, transition: `transform .18s ${EASE.spring}` } }, todayDone ? (isRestDay ? "✓ Recuperação registrada" : "✓ Treino finalizado") : (isRestDay ? "✓ Salvar Recuperação" : "Finalizar Treino")),
-                            !hasLoggedSomething && !todayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 14 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
+                                    setPseModal(true); }, disabled: !hasLoggedSomething || dayDone, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: hasLoggedSomething && !dayDone ? C.amber : C.muted, background: hasLoggedSomething && !dayDone ? "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)" : C.panel2, boxShadow: hasLoggedSomething && !dayDone ? "inset 0 0 0 1px rgba(255,255,255,0.06)" : "none", border: "none", borderRadius: 18, padding: "17px", cursor: hasLoggedSomething && !dayDone ? "pointer" : "default", marginBottom: 6, transition: `transform .18s ${EASE.spring}` } }, dayDone ? (isRestDay ? "✓ Recuperação registrada" : "✓ Treino finalizado") : (isRestDay ? "✓ Salvar Recuperação" : "Finalizar Treino")),
+                            !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 14 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
                             React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), onSend: (text) => sendMessage(text, profId) }))))))),
                 profTab === "modelos" && (React.createElement(React.Fragment, null,
                     React.createElement("p", { style: { fontFamily: F.mono, fontSize: 12, color: C.muted, lineHeight: 1.7, marginTop: 0, marginBottom: 18 } }, "Dias de treino prontos. Crie aqui ou salve um dia montado, e aplique em qualquer aluno com um toque."),
@@ -4031,14 +4062,14 @@ function CancioClub() {
                         list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema \u2014 registre seu cardio abaixo, se fez." }),
                         list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })))),
                 day === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
-                React.createElement(CardioSection, { entries: todayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
-                list.length === 0 && React.createElement(RecoverySection, { state: todayRecovery, onToggle: toggleRecovery }),
+                React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
+                list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
                 React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: "calc(98px + env(safe-area-inset-bottom))", zIndex: 85, padding: "0 18px", pointerEvents: (typingActive || barBusy) ? "none" : "auto", opacity: (typingActive || barBusy) ? 0 : 1, transform: (typingActive || barBusy) ? "translateY(12px)" : "translateY(0)", transition: "opacity .2s ease, transform .2s ease" } },
                     React.createElement("div", { style: { maxWidth: 624, margin: "0 auto", pointerEvents: "inherit" } },
                         React.createElement("button", { onClick: () => {
                                 flushAllPendingSaves();
-                                if (todayDone) {
-                                    setShareCard({ name: focusStudent.name, workoutName: dayName || dayFull, durationLabel: todaySession && todaySession.durationSec ? fmtDur(todaySession.durationSec) : "—", dateLabel: fmtDate(todayISO()), streak, tint: tier.tint, isRestDay, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
+                                if (dayDone) {
+                                    setShareCard({ name: focusStudent.name, workoutName: dayName || dayFull, durationLabel: daySession && daySession.durationSec ? fmtDur(daySession.durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak, tint: tier.tint, isRestDay, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
                                     return;
                                 }
                                 if (!hasLoggedSomething)
@@ -4047,16 +4078,16 @@ function CancioClub() {
                                     finalizeWorkout("descanso");
                                 else
                                     setPseModal(true);
-                            }, disabled: !hasLoggedSomething && !todayDone, style: {
+                            }, disabled: !hasLoggedSomething && !dayDone, style: {
                                 width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em",
-                                color: todayDone ? C.ink : hasLoggedSomething ? C.amber : C.muted,
-                                backgroundImage: todayDone ? `linear-gradient(150deg, #EEF3FB, #B9C6D9)` : undefined,
-                                background: todayDone ? C.amber : hasLoggedSomething ? "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)" : C.panel2,
-                                boxShadow: todayDone || hasLoggedSomething ? "inset 0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.4)",
-                                border: "none", borderRadius: 18, padding: "17px", cursor: hasLoggedSomething || todayDone ? "pointer" : "default",
-                            } }, todayDone ? "Partilhar Treino" : isRestDay ? "Salvar Recuperação" : "Finalizar Treino"))),
-                !hasLoggedSomething && !todayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 100 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
-                hasLoggedSomething && !todayDone && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontFamily: F.body, fontSize: 12, color: C.amber, marginBottom: 100, opacity: 0.9 } },
+                                color: dayDone ? C.ink : hasLoggedSomething ? C.amber : C.muted,
+                                backgroundImage: dayDone ? `linear-gradient(150deg, #EEF3FB, #B9C6D9)` : undefined,
+                                background: dayDone ? C.amber : hasLoggedSomething ? "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)" : C.panel2,
+                                boxShadow: dayDone || hasLoggedSomething ? "inset 0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.4)",
+                                border: "none", borderRadius: 18, padding: "17px", cursor: hasLoggedSomething || dayDone ? "pointer" : "default",
+                            } }, dayDone ? "Partilhar Treino" : isRestDay ? "Salvar Recuperação" : "Finalizar Treino"))),
+                !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 100 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
+                hasLoggedSomething && !dayDone && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontFamily: F.body, fontSize: 12, color: C.amber, marginBottom: 100, opacity: 0.9 } },
                     React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.amber, flexShrink: 0, animation: "cc-glow 1.6s ease-in-out infinite" } }),
                     "n\u00e3o esque\u00e7a de finalizar o treino pra guardar seu resumo e a sequ\u00eancia"),
                 React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: sendMessage }))),
