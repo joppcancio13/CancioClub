@@ -22,7 +22,7 @@ import { PremiumEmptyState } from "./components/shared/PremiumEmptyState";
 import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
 import { ActiveSetBar } from "./components/student/ActiveSetBar";
-import { DayChoiceDock } from "./components/student/DayChoiceDock";
+import { DayPickerModal } from "./components/student/DayPickerModal";
 import { DayTabs } from "./components/student/DayTabs";
 import { DiaryCalendar } from "./components/student/DiaryCalendar";
 import { ExerciseCard } from "./components/student/ExerciseCard";
@@ -121,6 +121,7 @@ function CancioClub() {
     const [logoCard, setLogoCard] = useState(false);
     const [assessmentJustDone, setAssessmentJustDone] = useState(false);
     const [alunoTab, setAlunoTab] = useState("treino");
+    const [dayPickerOpen, setDayPickerOpen] = useState(false);
     const [diaryMonth, setDiaryMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
     const changeDiaryMonth = (dir) => setDiaryMonth((m) => { let month = m.month + dir, year = m.year; if (month < 0) {
         month = 11;
@@ -1005,9 +1006,7 @@ function CancioClub() {
                     } })))),
         role === "aluno" && React.createElement(FloatingTimer, null),
         role === "aluno" && React.createElement(ActiveSetBar, null),
-        role === "aluno" && alunoStudent && React.createElement("div", { style: { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90, ...glassPanel, borderRadius: 0, borderLeft: "none", borderRight: "none", borderBottom: "none", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))" } },
-            React.createElement("div", { style: { maxWidth: 660, margin: "0 auto" } },
-                role === "aluno" && alunoStudent && alunoTab === "treino" && React.createElement(DayChoiceDock, { week: week, day: day, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, todayKey: todayKey, onPick: (k) => { setDay(k); setExpanded(null); }, cardio: cardioFocus }))),
+        role === "aluno" && alunoStudent && dayPickerOpen && React.createElement(DayPickerModal, { week: week, day: day, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, todayKey: todayKey, onPick: (k) => { setDay(k); setExpanded(null); }, onClose: () => setDayPickerOpen(false), cardio: cardioFocus }),
         role === "aluno" && !isStandalone && (React.createElement("div", { style: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 10, background: C.panel2, padding: "9px 16px" } },
             React.createElement("span", { style: { flex: 1, fontFamily: F.mono, fontSize: 10.5, color: C.silver, lineHeight: 1.5 } }, "Para experi\u00EAncia VIP em tela cheia, adicione o Cancio Club \u00E0 sua Tela de In\u00EDcio (Compartilhar \u2192 Adicionar \u00E0 Tela de In\u00EDcio)"),
             React.createElement("button", { onClick: () => setIsStandalone(true), "aria-label": "Dispensar", style: { flexShrink: 0, fontFamily: F.mono, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px" } }, "\u00D7"))),
@@ -1334,6 +1333,7 @@ function CancioClub() {
                             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 28, lineHeight: 0.95, marginTop: 6, color: "#FFFFFF" } }, title),
                             React.createElement("div", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.silver, marginTop: 5 } }, sub),
                             weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`),
+                            alunoTab === "treino" && React.createElement("button", { onClick: () => setDayPickerOpen(true), style: { ...tiny, padding: "6px 0 0", color: C.silver, fontWeight: 700 } }, "Trocar treino \u203A"),
                             React.createElement("button", { onClick: () => setLogoCard(true), style: { ...tiny, padding: "6px 0 0" } }, "Selo Cancio Club \u203A")));
                 })(),
                 alunoStudent.obs && obsChip(alunoStudent.obs),
