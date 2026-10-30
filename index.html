@@ -3045,10 +3045,13 @@ function CancioClub() {
     const tier = streakTier(freqTotal);
     const todayKey = JS2KEY[new Date().getDay()];
     const todayIsTraining = (week[todayKey] || []).length > 0;
-    // dayDate é sempre hoje agora (ver comentário acima), então isso já cobre tanto "o dia de hoje
-    // está feito" quanto "o dia que a aba representa está feito" — é o que controla "Finalizar
-    // Treino"/"Partilhar Treino".
-    const dayDone = checkinSet.has(dayDate);
+    const focusSessions = (data?.sessions && data.sessions[focusId]) || [];
+    // checkinSet.has(dayDate) sozinho não serve mais: dayDate é sempre hoje, então isso ficaria
+    // true pra TODOS os dias assim que qualquer um fosse finalizado hoje — escolher outro treino
+    // pra fazer em seguida no mesmo dia já aparecia como "concluído" sem nada registrado nele.
+    // sessions guarda {date, day} por registro — confere se ESSE slot específico (o `day` da aba
+    // aberta) já foi finalizado hoje, não só se algum foi.
+    const dayDone = focusSessions.some((s) => s.date === dayDate && s.day === day);
     const todayDayName = (data?.dayNames && data.dayNames[focusId] && data.dayNames[focusId][todayKey]) || "";
     const todayCardioOn = !!cardioFocus[todayKey];
     const greetWord = greeting(focusId, todayIsTraining);
@@ -3092,8 +3095,9 @@ function CancioClub() {
     }).filter(Boolean);
     const unread = messages.filter((m) => !m.read).length;
     const archives = (data?.archives && data.archives[profId]) || [];
-    const focusSessions = (data?.sessions && data.sessions[focusId]) || [];
-    const daySession = focusSessions.filter((s) => s.date === dayDate).slice(-1)[0];
+    // mesma lógica do dayDone: casa por (date, day) pra achar a sessão DESSE slot hoje, não a
+    // última sessão de qualquer slot hoje
+    const daySession = focusSessions.filter((s) => s.date === dayDate && s.day === day).slice(-1)[0];
     const lastProfSession = (((data?.sessions && data.sessions[profId]) || [])).slice(-1)[0];
     const profSessions = (data?.sessions && data.sessions[profId]) || [];
     const focusCardioLog = (data?.cardioLog && data.cardioLog[focusId]) || [];
