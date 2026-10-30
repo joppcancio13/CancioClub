@@ -49,19 +49,17 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     // séries foram SALVAS na sessão anterior pode não bater com a ordem do plano atual (ex.: aluno
     // corrigiu a série 1 depois da 2), e casar por índice mostrava "o que fiz na sessão passada" da
     // série errada — isso é o que estava deixando as séries bagunçadas entre sessões
-    const rowsFromLast = () => plan.map((s) => {
-        const match = lastEntries && lastEntries.find((e) => e.setId === s.id);
-        return {
-            setId: s.id, kind: s.kind, targetReps: s.reps,
-            load: match && typeof match.load === "number" ? String(match.load) : "",
-            reps: match && typeof match.reps === "number" ? String(match.reps) : "",
-        };
-    });
+    // Os campos de carga/reps nascem VAZIOS de propósito — a sessão anterior nunca fica dentro do
+    // campo editável. Ela aparece como uma dica à parte ("última vez: Xkg × Y") perto do campo, e
+    // some assim que o aluno de fato registra algo. Antes (rowsFromLast pré-preenchendo load/reps
+    // com o número da sessão passada) um toque exploratório no +/- ou nos atalhos de carga já
+    // confirmava e SALVAVA aquele número como se fosse o treino de hoje — foi assim que uma conta
+    // de teste acabou com toda a semana marcada como "feita" no mesmo dia sem o aluno ter treinado
+    // de verdade. Ver também os atalhos de carga mais abaixo, que agora buscam a sessão anterior
+    // direto (não mais a partir do valor do campo, que não existe mais até o aluno tocar).
+    const rowsFromLast = () => plan.map((s) => ({ setId: s.id, kind: s.kind, targetReps: s.reps, load: "", reps: "" }));
     const [rows, setRows] = useState(rowsFromLast);
-    // Auto-Save (ver efeito mais abaixo) só pode disparar numa mudança FEITA PELO ALUNO. Sem isso,
-    // o pré-preenchimento com os números da sessão anterior (rowsFromLast) já contava como
-    // "mudança" pro auto-save, e 800ms depois de só abrir o cartão ele regravava os valores antigos
-    // como se fossem de hoje — a série aparecia concluída sem o aluno ter tocado em nada. `sigOf`
+    // Auto-Save (ver efeito mais abaixo) só pode disparar numa mudança FEITA PELO ALUNO. `sigOf`
     // registra o que já é "conhecido" assim que as linhas nascem (aqui) ou são repostas (efeito do
     // ex.id logo abaixo), pra o auto-save só reagir ao que vier depois disso.
     const sigOf = (r) => `${r.load}|${r.reps}`;
@@ -333,6 +331,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                             const isChild = (r.kind === "rest-pause" || r.kind === "cluster") && i > 0; // série filha: mesma carga da série mãe, só reps extras importam
                             const effLoad = isChild ? (rows[i - 1] ? rows[i - 1].load : r.load) : r.load;
                             const saved = isRowSaved(isChild ? { ...r, load: effLoad } : r);
+                            const last = lastEntries && lastEntries.find((e) => e.setId === r.setId); // sessão anterior desta série — só referência, nunca pré-preenche o campo
                             const isWork = r.kind !== "warmup";
                             const repsIsComposite = /[+/]/.test(String(r.reps));
                             const formatLoad = (v) => (Number.isInteger(v) ? String(v) : String(Math.round(v * 2) / 2));
@@ -362,15 +361,21 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                                                 return; updateRow(i, { reps: String(Math.round(v)) }); }, onCommit: (v) => { if (repsIsComposite)
                                                 return; saveRow(i, false, isChild ? { reps: String(Math.round(v)), load: effLoad } : { reps: String(Math.round(v)) }); }, onTypeCommit: (v) => { updateRow(i, { reps: v }); saveRow(i, false, isChild ? { reps: v, load: effLoad } : { reps: v }); }, step: 1, color: C.text, suffix: "", size: 22, disabled: repsIsComposite }),
                                         React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 8.5, letterSpacing: "0.08em", color: C.muted, marginTop: 2 } }, isChild ? "EXTRAS" : "REPS"))),
+                                !isChild && last && typeof last.load === "number" && !r.load && !r.reps && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginTop: 6 } },
+                                    "última vez: ",
+                                    React.createElement("span", { style: { color: C.silver } }, `${last.load} kg`),
+                                    (typeof last.reps === "number" || (typeof last.reps === "string" && last.reps)) ? ` × ${last.reps}` : ""),
                                 (!saved && isWork && !isChild) && (() => {
-                                    // atalhos de um toque: repete a carga sugerida, ou sobe 2,5 / 5 kg e salva na hora
-                                    const base = Number(String(r.load).replace(",", ".")) || 0;
+                                    // atalhos de um toque: repete a carga digitada agora (se já tiver algo) ou a da sessão
+                                    // anterior, e sobe 2,5 / 5 kg em cima dela — salva na hora
+                                    const typedLoad = Number(String(r.load).replace(",", ".")) || 0;
+                                    const base = typedLoad || (typeof last?.load === "number" ? last.load : 0);
                                     if (!base) return null;
                                     const opts = [{ l: formatLoad(base) + " kg", v: base }, { l: "+2,5", v: base + 2.5 }, { l: "+5", v: base + 5 }];
                                     return React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 9 } }, opts.map((o, k) => React.createElement("button", { key: k, className: "cc-tap", onClick: () => { haptic("confirm"); updateRow(i, { load: formatLoad(o.v) }); saveRow(i, true, { load: formatLoad(o.v) }); }, style: { flex: 1, minWidth: 0, fontFamily: F.display, fontWeight: 700, fontSize: 13.5, color: k === 0 ? "#05060A" : C.silver, background: k === 0 ? "linear-gradient(150deg,#EEF3FB,#B9C6D9)" : "rgba(255,255,255,0.06)", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", transition: "transform .18s " + EASE.spring } }, o.l)));
                                 })()));
                         })),
-                        React.createElement("div", { style: { marginTop: 10, fontFamily: F.mono, fontSize: 10, color: C.muted, textAlign: "center" } }, "cada s\u00E9rie \u00E9 salva sozinha \u2014 o cinza \u00E9 a sugest\u00E3o do treino anterior"),
+                        React.createElement("div", { style: { marginTop: 10, fontFamily: F.mono, fontSize: 10, color: C.muted, textAlign: "center" } }, "cada s\u00E9rie \u00E9 salva sozinha assim que voc\u00EA registra carga e reps"),
                         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, justifyContent: "center" } },
                             React.createElement("button", { onClick: () => addSetRow("warmup"), style: { fontFamily: F.mono, fontSize: 11.5, color: C.silver, background: "transparent", border: `1px dashed ${C.line}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer" } }, "+ Aquec"),
                             React.createElement("button", { onClick: () => addSetRow("working"), style: { fontFamily: F.mono, fontSize: 11.5, color: C.silver, background: "transparent", border: `1px dashed ${C.line}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer" } }, "+ S\u00E9rie")))),
