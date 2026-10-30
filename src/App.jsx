@@ -32,6 +32,7 @@ import { StudentMessages } from "./components/student/StudentMessages";
 import { setActiveSet, useActiveSet } from "./hooks/useActiveSet";
 import { LS_KEY, flushAllPendingSaves, loadData, saveLocal, throttle } from "./hooks/useLocalData";
 import { callStudentApi, deleteStudentFromCloud, saveGlobalToCloud, saveStudentToCloud, sb } from "./lib/supabaseClient";
+import { useDataStore } from "./stores/useDataStore";
 import { BALL_URL, C, DAYS, EASE, F, JS2KEY, MIRROR_GRID, NON_COUNTING_KINDS, REST_PHRASES, SESS_KEY, TRAIN_PHRASES, glassPanel } from "./styles/tokens";
 import { mapAnamneseToFicha } from "./utils/assessment";
 import { playDisco, playFinishChime } from "./utils/audio";
@@ -44,8 +45,10 @@ import { buildDiary, computeRecords, daySummary, defaultSetPlan, emptyWeek, sort
 
 /* ------------------------------ app ------------------------------ */
 function CancioClub() {
-    const [data, setData] = useState(null);
-    const [ready, setReady] = useState(false);
+    const data = useDataStore((s) => s.data);
+    const setData = useDataStore((s) => s.setData);
+    const ready = useDataStore((s) => s.ready);
+    const setReady = useDataStore((s) => s.setReady);
     const [role, setRole] = useState(() => { try { return localStorage.getItem("cancio:lastRole") === "prof" ? "prof" : "aluno"; } catch (e) { return "aluno"; } });
     const [profTab, setProfTab] = useState("alunos");
     const [profView, setProfView] = useState("home");
@@ -128,8 +131,10 @@ function CancioClub() {
         year += 1;
     } return { year, month }; });
     const [loadingRoster, setLoadingRoster] = useState(false);
-    const [cloudSynced, setCloudSynced] = useState(true); // true = última gravação chegou na nuvem; false = só ficou salva localmente por enquanto
-    const [localFull, setLocalFull] = useState(false); // true = localStorage estourou a cota (ver saveLocal) — rede de segurança offline caiu
+    const cloudSynced = useDataStore((s) => s.cloudSynced); // true = última gravação chegou na nuvem; false = só ficou salva localmente por enquanto
+    const setCloudSynced = useDataStore((s) => s.setCloudSynced);
+    const localFull = useDataStore((s) => s.localFull); // true = localStorage estourou a cota (ver saveLocal) — rede de segurança offline caiu
+    const setLocalFull = useDataStore((s) => s.setLocalFull);
     const [isStandalone, setIsStandalone] = useState(true); // assume true até checar, pra não piscar o banner em quem já instalou
     const [typingActive, setTypingActive] = useState(false);
     const barSet = useActiveSet();
