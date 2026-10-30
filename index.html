@@ -2141,7 +2141,25 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
         };
     });
     const [rows, setRows] = useState(rowsFromLast);
-    useEffect(() => { setRows(rowsFromLast()); }, [ex.id]);
+    // Auto-Save (ver efeito mais abaixo) só pode disparar numa mudança FEITA PELO ALUNO. Sem isso,
+    // o pré-preenchimento com os números da sessão anterior (rowsFromLast) já contava como
+    // "mudança" pro auto-save, e 800ms depois de só abrir o cartão ele regravava os valores antigos
+    // como se fossem de hoje — a série aparecia concluída sem o aluno ter tocado em nada. `sigOf`
+    // registra o que já é "conhecido" assim que as linhas nascem (aqui) ou são repostas (efeito do
+    // ex.id logo abaixo), pra o auto-save só reagir ao que vier depois disso.
+    const sigOf = (r) => `${r.load}|${r.reps}`;
+    const lastAutoSaveSigRef = React.useRef({});
+    if (!lastAutoSaveSigRef.current.__seeded) {
+        rows.forEach((r) => { lastAutoSaveSigRef.current[r.setId] = sigOf(r); });
+        lastAutoSaveSigRef.current.__seeded = true;
+    }
+    useEffect(() => {
+        const fresh = rowsFromLast();
+        setRows(fresh);
+        const seeded = { __seeded: true };
+        fresh.forEach((r) => { seeded[r.setId] = sigOf(r); });
+        lastAutoSaveSigRef.current = seeded;
+    }, [ex.id]);
     const [restTrigger, setRestTrigger] = useState(0);
     // Modo Foco: em vez de exigir bater a contagem EXATA do plano (rígido demais pra treino fora de
     // ordem ou séries ajustadas na hora), considera concluído se a última série de trabalho da lista
@@ -2221,12 +2239,11 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     // já que a posição dela no array pode mudar durante a espera do debounce.
     const rowsRef = React.useRef(rows);
     rowsRef.current = rows;
-    const lastAutoSaveSigRef = React.useRef({});
     const autoSaveTimersRef = React.useRef({});
     useEffect(() => {
         rows.forEach((r) => {
             const key = r.setId;
-            const sig = `${r.load}|${r.reps}`;
+            const sig = sigOf(r);
             if (lastAutoSaveSigRef.current[key] === sig)
                 return; // não mudou desde o último agendamento
             lastAutoSaveSigRef.current[key] = sig;
