@@ -3,7 +3,6 @@ import { Field, TextArea } from "../shared/FormFields";
 import { MediaEmbed } from "../shared/MediaEmbed";
 import { PressStep } from "../shared/PressStep";
 import { Stat } from "../shared/Stat";
-import { ProgressChart } from "./ProgressChart";
 import { RestTimer } from "./RestTimer";
 import { activeSet, setActiveSet } from "../../hooks/useActiveSet";
 import { pendingFlushes } from "../../hooks/useLocalData";
@@ -11,6 +10,14 @@ import { C, EASE, F, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, glassPanel } f
 import { fmtDate, todayISO } from "../../utils/date";
 import { haptic, uidShort } from "../../utils/misc";
 import { currentLoad, daySummary, defaultSetPlan, lastReps, parseReps, planSummary, repsCeiling, sortedHistory } from "../../utils/workout";
+
+// Recharts (usada só aqui) é a maior dependência do bundle (~5MB de fonte, d3 incluso) — mas só
+// é realmente necessária quando um card é expandido e o gráfico de progressão é olhado de fato.
+// React.lazy adia o download/parse dela pra esse momento, em vez de pagar o custo em todo boot
+// do app (inclusive pra quem nunca abre um gráfico numa sessão). Adaptador .then(m => ({default}))
+// porque ProgressChart.jsx usa export nomeado, não default — padrão exigido pelo React.lazy.
+const ProgressChart = React.lazy(() => import("./ProgressChart").then((m) => ({ default: m.ProgressChart })));
+const chartFallback = React.createElement("div", { style: { height: 170, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 11, color: C.muted } }, "carregando gráfico…");
 
 function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpdate, onDeleteRecord, onMove, isFirst, isLast, sessionDone, onToggleDone, tint, onNote, isNextUp, dayDate, idx }) {
     const [date, setDate] = useState(dayDate || todayISO());
@@ -304,7 +311,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                             React.createElement("button", { onClick: () => setMetric("reps"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "reps" ? C.ink : C.muted, background: metric === "reps" ? C.silver : "transparent", border: `1px solid ${metric === "reps" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Reps"),
                             React.createElement("button", { onClick: () => setMetric("volume"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "volume" ? C.ink : C.muted, background: metric === "volume" ? C.silver : "transparent", border: `1px solid ${metric === "volume" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Tonelagem")),
                         React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: -4, marginBottom: 10 } }, metric === "volume" ? "tonelagem = soma de carga × reps de todas as séries de trabalho do dia" : "gráfico considera a série de trabalho mais pesada do dia"),
-                        React.createElement(ProgressChart, { ex: ex, metric: metric }))) : (React.createElement("div", { style: { marginBottom: 14 } },
+                        React.createElement(React.Suspense, { fallback: chartFallback }, React.createElement(ProgressChart, { ex: ex, metric: metric })))) : (React.createElement("div", { style: { marginBottom: 14 } },
                         React.createElement("button", { onClick: () => setShowHistory((v) => !v), style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: F.mono, fontSize: 11.5, letterSpacing: "0.03em", color: C.muted, background: "rgba(255,255,255,0.03)", border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer" } },
                             showHistory ? "Ocultar histórico e progressão" : "Ver histórico e progressão",
                             " ",
@@ -319,7 +326,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                                 React.createElement("button", { onClick: () => setMetric("reps"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "reps" ? C.ink : C.muted, background: metric === "reps" ? C.silver : "transparent", border: `1px solid ${metric === "reps" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Reps"),
                                 React.createElement("button", { onClick: () => setMetric("volume"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "volume" ? C.ink : C.muted, background: metric === "volume" ? C.silver : "transparent", border: `1px solid ${metric === "volume" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Tonelagem")),
                             React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: -4, marginBottom: 10 } }, metric === "volume" ? "tonelagem = soma de carga × reps de todas as séries de trabalho do dia" : "gráfico considera a série de trabalho mais pesada do dia"),
-                            React.createElement(ProgressChart, { ex: ex, metric: metric }))))),
+                            React.createElement(React.Suspense, { fallback: chartFallback }, React.createElement(ProgressChart, { ex: ex, metric: metric })))))),
                     role === "aluno" && (React.createElement(React.Fragment, null,
                         React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } },
                             React.createElement(Field, { label: "Data", type: "date", value: date, onChange: (e) => setDate(e.target.value), flex: "0 1 140px" }),

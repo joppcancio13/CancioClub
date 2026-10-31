@@ -9,7 +9,6 @@ import { TemplateBuilder } from "./components/professor/TemplateBuilder";
 import { TemplateCard } from "./components/professor/TemplateCard";
 import { LogoCard } from "./components/share/LogoCard";
 import { SerieExport } from "./components/share/SerieExport";
-import { ShareCard } from "./components/share/ShareCard";
 import { AddButton } from "./components/shared/AddButton";
 import { Celebration } from "./components/shared/Celebration";
 import { Disclaimer } from "./components/shared/Disclaimer";
@@ -42,6 +41,10 @@ import { genCode, greeting, haptic, noop, pickDailyPhrase, uid, uidShort } from 
 import { seed } from "./utils/seedData";
 import { computeStreak, lastCheckinLabel, streakTier, trainingWds } from "./utils/streak";
 import { buildDiary, computeRecords, daySummary, defaultSetPlan, emptyWeek, sortedHistory, workingProgress } from "./utils/workout";
+
+// 652 linhas de desenho em canvas, só usadas quando o aluno termina um treino e vê a tela de
+// compartilhar — React.lazy adia esse download pro momento real de uso, não pro boot do app.
+const ShareCard = React.lazy(() => import("./components/share/ShareCard").then((m) => ({ default: m.ShareCard })));
 
 /* ------------------------------ app ------------------------------ */
 function CancioClub() {
@@ -993,7 +996,7 @@ function CancioClub() {
         feedbackModal && React.createElement(FeedbackModal, { question: feedbackModal.question, onSend: (txt) => { submitFeedback(feedbackModal.sessionId, txt); const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); }, onSkip: () => { const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); } }),
-        shareCard && React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) }),
+        shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 12, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         serieOpen && profStudent && React.createElement(SerieExport, { student: profStudent, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, initialDay: day, onClose: () => setSerieOpen(false) }),
         role === "aluno" && alunoStudent && !alunoStudent.ackAt && React.createElement(Disclaimer, { onAccept: () => updateStudent(alunoId, { ackAt: new Date().toISOString() }) }),
