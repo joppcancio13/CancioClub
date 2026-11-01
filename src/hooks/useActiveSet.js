@@ -1,7 +1,7 @@
 import React from "react";
 
 // Série atual: o ExerciseCard aberto publica aqui a próxima série pendente; a faixa fixa do
-// rodapé (ActiveSetBar) lê isso e registra carga/reps sem o aluno precisar rolar de volta.
+// rodapé (BottomActionBar) lê isso e registra carga/reps sem o aluno precisar rolar de volta.
 const activeSet = { current: null, subs: new Set() };
 function setActiveSet(v) { activeSet.current = v; activeSet.subs.forEach((fn) => { try { fn(v); } catch (e) { } }); }
 function useActiveSet() {

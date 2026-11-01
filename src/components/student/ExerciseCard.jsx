@@ -4,11 +4,11 @@ import { Field, TextArea } from "../shared/FormFields";
 import { MediaEmbed } from "../shared/MediaEmbed";
 import { PressStep } from "../shared/PressStep";
 import { Stat } from "../shared/Stat";
-import { RestTimer } from "./RestTimer";
+import { RestTimer, useActiveRest } from "./RestTimer";
 import { activeSet, setActiveSet } from "../../hooks/useActiveSet";
 import { pendingFlushes } from "../../hooks/useLocalData";
-import { C, EASE, F, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, glassPanel } from "../../styles/tokens";
-import { fmtDate, todayISO } from "../../utils/date";
+import { C, EASE, F, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, PILL_OFF_SHADOW, PILL_ON, flatPanel, glassPanel } from "../../styles/tokens";
+import { fmtDate, mmss, todayISO } from "../../utils/date";
 import { haptic, uidShort } from "../../utils/misc";
 import { currentLoad, daySummary, defaultSetPlan, lastReps, parseReps, planSummary, repsCeiling, sortedHistory } from "../../utils/workout";
 
@@ -84,6 +84,13 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
         lastAutoSaveSigRef.current = seeded;
     }, [ex.id]);
     const [restTrigger, setRestTrigger] = useState(0);
+    // Descanso no card (redesign estético 4, item 5): o cronômetro em si ainda mora no RestTimer
+    // (mantido montado, só sem UI própria — ver abaixo), mas o canto do card onde a carga normalmente
+    // fica vira o anel de contagem regressiva enquanto o descanso DESTE exercício está rodando.
+    const activeRest = useActiveRest();
+    const isResting = role === "aluno" && !!activeRest && activeRest.key === "cancio:rt:" + ex.id;
+    const [, forceRestTick] = useState(0);
+    useEffect(() => { if (!isResting) return; const id = setInterval(() => forceRestTick((n) => n + 1), 250); return () => clearInterval(id); }, [isResting, activeRest && activeRest.key]);
     // Modo Foco: em vez de exigir bater a contagem EXATA do plano (rígido demais pra treino fora de
     // ordem ou séries ajustadas na hora), considera concluído se a última série de trabalho da lista
     // já foi registrada hoje, OU se o aluno confirmou manualmente pelo botão "Concluir Exercício"
@@ -247,47 +254,63 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     }, [role, expanded, pendingIdx, ex.id, ex.name, pendingRow && pendingRow.load, pendingRow && pendingRow.reps]);
     // Modo Foco: exercício concluído hoje + recolhido -> cartão fino, só nome + check, pra limpar a rolagem
     if (!expanded && role === "aluno" && isFullyLogged && !settling) {
-        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...glassPanel, borderRadius: 22, overflow: "hidden" } },
-            React.createElement("button", { onClick: () => onToggle(ex.id), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" } },
-                React.createElement("span", { style: { flex: 1, fontFamily: F.body, fontSize: 13.5, color: C.muted } }, ex.name),
-                React.createElement("span", { style: { color: C.amber, fontFamily: F.mono, fontSize: 15 } }, "\u2713"))));
+        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...flatPanel, borderRadius: 22, overflow: "hidden" } },
+            React.createElement("button", { onClick: () => onToggle(ex.id), style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" } },
+                React.createElement("span", { style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ex.name),
+                cur > 0 && React.createElement("span", { style: { flexShrink: 0, fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 15, color: C.silver } }, cur + " kg"),
+                React.createElement("div", { style: { flexShrink: 0, display: "flex", gap: 2.5 } }, workingPlanCount > 0 && Array.from({ length: workingPlanCount }).map((_, i) => React.createElement("span", { key: i, style: { width: 10, height: 6, borderRadius: 2, backgroundImage: PILL_ON, boxShadow: "none" } }))))));
     }
     // exercício "pulado" (aluno decidiu não fazer hoje) + recolhido -> cartão apagado, nome riscado, sem poluir a lista mental
     if (!expanded && role === "aluno" && isSkipped && !hasAnySetToday && !settling) {
-        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...glassPanel, borderRadius: 22, overflow: "hidden", opacity: 0.55, transition: "opacity .4s ease" } },
+        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...flatPanel, borderRadius: 22, overflow: "hidden", opacity: 0.55, transition: "opacity .4s ease" } },
             React.createElement("button", { onClick: () => onToggle(ex.id), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" } },
                 React.createElement("span", { style: { flex: 1, fontFamily: F.body, fontSize: 13.5, color: C.muted, textDecoration: "line-through" } }, ex.name),
                 React.createElement("span", { style: { fontFamily: F.mono, fontSize: 9.5, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase" } }, "pulado"))));
     }
-    return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { position: "relative", ...glassPanel, borderRadius: 26, overflow: "hidden", opacity: settling ? 0.55 : 1, boxShadow: prGlow ? `0 0 0 1.5px ${C.amber}, 0 0 28px ${C.amber}88, 0 8px 32px rgba(0,0,0,0.4)` : isNextUp ? `0 0 0 1.5px ${tint || C.amber}, 0 0 22px ${(tint || C.amber)}55, 0 8px 32px rgba(0,0,0,0.4)` : glassPanel.boxShadow, transition: "opacity .4s ease, box-shadow .5s ease" } },
+    const shell = role === "aluno" ? flatPanel : glassPanel;
+    const nextSetLabel = (() => { if (!pendingRow) return null; const warmupsBefore = rows.slice(0, pendingIdx + 1).filter((r) => r.kind === "warmup").length; return "S" + (pendingIdx + 1 - warmupsBefore); })();
+    return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { position: "relative", ...shell, borderRadius: 26, overflow: "hidden", opacity: settling ? 0.55 : 1, boxShadow: prGlow ? `0 0 0 1.5px ${C.amber}, 0 0 28px ${C.amber}88, 0 8px 32px rgba(0,0,0,0.4)` : isNextUp ? `0 0 0 1.5px ${tint || C.amber}, 0 0 22px ${(tint || C.amber)}55, 0 8px 32px rgba(0,0,0,0.4)` : shell.boxShadow, transition: "opacity .4s ease, box-shadow .5s ease" } },
         isNextUp && React.createElement("div", { style: { position: "absolute", top: 10, left: 18, zIndex: 2, fontFamily: F.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.ink, background: tint || C.amber, borderRadius: 999, padding: "3px 9px", animation: "cc-glow 2.2s ease-in-out infinite" } }, "Comece aqui"),
         React.createElement("div", { style: { position: "absolute", top: 16, right: 16, width: 7, height: 7, borderRadius: "50%", background: tint || C.line, zIndex: 1, boxShadow: tint ? `0 0 10px 2px ${tint}88` : "none" } }),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: isNextUp ? "34px 18px 16px" : "16px 18px" } },
             React.createElement("button", { onClick: () => onToggle(ex.id), style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 12, background: "transparent", border: "none", cursor: "pointer", textAlign: "left", padding: 0 } },
-                React.createElement("div", { style: { flexShrink: 0, width: 38, height: 38, borderRadius: 12, background: `linear-gradient(145deg, ${(tint || C.amber)}30, ${(tint || C.amber)}0a)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: tint || C.amber } }, (role === "prof" && idx) ? String(idx) : ex.name.charAt(0).toUpperCase()),
+                role === "prof" && React.createElement("div", { style: { flexShrink: 0, width: 38, height: 38, borderRadius: 12, background: `linear-gradient(145deg, ${(tint || C.amber)}30, ${(tint || C.amber)}0a)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: tint || C.amber } }, idx ? String(idx) : ex.name.charAt(0).toUpperCase()),
                 React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                     React.createElement("div", { style: { fontFamily: F.display, fontSize: 17, color: C.text, fontWeight: 700, letterSpacing: "-0.015em" } }, ex.name),
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 12, color: C.muted, marginTop: 3 } },
-                        planSummary(ex),
-                        ex.rest ? ` · desc ${ex.rest}s` : "",
-                        ex.url ? React.createElement("span", { style: { color: C.silver } }, " \u00B7 v\u00EDdeo") : "",
-                        ex.note ? React.createElement("span", { style: { color: C.amber } }, " \u00B7 obs") : "")),
-                React.createElement("div", { style: { textAlign: "right" } },
+                        isResting && activeRest ? ("pr\u00F3xima: " + (nextSetLabel || "\u2014") + (cur ? " \u00B7 " + cur + " kg" : "")) : React.createElement(React.Fragment, null,
+                            planSummary(ex),
+                            ex.rest ? ` · desc ${ex.rest}s` : "",
+                            ex.url ? React.createElement("span", { style: { color: C.silver } }, " \u00B7 v\u00EDdeo") : "",
+                            ex.note ? React.createElement("span", { style: { color: C.amber } }, " \u00B7 obs") : ""))),
+                isResting && activeRest ? (() => {
+                    const remaining = Math.max(0, Math.ceil((activeRest.endTime - Date.now()) / 1000));
+                    const p = activeRest.total > 0 ? Math.min(100, Math.max(0, (1 - remaining / activeRest.total) * 100)) : 0;
+                    const ringR = 32, ringC = 2 * Math.PI * ringR;
+                    return React.createElement("div", { style: { position: "relative", flexShrink: 0, width: 76, height: 76 } },
+                        React.createElement("svg", { width: 76, height: 76, viewBox: "0 0 76 76" },
+                            React.createElement("circle", { cx: 38, cy: 38, r: ringR, fill: "none", stroke: C.line2, strokeWidth: 4 }),
+                            React.createElement("circle", { cx: 38, cy: 38, r: ringR, fill: "none", stroke: C.silver, strokeWidth: 4, strokeLinecap: "round", strokeDasharray: ringC, strokeDashoffset: ringC * (1 - p / 100), transform: "rotate(-90 38 38)", style: { transition: "stroke-dashoffset .3s linear" } })),
+                        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" } },
+                            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 18, color: C.text, fontVariantNumeric: "tabular-nums" } }, mmss(remaining)),
+                            React.createElement("span", { style: { fontFamily: F.mono, fontSize: 7, letterSpacing: "0.1em", color: C.muted, marginTop: 1 } }, "DESCANSO")));
+                })() : React.createElement("div", { style: { textAlign: "right" } },
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 22 } },
                         ceilingHit && React.createElement("span", { title: "Teto de reps atingido \u2014 hora de subir a carga", style: { color: C.amber, marginRight: 5 } }, "\u2191"),
                         React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, letterSpacing: "-0.03em", color: "#FFFFFF", fontSize: 27 } }, cur),
                         React.createElement("span", { style: { fontSize: 12, fontWeight: 500, color: C.muted } }, " kg")),
-                    React.createElement("div", { style: { display: "inline-flex", fontFamily: F.mono, fontSize: 10.5, fontWeight: 600, color: delta >= 0 ? C.ink : C.muted, background: delta >= 0 ? C.amber : "rgba(255,255,255,0.08)", borderRadius: 999, padding: "2px 8px", marginTop: 5 } },
-                        delta >= 0 ? "+" : "",
-                        delta,
-                        " kg")),
+                    role === "aluno"
+                        ? (delta !== 0 && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, fontWeight: 600, color: C.muted, marginTop: 5, textAlign: "right" } }, (delta >= 0 ? "+" : "") + delta + " kg"))
+                        : React.createElement("div", { style: { display: "inline-flex", fontFamily: F.mono, fontSize: 10.5, fontWeight: 600, color: delta >= 0 ? C.ink : C.muted, background: delta >= 0 ? C.amber : "rgba(255,255,255,0.08)", borderRadius: 999, padding: "2px 8px", marginTop: 5 } },
+                            delta >= 0 ? "+" : "",
+                            delta,
+                            " kg")),
                 React.createElement("span", { style: { color: C.muted, fontFamily: F.mono, fontSize: 13, transform: expanded ? "rotate(90deg)" : "none", transition: "transform .2s" } }, "\u203A")),
             role === "aluno" && !hasAnySetToday && (React.createElement("button", { onClick: () => { if (expanded)
                     onToggle(ex.id); if (!isSkipped)
-                    startSettle(); setIsSkipped((v) => !v); }, style: { flexShrink: 0, fontFamily: F.mono, fontSize: 10.5, color: isSkipped ? C.silver : C.muted, background: C.panel2, border: "none", borderRadius: 999, padding: "7px 11px", cursor: "pointer" } }, isSkipped ? "Desfazer" : "Saltar"))),
-        role === "aluno" && workingPlanCount > 0 && React.createElement("div", { style: { padding: "0 18px 14px" } },
-            React.createElement("div", { style: { height: 3, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden", animation: (workingPlanCount - workingToday.length === 1) ? "cc-glow 1.4s ease-in-out infinite" : "none" } },
-                React.createElement("div", { style: { height: "100%", width: `${Math.min(100, Math.round((workingToday.length / workingPlanCount) * 100))}%`, background: tint || C.amber, borderRadius: 3, transition: "width .3s" } }))),
+                    startSettle(); setIsSkipped((v) => !v); }, style: { flexShrink: 0, fontFamily: F.mono, fontSize: 10.5, color: isSkipped ? C.silver : C.muted, background: C.panel2, border: "none", borderRadius: 999, padding: "7px 11px", cursor: "pointer" } }, isSkipped ? "Desfazer" : "Pular exerc\u00EDcio"))),
+        role === "aluno" && workingPlanCount > 0 && React.createElement("div", { style: { display: "flex", gap: 2.5, padding: "0 18px 14px" } },
+            Array.from({ length: workingPlanCount }).map((_, i) => React.createElement("span", { key: i, style: { width: 22, height: 8, borderRadius: 3, backgroundImage: i < workingToday.length ? PILL_ON : undefined, boxShadow: i < workingToday.length ? "none" : PILL_OFF_SHADOW, animation: (i === workingToday.length) ? "cc-glow 1.4s ease-in-out infinite" : "none" } }))),
         React.createElement("div", { className: `cc-accordion${expanded ? " cc-open" : ""}` },
             React.createElement("div", { className: "cc-accordion-inner" },
                 React.createElement("div", { style: { borderTop: `1px solid ${C.line}`, padding: 16 } },
@@ -301,7 +324,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                     ex.url && (React.createElement("div", { style: { marginBottom: 14 } },
                         React.createElement("button", { onClick: () => setShowVideo((v) => !v), style: { fontFamily: F.mono, fontSize: 12, letterSpacing: "0.03em", color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 14px", cursor: "pointer" } }, showVideo ? "Ocultar demonstração" : "Ver demonstração"),
                         showVideo && React.createElement(MediaEmbed, { url: ex.url }))),
-                    role === "aluno" && React.createElement(RestTimer, { seconds: ex.rest, autoStart: restTrigger, overrideSeconds: lastSavedKind === "warmup" ? 60 : undefined, timerKey: ex.id }),
+                    role === "aluno" && React.createElement(RestTimer, { seconds: ex.rest, autoStart: restTrigger, overrideSeconds: lastSavedKind === "warmup" ? 60 : undefined, timerKey: ex.id, hidden: true }),
                     role === "prof" ? (React.createElement(React.Fragment, null,
                         React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 14 } },
                             React.createElement(Stat, { value: `${cur}`, label: "carga (kg)", accent: C.silver }),
@@ -343,11 +366,13 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                             const isWork = r.kind !== "warmup";
                             const repsIsComposite = /[+/]/.test(String(r.reps));
                             const formatLoad = (v) => (Number.isInteger(v) ? String(v) : String(Math.round(v * 2) / 2));
+                            const isPending = role === "aluno" && i === pendingIdx;
                             const kindLabel = isChild ? null
-                                : r.kind === "warmup" ? `Aquec. · alvo ${r.targetReps}`
-                                    : r.kind === "recon" ? `Reconhec. · alvo ${r.targetReps}`
-                                        : `S${i + 1 - plan.slice(0, i + 1).filter((s) => NON_COUNTING_KINDS.has(s.kind)).length} · alvo ${r.targetReps}`;
-                            return (React.createElement("div", { key: r.setId, className: flashId === r.setId ? "cc-flash-row" : "", style: { background: "rgba(255,255,255,0.03)", borderRadius: 18, padding: "10px 10px", marginLeft: isChild ? 24 : 0, opacity: isWork ? 1 : 0.6, boxShadow: saved ? `inset 0 0 0 1.5px ${C.amber}55` : "none" } },
+                                : isPending ? "AGORA"
+                                    : r.kind === "warmup" ? `Aquec. · alvo ${r.targetReps}`
+                                        : r.kind === "recon" ? `Reconhec. · alvo ${r.targetReps}`
+                                            : `S${i + 1 - plan.slice(0, i + 1).filter((s) => NON_COUNTING_KINDS.has(s.kind)).length} · alvo ${r.targetReps}`;
+                            return (React.createElement("div", { key: r.setId, className: flashId === r.setId ? "cc-flash-row" : "", style: { background: "rgba(255,255,255,0.03)", borderRadius: 18, padding: "10px 10px", marginLeft: isChild ? 24 : 0, opacity: isWork ? 1 : 0.6, boxShadow: saved ? `inset 0 0 0 1.5px ${C.amber}55` : isPending ? `inset 0 0 0 1.5px ${C.line2}` : "none" } },
                                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 } },
                                     React.createElement("button", { onClick: () => setRowKind(i, KIND_CYCLE[(KIND_CYCLE.indexOf(r.kind) + 1) % KIND_CYCLE.length]), style: { background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 } },
                                         React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: r.kind === "warmup" ? C.muted : r.kind === "recon" ? C.amber : C.text } }, isChild ? React.createElement(React.Fragment, null,

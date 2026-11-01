@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { C, F, glassPanel } from "../../styles/tokens";
+import { C, F, flatPanel } from "../../styles/tokens";
 import { fmtDateTime } from "../../utils/date";
 
 function StudentMessages({ messages, onSend }) {
     const [text, setText] = useState("");
     const send = () => { if (!text.trim())
         return; onSend(text.trim()); setText(""); };
-    return (React.createElement("div", { style: { ...glassPanel, borderRadius: 22, padding: 16, marginTop: 18 } },
+    return (React.createElement("div", { style: { ...flatPanel, borderRadius: 22, padding: 16, marginTop: 18 } },
         React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, marginBottom: 12 } }, "Recado para o professor"),
         React.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), rows: 2, placeholder: "Ex.: senti dor no ombro no supino hoje.", style: { width: "100%", boxSizing: "border-box", fontFamily: F.body, fontSize: 14, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", outline: "none", resize: "vertical", lineHeight: 1.5 } }),
         React.createElement("button", { onClick: send, disabled: !text.trim(), style: { marginTop: 10, width: "100%", fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: C.ink, background: text.trim() ? C.silver : C.line, border: "none", borderRadius: 10, padding: "11px", cursor: text.trim() ? "pointer" : "default" } }, "Enviar recado"),

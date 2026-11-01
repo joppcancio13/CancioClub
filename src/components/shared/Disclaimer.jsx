@@ -1,11 +1,11 @@
 import React from "react";
 import { DiscoBall } from "./DiscoBall";
-import { C, F, glassPanel } from "../../styles/tokens";
+import { C, F, flatPanel } from "../../styles/tokens";
 
 /* ----------------------- termo de responsabilidade --------------- */
 function Disclaimer({ onAccept }) {
     return (React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 100, display: "grid", placeItems: "center", background: "rgba(8,9,12,.86)", padding: 18 } },
-        React.createElement("div", { style: { ...glassPanel, borderRadius: 26, maxWidth: 420, width: "100%", padding: "26px 22px", maxHeight: "88vh", overflowY: "auto" } },
+        React.createElement("div", { style: { ...flatPanel, borderRadius: 26, maxWidth: 420, width: "100%", padding: "26px 22px", maxHeight: "88vh", overflowY: "auto" } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14 } },
                 React.createElement(DiscoBall, { size: 30, seedN: 5 }),
                 React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 16, letterSpacing: "0.04em" } }, "Antes de come\u00E7ar")),

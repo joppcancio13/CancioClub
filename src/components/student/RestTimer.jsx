@@ -4,7 +4,7 @@ import { beep } from "../../utils/audio";
 import { mmss } from "../../utils/date";
 
 /* ----------------------- cronômetro descanso --------------------- */
-function RestTimer({ seconds, autoStart, overrideSeconds, timerKey }) {
+function RestTimer({ seconds, autoStart, overrideSeconds, timerKey, hidden }) {
     const base = seconds && seconds > 0 ? seconds : 60;
     const rtKey = timerKey ? `cancio:rt:${timerKey}` : null;
     // se esse mesmo exercício já tinha um descanso rodando (o card foi recolhido e reaberto,
@@ -96,7 +96,7 @@ function RestTimer({ seconds, autoStart, overrideSeconds, timerKey }) {
         setDone(false);
     };
     const reset = () => { setRunning(false); setEndTime(null); setRemaining(total); setDone(false); clearPersisted(); };
-    // a barra fixa de descanso (FloatingTimer) manda +15 / pular por evento — sem isso o cartão e a barra divergiam
+    // a barra fixa do rodapé (BottomActionBar) manda +15 / pular por evento — sem isso o cartão e a barra divergiam
     useEffect(() => {
         if (!rtKey) return;
         const onEv = (e) => { const d = e.detail || {}; if (d.key !== rtKey) return; if (d.action === "add") add(15); else reset(); };
@@ -104,6 +104,10 @@ function RestTimer({ seconds, autoStart, overrideSeconds, timerKey }) {
         return () => window.removeEventListener("cancio:rt", onEv);
     });
     const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
+    // a UI própria (presets/pausar/reiniciar) saiu do redesign estético 4 — o componente continua
+    // montado (ticking + persistência em sessionStorage + autoStart) porque é o dono do estado;
+    // só quem mostra o descanso agora é o anel no cabeçalho do ExerciseCard e o rodapé (BottomActionBar).
+    if (hidden) return null;
     const accent = done ? C.warn : running ? C.amber : C.silver;
     const ringR = 14, ringC = 2 * Math.PI * ringR;
     return (React.createElement("div", { style: { background: "rgba(255,255,255,0.03)", border: `1px solid ${done ? C.warn : "rgba(255,255,255,0.08)"}`, borderRadius: 14, padding: 9, marginBottom: 10, transition: "border-color .3s" } },

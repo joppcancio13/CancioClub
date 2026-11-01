@@ -4,11 +4,11 @@ import React from "react";
 /*  Cancio Club                                                        */
 /* ================================================================== */
 const C = {
-    ink: "#05060A", panel: "#0F1218", panel2: "#171B22", line: "#23262E",
+    ink: "#05060A", panel: "#0E1015", panel2: "#171B22", line: "#1E222A", line2: "#2E333D",
     text: "#F2F5FA", muted: "#7D8698", silver: "#C6D2E4", amber: "#DCE4F0", amberDim: "#2A303B", warn: "#E8794B",
 };
 const cardShadow = "0 1px 0 rgba(255,255,255,.05) inset, 0 22px 48px rgba(0,0,0,.42), 0 3px 10px rgba(0,0,0,.3)";
-// vidro fosco — usado em todos os painéis/cartões principais no lugar do preenchimento sólido C.panel
+// vidro fosco — usado nos painéis do professor (mantém a profundidade translúcida original)
 const glassPanel = {
     borderRadius: 24,
     background: "linear-gradient(168deg, rgba(23,27,34,0.72), rgba(11,13,18,0.74))",
@@ -17,6 +17,17 @@ const glassPanel = {
     border: "1px solid rgba(198,210,228,0.10)",
     boxShadow: "0 18px 40px rgba(0,0,0,0.5)",
 };
+// fundo chapado, só com fio — usado nas telas do aluno no lugar do glassPanel (redesign estético 4:
+// "sem glassPanel/sombras, fundo chapado, cards só com fio")
+const flatPanel = {
+    borderRadius: 24,
+    background: C.ink,
+    boxShadow: `inset 0 0 0 1px ${C.line}`,
+};
+// pílula de progresso/seleção "acesa" (handoff: linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889))
+// e "vazia" (inset 0 0 0 1px #2A2E37)
+const PILL_ON = "linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)";
+const PILL_OFF_SHADOW = "inset 0 0 0 1px #2A2E37";
 const F = {
     display: "'Archivo', system-ui, sans-serif",
     body: "'Archivo', system-ui, sans-serif",
@@ -147,4 +158,4 @@ const ASSESSMENT_CSS = `
 .cc-assess-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(10,10,12,0.35); border-top-color:#0A0A0C; animation: cc-boot-spin .7s linear infinite; flex-shrink:0; }
 `;
 const ASSESSMENT_TEMPO_SESSAO_LABELS = { "45min": "45 min", "60min": "60 min", "90min": "+1 hora" };
-export { C, cardShadow, glassPanel, F, EASE, DAYS, JS2KEY, MILESTONES, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, TRAIN_PHRASES, REST_PHRASES, SHARE_PHRASES, GREET_MANHA, GREET_TARDE, GREET_NOITE, SESS_KEY, FEEDBACK_QUESTIONS, BALL_URL, SPARKLE_SPOTS, MIRROR_GRID, SELO_URL, SEAL_MARK_URL, DIARY_EFFORT_LABELS, CALENDAR_WEEKDAY_SHORT, EMPTY_ICON_PATHS, ASSESSMENT_TEMPO_TREINO_OPTIONS, ASSESSMENT_OBJETIVO_OPTIONS, ASSESSMENT_DIAS_OPTIONS, ASSESSMENT_TEMPO_SESSAO_OPTIONS, ASSESSMENT_ESTRESSE_OPTIONS, assessmentLabelStyle, ASSESSMENT_CSS, ASSESSMENT_TEMPO_SESSAO_LABELS };
+export { C, cardShadow, glassPanel, flatPanel, PILL_ON, PILL_OFF_SHADOW, F, EASE, DAYS, JS2KEY, MILESTONES, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, TRAIN_PHRASES, REST_PHRASES, SHARE_PHRASES, GREET_MANHA, GREET_TARDE, GREET_NOITE, SESS_KEY, FEEDBACK_QUESTIONS, BALL_URL, SPARKLE_SPOTS, MIRROR_GRID, SELO_URL, SEAL_MARK_URL, DIARY_EFFORT_LABELS, CALENDAR_WEEKDAY_SHORT, EMPTY_ICON_PATHS, ASSESSMENT_TEMPO_TREINO_OPTIONS, ASSESSMENT_OBJETIVO_OPTIONS, ASSESSMENT_DIAS_OPTIONS, ASSESSMENT_TEMPO_SESSAO_OPTIONS, ASSESSMENT_ESTRESSE_OPTIONS, assessmentLabelStyle, ASSESSMENT_CSS, ASSESSMENT_TEMPO_SESSAO_LABELS };
