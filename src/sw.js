@@ -13,7 +13,7 @@
 //   Isso teria que ficar sempre fresco da rede — cachear resultaria em ver
 //   dados desatualizados até muito tempo depois de a internet voltar.
 
-const CACHE_NAME = "cancio-club-v30";
+const CACHE_NAME = "cancio-club-v31";
 
 // self.__WB_MANIFEST é substituído em build time (vite-plugin-pwa, strategy "injectManifest")
 // pela lista real de assets com hash ([{url, revision}, ...]) — por isso o pré-cache não precisa

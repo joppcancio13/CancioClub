@@ -79,7 +79,7 @@ const FEEDBACK_QUESTIONS = [
     "Como foi o pique hoje?", "Valeu o esforço? Conta pra gente.", "Missão cumprida! Como foi?",
     "Como está se sentindo depois do treino?", "Deixa aqui como foi o seu treino.",
 ];
-const BALL_URL = "selo-bola-transparente.png?v=13";
+const BALL_URL = "selo-bola-transparente.png?v=14";
 // pontinhos de brilho fixos (sem jitter entre renders) ao redor da bola — assinatura "disco club"
 const SPARKLE_SPOTS = [
     { x: -6, y: 4, delay: 0, size: 5 },
@@ -95,7 +95,7 @@ const MIRROR_GRID = (px) => `linear-gradient(90deg,#05060A ${px * 0.17}px,transp
 // baixa/exibe uma imagem, sem gastar tempo de CPU redesenhando a bola toda vez.
 // (nome anterior apontava para "selo-cancio-club-transparente.png", um arquivo que nunca
 // chegou a existir no projeto — por isso o selo parava de aparecer/baixar.)
-const SELO_URL = "selo-cancio-club.png?v=13";
+const SELO_URL = "selo-cancio-club.png?v=14";
 // versão só-a-bola, fundo transparente, sem o texto "CANCIO CLUB" — usada como selo decorativo
 // dentro dos cards de compartilhamento (a marca com texto completo fica só no LogoCard)
 const SEAL_MARK_URL = BALL_URL;
