@@ -20,70 +20,80 @@ const MUSCLE_TO_GROUP = {
     reto_abdominal: "Abdômen", transverso: "Abdômen", obliquos: "Abdômen", core: "Abdômen", eretores_espinha: "Abdômen",
 };
 
-// ordem de exibição — superior pra inferior, core por último (músculo fora do mapa acima cai num
-// grupo "Outros" ao final, nunca some silenciosamente)
+// ordem de exibição de desempate — a lista final é sempre reordenada do maior pro menor total
+// (redesign estético 4, item 7); isso só decide a ordem entre grupos empatados ou com volume zero
 const GROUP_ORDER = ["Peitoral", "Costas", "Ombros", "Bíceps", "Tríceps", "Quadríceps", "Isquiotibiais", "Glúteos", "Adutores", "Panturrilha", "Abdômen"];
 
 // mesmo critério de "série que conta de verdade" já usado no resto do app (NON_COUNTING_KINDS em
 // utils/workout.js) — aquecimento/reconhecimento não entram no volume de treino
 const NON_COUNTING_KINDS = new Set(["warmup", "recon"]);
 
-function countValidSets(ex) {
-    if (Array.isArray(ex.setPlan) && ex.setPlan.length) {
-        return ex.setPlan.filter((s) => !NON_COUNTING_KINDS.has(s.kind)).length;
-    }
-    const n = typeof ex.sets === "number" ? ex.sets : parseInt(ex.sets, 10);
-    return Number.isFinite(n) ? n : 0;
+// semana segunda-domingo (mesma convenção de DAYS/JS2KEY no resto do app), com offset em semanas:
+// 0 = semana atual, -1 = semana passada
+function getWeekRange(weekOffset = 0, today = new Date()) {
+    const d = new Date(today);
+    d.setHours(0, 0, 0, 0);
+    const dow = d.getDay(); // 0=dom..6=sáb
+    const mondayDelta = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + mondayDelta + weekOffset * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const iso = (x) => x.toISOString().slice(0, 10);
+    return { startISO: iso(monday), endISO: iso(sunday) };
 }
 
-// Função pura: recebe a lista de exercícios de UM dia da ficha (o formato real de
-// data.workouts[studentId][day] — cada item com `catalogId` opcional, `sets`/`setPlan`) e devolve
-// o volume agregado por músculo fino em "séries equivalentes". Um exercício sem `catalogId` (ou
-// com um catalogId que não existe no catálogo) não derruba o cálculo — só é listado em `unmatched`.
-function calculateWorkoutVolume(exercisesList, catalog = exerciseCatalog) {
-    const totals = {}; // músculo fino -> séries equivalentes (soma de todas as frações)
-    const directTotals = {}; // músculo fino -> só a parcela onde a fração é 1.0 (motor primário de verdade)
+// conta séries de trabalho REGISTRADAS (histórico, não o plano) de um exercício dentro de um
+// intervalo de datas — cobre tanto o formato atual (h.entries, uma série por item) quanto um
+// formato antigo mais raro (um valor de carga direto em h.load, sem array de entries: conta como 1)
+function countLoggedWorkingSetsInRange(ex, startISO, endISO) {
+    let n = 0;
+    (ex.history || []).forEach((h) => {
+        if (!h || h.date < startISO || h.date > endISO) return;
+        if (Array.isArray(h.entries)) {
+            n += h.entries.filter((e) => !NON_COUNTING_KINDS.has(e.kind) && e.load !== undefined && e.load !== null && e.load !== "").length;
+        } else if (h.load !== undefined && h.load !== null && h.load !== "") {
+            n += 1;
+        }
+    });
+    return n;
+}
+
+// Função pura: recebe TODOS os exercícios da semana de um aluno (qualquer formato com `_day`
+// opcional, como allEx já montado em App.jsx) e devolve o volume por músculo fino em pastilhas —
+// uma pastilha por série de trabalho REGISTRADA que toca aquele músculo (ver ativacao no
+// catálogo). Sem peso de fração e sem separar direto/indireto: "é só a contagem" (redesign
+// estético 4, item 7) — um exercício sem `catalogId` (ou com um catalogId fora do catálogo) não
+// derruba o cálculo, só é listado em `unmatched` quando tem um plano de séries de trabalho.
+function calculateWeeklyVolume(allExercises, weekOffset = 0, catalog = exerciseCatalog) {
+    const { startISO, endISO } = getWeekRange(weekOffset);
+    const totals = {}; // músculo fino -> nº de pastilhas (toques)
     const unmatched = [];
 
-    (exercisesList || []).forEach((ex) => {
-        const entry = ex && ex.catalogId ? catalog[ex.catalogId] : null;
+    (allExercises || []).forEach((ex) => {
+        if (!ex) return;
+        const entry = ex.catalogId ? catalog[ex.catalogId] : null;
         if (!entry) {
-            if (ex && ex.name) unmatched.push(ex.name);
+            const hasWorkingPlan = Array.isArray(ex.setPlan) ? ex.setPlan.some((s) => !NON_COUNTING_KINDS.has(s.kind)) : !!(ex.sets && ex.sets > 0);
+            if (ex.name && hasWorkingPlan && !ex.excludeFromVolume) unmatched.push({ id: ex.id, name: ex.name, day: ex._day });
             return;
         }
-        const validSets = countValidSets(ex);
-        if (!validSets) return;
-        Object.entries(entry.ativacao || {}).forEach(([musculo, fracao]) => {
-            const add = validSets * fracao;
-            totals[musculo] = (totals[musculo] || 0) + add;
-            if (fracao >= 1) directTotals[musculo] = (directTotals[musculo] || 0) + add;
+        const sets = countLoggedWorkingSetsInRange(ex, startISO, endISO);
+        if (!sets) return;
+        Object.keys(entry.ativacao || {}).forEach((musculo) => {
+            totals[musculo] = (totals[musculo] || 0) + sets;
         });
     });
 
-    return { totals, directTotals, unmatched };
+    return { totals, unmatched, startISO, endISO };
 }
 
 // Monta o relatório pronto pra exibição em duas camadas: grupo muscular amplo (linha principal,
-// com o total somado de todos os músculos finos dentro dele) e, dentro de cada grupo, o
-// detalhamento por músculo fino. "Sobrecarga indireta" continua calculada no nível fino — um
-// músculo que nunca é motor primário em nada desse treino (fração nunca chega a 1.0) mas já
-// acumulou volume comparável a um grupamento treinado de propósito (limiar de 6 séries-
-// equivalentes, ajustável) — e o grupo em si ganha um aviso se QUALQUER músculo dentro dele
-// estiver nessa situação, convidando a abrir o detalhamento pra ver qual.
-const SYNERGIST_OVERLOAD_THRESHOLD = 6;
-
-function buildVolumeReport(exercisesList, catalog = exerciseCatalog) {
-    const { totals, directTotals, unmatched } = calculateWorkoutVolume(exercisesList, catalog);
-    const muscles = Object.keys(totals);
-    const maxMuscleTotal = Math.max(1, ...muscles.map((m) => totals[m]));
-
-    const muscleRows = muscles.map((musculo) => {
-        const total = totals[musculo];
-        const direct = directTotals[musculo] || 0;
-        const indirect = total - direct;
-        const overloaded = direct === 0 && indirect >= SYNERGIST_OVERLOAD_THRESHOLD;
-        return { musculo, total, direct, indirect, overloaded, pct: total / maxMuscleTotal };
-    });
+// pastilha de 12px por série) e, dentro de cada grupo, o detalhamento por músculo fino (pastilha
+// de 8px). Grupos do maior total pro menor.
+function buildWeeklyVolumeReport(allExercises, weekOffset = 0, catalog = exerciseCatalog) {
+    const { totals, unmatched, startISO, endISO } = calculateWeeklyVolume(allExercises, weekOffset, catalog);
+    const muscleRows = Object.keys(totals).map((musculo) => ({ musculo, total: totals[musculo] }));
 
     const byGroup = {};
     muscleRows.forEach((r) => {
@@ -92,16 +102,16 @@ function buildVolumeReport(exercisesList, catalog = exerciseCatalog) {
     });
 
     const groupTotalOf = (rows) => rows.reduce((sum, r) => sum + r.total, 0);
-    const maxGroupTotal = Math.max(1, ...Object.values(byGroup).map(groupTotalOf));
-
     const orderedLabels = [...GROUP_ORDER.filter((g) => byGroup[g]), ...Object.keys(byGroup).filter((g) => !GROUP_ORDER.includes(g))];
-    const groups = orderedLabels.map((label) => {
-        const rows = byGroup[label].slice().sort((a, b) => b.total - a.total);
-        const total = groupTotalOf(rows);
-        return { label, total, pct: total / maxGroupTotal, hasOverload: rows.some((r) => r.overloaded), rows };
-    });
+    const groups = orderedLabels
+        .map((label) => {
+            const rows = byGroup[label].slice().sort((a, b) => b.total - a.total);
+            return { label, total: groupTotalOf(rows), rows };
+        })
+        .sort((a, b) => b.total - a.total);
 
-    return { groups, unmatched, maxGroupTotal };
+    const totalSets = groups.reduce((sum, g) => sum + g.total, 0);
+    return { groups, unmatched, totalSets, startISO, endISO };
 }
 
-export { calculateWorkoutVolume, buildVolumeReport, countValidSets, MUSCLE_TO_GROUP, GROUP_ORDER, SYNERGIST_OVERLOAD_THRESHOLD };
+export { calculateWeeklyVolume, buildWeeklyVolumeReport, countLoggedWorkingSetsInRange, getWeekRange, MUSCLE_TO_GROUP, GROUP_ORDER };
