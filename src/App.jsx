@@ -11,7 +11,7 @@ import { VolumeDashboard } from "./components/professor/VolumeDashboard";
 import { LogoCard } from "./components/share/LogoCard";
 import { SerieExport } from "./components/share/SerieExport";
 import { AddButton } from "./components/shared/AddButton";
-import { CatalogSelect } from "./components/shared/CatalogSelect";
+import { CatalogPicker } from "./components/shared/CatalogPicker";
 import { Celebration } from "./components/shared/Celebration";
 import { Disclaimer } from "./components/shared/Disclaimer";
 import { DiscoBall } from "./components/shared/DiscoBall";
@@ -1251,7 +1251,7 @@ function CancioClub() {
                                             e.url ? React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.silver } }, " \u00B7 v\u00EDdeo") : "")))))))),
                                 React.createElement(Field, { label: "Exerc\u00EDcio", type: "text", placeholder: "Ex.: Agachamento livre", value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }) }),
                                 React.createElement("div", { style: { marginTop: 12 } },
-                                    React.createElement(CatalogSelect, { label: "Ligar ao cat\u00E1logo (volume por m\u00FAsculo)", value: form.catalogId, onChange: (v) => setForm({ ...form, catalogId: v }) })),
+                                    React.createElement(CatalogPicker, { label: "Ligar ao cat\u00E1logo (volume por m\u00FAsculo)", value: form.catalogId, onChange: (v) => setForm({ ...form, catalogId: v }) })),
                                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } },
                                     React.createElement(Field, { label: "S\u00E9ries", type: "text", inputMode: "numeric", value: form.sets, onChange: (e) => setForm({ ...form, sets: e.target.value }), flex: "1 1 0" }),
                                     React.createElement(Field, { label: "Reps", type: "text", value: form.reps, onChange: (e) => setForm({ ...form, reps: e.target.value }), flex: "1 1 0" }),

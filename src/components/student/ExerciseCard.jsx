@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CatalogSelect } from "../shared/CatalogSelect";
+import { CatalogPicker } from "../shared/CatalogPicker";
 import { Field, TextArea } from "../shared/FormFields";
 import { MediaEmbed } from "../shared/MediaEmbed";
 import { PressStep } from "../shared/PressStep";
@@ -391,7 +391,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                         React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, margin: "4px 0 8px" } }, "Editar exerc\u00EDcio"),
                         React.createElement(Field, { label: "Nome", type: "text", value: f.name, onChange: (e) => setF({ ...f, name: e.target.value }), onBlur: () => f.name.trim() && commit({ name: f.name.trim() }) }),
                         React.createElement("div", { style: { marginTop: 10 } },
-                            React.createElement(CatalogSelect, { label: "Ligar ao catálogo (volume por músculo)", value: ex.catalogId, onChange: (v) => commit({ catalogId: v || undefined }) })),
+                            React.createElement(CatalogPicker, { label: "Ligar ao catálogo (volume por músculo)", value: ex.catalogId, onChange: (v) => commit({ catalogId: v || undefined }) })),
                         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
                             React.createElement(Field, { label: "Descanso (s)", type: "text", inputMode: "numeric", placeholder: "\u2014", value: f.rest, onChange: (e) => setF({ ...f, rest: e.target.value }), onBlur: () => commit({ rest: num(f.rest) }), flex: "1 1 0" })),
                         React.createElement(TextArea, { label: "Observa\u00E7\u00E3o para o aluno", rows: 2, placeholder: "Ex.: des\u00E7a controlado, 3s na fase exc\u00EAntrica.", value: f.note, onChange: (e) => setF({ ...f, note: e.target.value }), onBlur: () => commit({ note: f.note.trim() || undefined }) }),

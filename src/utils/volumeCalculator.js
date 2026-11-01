@@ -1,13 +1,28 @@
 import { exerciseCatalog } from "../data/exerciseCatalog";
 
-// Agrupamento de exibição — "Outros" recebe qualquer músculo do catálogo que apareça no treino
-// mas não esteja mapeado aqui (defensivo: o catálogo pode crescer com músculos novos sem quebrar
-// o dashboard, só cai num grupo genérico em vez de sumir).
-const MUSCLE_GROUPS = {
-    "Membros Superiores": ["peitoral", "dorsais", "trapezio", "romboides", "deltoide_anterior", "deltoide_posterior", "biceps", "triceps", "triceps_cabeça_longa", "braquial", "braquiorradial", "antebraco"],
-    "Membros Inferiores": ["quadriceps", "isquiotibiais", "gluteos", "gluteo_medio", "gluteo_minimo", "adutores", "panturrilhas", "reto_femoral", "iliopsoas"],
-    "Core": ["eretores_espinha"],
+// Casa de cada músculo fino (como aparece em `ativacao`) com sua porção muscular ampla — é aqui,
+// não por categoria de exercício, que o volume se agrupa: gluteo_maximo sempre entra em "Glúteos"
+// mesmo quando ativado por um agachamento (exercício de Quadríceps). Cobre tanto os nomes
+// detalhados (vasto_lateral, biceps_cabeca_longa...) quanto os genéricos que aparecem na seção
+// Ombros do catálogo (triceps, trapezio, biceps) — ver aviso sobre essa mistura na resposta.
+const MUSCLE_TO_GROUP = {
+    latissimo_dorso: "Costas", redondos: "Costas", trapezio_inferior: "Costas", trapezio_medio: "Costas",
+    trapezio_superior: "Costas", trapezio: "Costas", romboides: "Costas",
+    biceps_cabeca_longa: "Bíceps", biceps_cabeca_curta: "Bíceps", biceps: "Bíceps", braquial: "Bíceps", braquiorradial: "Bíceps",
+    peitoral_esternocostal: "Peitoral", peitoral_clavicular: "Peitoral", peitoral_menor: "Peitoral",
+    deltoide_anterior: "Ombros", deltoide_lateral: "Ombros", deltoide_posterior: "Ombros",
+    triceps_longa: "Tríceps", triceps_lateral: "Tríceps", triceps_medial: "Tríceps", triceps: "Tríceps",
+    vasto_lateral: "Quadríceps", vasto_medial: "Quadríceps", vasto_intermedio: "Quadríceps", reto_femoral: "Quadríceps", iliopsoas: "Quadríceps",
+    isquiotibiais: "Isquiotibiais",
+    gluteo_maximo: "Glúteos", gluteo_medio: "Glúteos", gluteo_minimo: "Glúteos",
+    adutores: "Adutores",
+    gastrocnemio: "Panturrilha", soleo: "Panturrilha",
+    reto_abdominal: "Abdômen", transverso: "Abdômen", obliquos: "Abdômen", core: "Abdômen", eretores_espinha: "Abdômen",
 };
+
+// ordem de exibição — superior pra inferior, core por último (músculo fora do mapa acima cai num
+// grupo "Outros" ao final, nunca some silenciosamente)
+const GROUP_ORDER = ["Peitoral", "Costas", "Ombros", "Bíceps", "Tríceps", "Quadríceps", "Isquiotibiais", "Glúteos", "Adutores", "Panturrilha", "Abdômen"];
 
 // mesmo critério de "série que conta de verdade" já usado no resto do app (NON_COUNTING_KINDS em
 // utils/workout.js) — aquecimento/reconhecimento não entram no volume de treino
@@ -23,11 +38,11 @@ function countValidSets(ex) {
 
 // Função pura: recebe a lista de exercícios de UM dia da ficha (o formato real de
 // data.workouts[studentId][day] — cada item com `catalogId` opcional, `sets`/`setPlan`) e devolve
-// o volume agregado por músculo em "séries equivalentes". Um exercício sem `catalogId` (ou com um
-// catalogId que não existe no catálogo) não derruba o cálculo — só é listado em `unmatched`.
+// o volume agregado por músculo fino em "séries equivalentes". Um exercício sem `catalogId` (ou
+// com um catalogId que não existe no catálogo) não derruba o cálculo — só é listado em `unmatched`.
 function calculateWorkoutVolume(exercisesList, catalog = exerciseCatalog) {
-    const totals = {}; // músculo -> séries equivalentes (soma de todas as frações)
-    const directTotals = {}; // músculo -> só a parcela onde a fração é 1.0 (motor primário de verdade)
+    const totals = {}; // músculo fino -> séries equivalentes (soma de todas as frações)
+    const directTotals = {}; // músculo fino -> só a parcela onde a fração é 1.0 (motor primário de verdade)
     const unmatched = [];
 
     (exercisesList || []).forEach((ex) => {
@@ -48,36 +63,45 @@ function calculateWorkoutVolume(exercisesList, catalog = exerciseCatalog) {
     return { totals, directTotals, unmatched };
 }
 
-// Monta o relatório pronto pra exibição: agrupado por bloco corporal, ordenado por volume, com a
-// flag de "sobrecarga indireta" — músculo que nunca é motor primário em nada desse treino (fração
-// nunca chega a 1.0) mas mesmo assim já acumulou volume comparável a um grupamento treinado de
-// propósito (limiar de 6 séries-equivalentes é um ponto de partida razoável, não uma lei física —
-// ajustável conforme a realidade de cada ficha).
+// Monta o relatório pronto pra exibição em duas camadas: grupo muscular amplo (linha principal,
+// com o total somado de todos os músculos finos dentro dele) e, dentro de cada grupo, o
+// detalhamento por músculo fino. "Sobrecarga indireta" continua calculada no nível fino — um
+// músculo que nunca é motor primário em nada desse treino (fração nunca chega a 1.0) mas já
+// acumulou volume comparável a um grupamento treinado de propósito (limiar de 6 séries-
+// equivalentes, ajustável) — e o grupo em si ganha um aviso se QUALQUER músculo dentro dele
+// estiver nessa situação, convidando a abrir o detalhamento pra ver qual.
 const SYNERGIST_OVERLOAD_THRESHOLD = 6;
 
 function buildVolumeReport(exercisesList, catalog = exerciseCatalog) {
     const { totals, directTotals, unmatched } = calculateWorkoutVolume(exercisesList, catalog);
     const muscles = Object.keys(totals);
-    const maxTotal = Math.max(1, ...muscles.map((m) => totals[m]));
+    const maxMuscleTotal = Math.max(1, ...muscles.map((m) => totals[m]));
 
-    const rows = muscles
-        .map((musculo) => {
-            const total = totals[musculo];
-            const direct = directTotals[musculo] || 0;
-            const indirect = total - direct;
-            const overloaded = direct === 0 && indirect >= SYNERGIST_OVERLOAD_THRESHOLD;
-            return { musculo, total, direct, indirect, overloaded, pct: total / maxTotal };
-        })
-        .sort((a, b) => b.total - a.total);
+    const muscleRows = muscles.map((musculo) => {
+        const total = totals[musculo];
+        const direct = directTotals[musculo] || 0;
+        const indirect = total - direct;
+        const overloaded = direct === 0 && indirect >= SYNERGIST_OVERLOAD_THRESHOLD;
+        return { musculo, total, direct, indirect, overloaded, pct: total / maxMuscleTotal };
+    });
 
-    const grouped = new Set(Object.values(MUSCLE_GROUPS).flat());
-    const groups = Object.entries(MUSCLE_GROUPS)
-        .map(([label, list]) => ({ label, rows: rows.filter((r) => list.includes(r.musculo)) }))
-        .filter((g) => g.rows.length);
-    const leftover = rows.filter((r) => !grouped.has(r.musculo));
-    if (leftover.length) groups.push({ label: "Outros", rows: leftover });
+    const byGroup = {};
+    muscleRows.forEach((r) => {
+        const g = MUSCLE_TO_GROUP[r.musculo] || "Outros";
+        (byGroup[g] = byGroup[g] || []).push(r);
+    });
 
-    return { groups, unmatched, maxTotal };
+    const groupTotalOf = (rows) => rows.reduce((sum, r) => sum + r.total, 0);
+    const maxGroupTotal = Math.max(1, ...Object.values(byGroup).map(groupTotalOf));
+
+    const orderedLabels = [...GROUP_ORDER.filter((g) => byGroup[g]), ...Object.keys(byGroup).filter((g) => !GROUP_ORDER.includes(g))];
+    const groups = orderedLabels.map((label) => {
+        const rows = byGroup[label].slice().sort((a, b) => b.total - a.total);
+        const total = groupTotalOf(rows);
+        return { label, total, pct: total / maxGroupTotal, hasOverload: rows.some((r) => r.overloaded), rows };
+    });
+
+    return { groups, unmatched, maxGroupTotal };
 }
 
-export { calculateWorkoutVolume, buildVolumeReport, countValidSets, MUSCLE_GROUPS, SYNERGIST_OVERLOAD_THRESHOLD };
+export { calculateWorkoutVolume, buildVolumeReport, countValidSets, MUSCLE_TO_GROUP, GROUP_ORDER, SYNERGIST_OVERLOAD_THRESHOLD };
