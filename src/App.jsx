@@ -7,9 +7,11 @@ import { PSEModal } from "./components/professor/PSEModal";
 import { RecoverySection } from "./components/professor/RecoverySection";
 import { TemplateBuilder } from "./components/professor/TemplateBuilder";
 import { TemplateCard } from "./components/professor/TemplateCard";
+import { VolumeDashboard } from "./components/professor/VolumeDashboard";
 import { LogoCard } from "./components/share/LogoCard";
 import { SerieExport } from "./components/share/SerieExport";
 import { AddButton } from "./components/shared/AddButton";
+import { CatalogSelect } from "./components/shared/CatalogSelect";
 import { Celebration } from "./components/shared/Celebration";
 import { Disclaimer } from "./components/shared/Disclaimer";
 import { DiscoBall } from "./components/shared/DiscoBall";
@@ -100,7 +102,7 @@ function CancioClub() {
     const [tplName, setTplName] = useState("");
     const [nStudent, setNStudent] = useState("");
     const [studentSearch, setStudentSearch] = useState("");
-    const [form, setForm] = useState({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "" });
+    const [form, setForm] = useState({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "", catalogId: "" });
     const [pickLib, setPickLib] = useState(false);
     const [libFilter, setLibFilter] = useState("");
     const [celebration, setCelebration] = useState(null);
@@ -391,7 +393,7 @@ function CancioClub() {
         setShareCard({ isWeeklySummary: true, name: focusStudent.name, freqWeek, streak, tint: tier.tint, dateLabel: "Nesta semana", weeklyVolume, weeklyTime: timeStr });
     };
     const addExercise = () => { const name = form.name.trim(); if (!name || !focusId)
-        return; const loadN = parseFloat(String(form.load).replace(",", ".")); const restN = parseInt(form.rest); const ex = { id: uid(), name, sets: parseInt(form.sets) || 1, reps: form.reps || "1", rest: isNaN(restN) ? undefined : restN, note: form.note.trim() || undefined, url: form.url.trim() || undefined, setPlan: defaultSetPlan(form.sets, form.reps), history: isNaN(loadN) ? [] : [{ date: dayDate, load: loadN }] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = [...(w[day] || []), ex]; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); setForm({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "" }); setAdding(false); setPickLib(false); setExpanded(ex.id); };
+        return; const loadN = parseFloat(String(form.load).replace(",", ".")); const restN = parseInt(form.rest); const ex = { id: uid(), name, sets: parseInt(form.sets) || 1, reps: form.reps || "1", rest: isNaN(restN) ? undefined : restN, note: form.note.trim() || undefined, url: form.url.trim() || undefined, catalogId: form.catalogId || undefined, setPlan: defaultSetPlan(form.sets, form.reps), history: isNaN(loadN) ? [] : [{ date: dayDate, load: loadN }] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = [...(w[day] || []), ex]; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); setForm({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "", catalogId: "" }); setAdding(false); setPickLib(false); setExpanded(ex.id); };
     // marca o início do treino sozinho, na 1ª série do dia — sem botão, sem cronômetro visível (só guarda o horário pra calcular a duração depois)
     const markWorkoutStarted = React.useCallback(() => {
         if (workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO())
@@ -1099,7 +1101,7 @@ function CancioClub() {
                                     React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 20, letterSpacing: "0.16em", color: C.text } }, ps.code))));
                         const statB = (v, l) => React.createElement("span", null, React.createElement("b", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 16, color: C.text } }, v), " " + l);
                         const chips = [ps.clinicalAlert && "Alerta \u00B7 " + ps.clinicalAlert, lastEffortFor(profId) === "destruidor" && "Fadiga \u00B7 \u00FAltimo treino Destruidor", !ps.ackAt && "Termo pendente"].filter(Boolean);
-                        const tabs = React.createElement("div", { style: { display: "flex", gap: 4, marginTop: 14, padding: 4, borderRadius: 12, background: C.panel } }, [["treino", "Treino"], ["rend", "Rendimento"], ["ficha", "Ficha"]].map(([k, l]) => React.createElement("button", { key: k, onClick: () => { setFichaTab(k); setRendEx(null); }, style: { flex: 1, padding: 9, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, fontWeight: fichaTab === k ? 700 : 500, background: fichaTab === k ? "#1E222A" : "transparent", color: fichaTab === k ? C.text : C.muted } }, l)));
+                        const tabs = React.createElement("div", { style: { display: "flex", gap: 4, marginTop: 14, padding: 4, borderRadius: 12, background: C.panel } }, [["treino", "Treino"], ["rend", "Rendimento"], ["volume", "Volume"], ["ficha", "Ficha"]].map(([k, l]) => React.createElement("button", { key: k, onClick: () => { setFichaTab(k); setRendEx(null); }, style: { flex: 1, padding: 9, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, fontWeight: fichaTab === k ? 700 : 500, background: fichaTab === k ? "#1E222A" : "transparent", color: fichaTab === k ? C.text : C.muted } }, l)));
                         let body = null;
                         const wkP = (data.workouts && data.workouts[profId]) || emptyWeek();
                         const allEx = []; DAYS.forEach((d) => (wkP[d.key] || []).forEach((e) => allEx.push({ ...e, _day: d.key })));
@@ -1174,6 +1176,11 @@ function CancioClub() {
                                     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, fontFamily: F.body, fontSize: 13 } }, React.createElement("span", null, fmtDate(x.date) + " \u00B7 " + ((DAYS.find((d) => d.key === x.day) || {}).short || x.day || "")), React.createElement("span", { style: { color: C.muted } }, [x.durationSec ? fmtDur(x.durationSec) : "", x.effort ? ({ facil: "f\u00E1cil", medida: "na medida", destruidor: "destruidor", descanso: "recupera\u00E7\u00E3o" }[x.effort] || x.effort) : ""].filter(Boolean).join(" \u00B7 "))),
                                     x.feedback && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12.5, lineHeight: 1.4, color: "#C9D0DC", marginTop: 4 } }, "\u201C" + x.feedback + "\u201D"))));
                         }
+                        else if (fichaTab === "volume") {
+                            body = React.createElement("div", { className: "cc-view", style: { marginTop: 16 } },
+                                React.createElement("div", { style: { ...tiny, marginBottom: 12 } }, "VOLUME POR MÚSCULO · " + dayFull.toUpperCase()),
+                                React.createElement(VolumeDashboard, { list: list }));
+                        }
                         else if (fichaTab === "ficha") {
                             body = React.createElement("div", { className: "cc-view", style: { marginTop: 6 } },
                                 React.createElement(FichaEditor, { student: ps, onSave: (patch) => updateStudent(profId, patch) }),
@@ -1243,6 +1250,8 @@ function CancioClub() {
                                             e.tag && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 9, letterSpacing: "0.04em", color: C.ink, background: C.silver, borderRadius: 999, padding: "2px 7px", marginLeft: 7 } }, e.tag),
                                             e.url ? React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.silver } }, " \u00B7 v\u00EDdeo") : "")))))))),
                                 React.createElement(Field, { label: "Exerc\u00EDcio", type: "text", placeholder: "Ex.: Agachamento livre", value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }) }),
+                                React.createElement("div", { style: { marginTop: 12 } },
+                                    React.createElement(CatalogSelect, { label: "Ligar ao cat\u00E1logo (volume por m\u00FAsculo)", value: form.catalogId, onChange: (v) => setForm({ ...form, catalogId: v }) })),
                                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } },
                                     React.createElement(Field, { label: "S\u00E9ries", type: "text", inputMode: "numeric", value: form.sets, onChange: (e) => setForm({ ...form, sets: e.target.value }), flex: "1 1 0" }),
                                     React.createElement(Field, { label: "Reps", type: "text", value: form.reps, onChange: (e) => setForm({ ...form, reps: e.target.value }), flex: "1 1 0" }),

@@ -399,3 +399,16 @@ export const exerciseCatalog = {
     ativacao: { adutores: 1.0 }
   }
 };
+
+// Agrupado por categoria pra popular o <select> de vínculo no editor de ficha (CatalogSelect) —
+// dado estático, computado uma vez aqui em vez de recalcular em cada componente que o usa.
+const catalogByCategory = (() => {
+    const groups = {};
+    Object.values(exerciseCatalog).forEach((entry) => {
+        const cat = entry.categoria || "Outros";
+        (groups[cat] = groups[cat] || []).push(entry);
+    });
+    return Object.entries(groups).map(([categoria, entries]) => ({ categoria, entries: entries.slice().sort((a, b) => a.nome.localeCompare(b.nome)) }));
+})();
+
+export { catalogByCategory };
