@@ -60,14 +60,24 @@ function countLoggedWorkingSetsInRange(ex, startISO, endISO) {
 }
 
 // Função pura: recebe TODOS os exercícios da semana de um aluno (qualquer formato com `_day`
-// opcional, como allEx já montado em App.jsx) e devolve o volume por músculo fino em pastilhas —
-// uma pastilha por série de trabalho REGISTRADA que toca aquele músculo (ver ativacao no
-// catálogo). Sem peso de fração e sem separar direto/indireto: "é só a contagem" (redesign
-// estético 4, item 7) — um exercício sem `catalogId` (ou com um catalogId fora do catálogo) não
-// derruba o cálculo, só é listado em `unmatched` quando tem um plano de séries de trabalho.
+// opcional, como allEx já montado em App.jsx) e devolve o volume em pastilhas — uma pastilha por
+// série de trabalho REGISTRADA. Sem peso de fração e sem separar direto/indireto: "é só a
+// contagem" (redesign estético 4, item 7) — um exercício sem `catalogId` (ou com um catalogId
+// fora do catálogo) não derruba o cálculo, só é listado em `unmatched` quando tem um plano de
+// séries de trabalho.
+//
+// Duas contagens propositalmente diferentes (ver buildWeeklyVolumeReport):
+// - `totals` (por músculo FINO): quantas séries tocaram cada cabeça/porção específica — útil pra
+//   ver onde o volume realmente foi, mas NÃO dá pra somar pra achar o total do grupo.
+// - `groupTotals` (por GRUPO amplo): quantas séries tocaram o grupo, contando CADA SÉRIE UMA VEZ
+//   SÓ por grupo, mesmo quando o exercício ativa várias cabeças do mesmo grupo ao mesmo tempo —
+//   um agachamento ativa vasto lateral + medial + intermédio + reto femoral juntos, mas é uma
+//   série só de Quadríceps, não quatro. Sem isso o total do grupo multiplicava pelo nº de cabeças
+//   que o exercício lista, inflando o volume e tornando o contador inútil pra esse fim.
 function calculateWeeklyVolume(allExercises, weekOffset = 0, catalog = exerciseCatalog) {
     const { startISO, endISO } = getWeekRange(weekOffset);
     const totals = {}; // músculo fino -> nº de pastilhas (toques)
+    const groupTotals = {}; // grupo amplo -> nº de séries que tocaram o grupo (deduplicado por exercício)
     const unmatched = [];
 
     (allExercises || []).forEach((ex) => {
@@ -80,19 +90,22 @@ function calculateWeeklyVolume(allExercises, weekOffset = 0, catalog = exerciseC
         }
         const sets = countLoggedWorkingSetsInRange(ex, startISO, endISO);
         if (!sets) return;
-        Object.keys(entry.ativacao || {}).forEach((musculo) => {
-            totals[musculo] = (totals[musculo] || 0) + sets;
-        });
+        const musculos = Object.keys(entry.ativacao || {});
+        musculos.forEach((musculo) => { totals[musculo] = (totals[musculo] || 0) + sets; });
+        const gruposDoExercicio = new Set(musculos.map((m) => MUSCLE_TO_GROUP[m] || "Outros"));
+        gruposDoExercicio.forEach((g) => { groupTotals[g] = (groupTotals[g] || 0) + sets; });
     });
 
-    return { totals, unmatched, startISO, endISO };
+    return { totals, groupTotals, unmatched, startISO, endISO };
 }
 
 // Monta o relatório pronto pra exibição em duas camadas: grupo muscular amplo (linha principal,
-// pastilha de 12px por série) e, dentro de cada grupo, o detalhamento por músculo fino (pastilha
-// de 8px). Grupos do maior total pro menor.
+// pastilha de 12px por série — total já deduplicado, nunca multiplicado pelas cabeças do grupo) e,
+// dentro dele, o detalhamento por músculo fino (pastilha de 8px, mostrando quantas dessas séries
+// tocaram cada cabeça especificamente — pode não bater com o total do grupo, de propósito).
+// Grupos do maior total pro menor.
 function buildWeeklyVolumeReport(allExercises, weekOffset = 0, catalog = exerciseCatalog) {
-    const { totals, unmatched, startISO, endISO } = calculateWeeklyVolume(allExercises, weekOffset, catalog);
+    const { totals, groupTotals, unmatched, startISO, endISO } = calculateWeeklyVolume(allExercises, weekOffset, catalog);
     const muscleRows = Object.keys(totals).map((musculo) => ({ musculo, total: totals[musculo] }));
 
     const byGroup = {};
@@ -101,15 +114,17 @@ function buildWeeklyVolumeReport(allExercises, weekOffset = 0, catalog = exercis
         (byGroup[g] = byGroup[g] || []).push(r);
     });
 
-    const groupTotalOf = (rows) => rows.reduce((sum, r) => sum + r.total, 0);
     const orderedLabels = [...GROUP_ORDER.filter((g) => byGroup[g]), ...Object.keys(byGroup).filter((g) => !GROUP_ORDER.includes(g))];
     const groups = orderedLabels
         .map((label) => {
             const rows = byGroup[label].slice().sort((a, b) => b.total - a.total);
-            return { label, total: groupTotalOf(rows), rows };
+            return { label, total: groupTotals[label] || 0, rows };
         })
         .sort((a, b) => b.total - a.total);
 
+    // soma entre grupos DIFERENTES conta de propósito mais de uma vez a mesma série (ex.: supino
+    // soma pra Peitoral E Tríceps) — cada grupo é uma "moeda" de volume separada; só dentro de um
+    // mesmo grupo é que uma série não pode valer mais de uma pastilha (ver groupTotals acima)
     const totalSets = groups.reduce((sum, g) => sum + g.total, 0);
     return { groups, unmatched, totalSets, startISO, endISO };
 }
