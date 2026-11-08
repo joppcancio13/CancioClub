@@ -1,44 +1,47 @@
 import React, { useState } from "react";
-import { ASSESSMENT_TEMPO_SESSAO_LABELS, C, F } from "../../styles/tokens";
+import { C, F } from "../../styles/tokens";
+import { SECTIONS } from "./AssessmentInicial";
 
-// Anamnese completa que o aluno respondeu — mostrada por inteiro aqui, mesmo as respostas que
-// mapAnamneseToFicha também copiou pros campos reais da ficha (objetivo, frequência, restrições,
-// grupos de ênfase). Antes só os 5 campos sem destino na ficha apareciam aqui e os outros ficavam
-// só com um texto genérico dizendo "já foi aplicado abaixo" — o professor não tinha como conferir
-// a resposta de verdade do aluno sem caçar nos campos de texto da ficha (restrições, por exemplo,
-// vem misturada ali dentro de "Restrições / alertas clínicos" com qualquer nota do professor).
-function AssessmentSummary({ assessment, assessmentAt, onRequestNew, forStudent }) {
+// anamnese completa pro professor: todas as respostas, agrupadas pelas mesmas seções que o aluno
+// preencheu. Respostas "sim" na triagem de saúde ficam no tom de alerta.
+const fmt = (st, v) => { if (v == null || String(v).trim() === "") return null; const o = (st.options || []).find((x) => x.value === v); return o ? o.label : String(v); };
+function AssessmentSummary({ assessment: a, assessmentAt, onRequestNew }) {
+    const [open, setOpen] = useState(false);
     const [confirming, setConfirming] = useState(false);
-    const stat = (label, value) => value && React.createElement("div", { style: { flex: "1 1 84px" } },
-        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.muted } }, label),
-        React.createElement("div", { style: { fontFamily: F.body, fontSize: 14.5, color: C.text, marginTop: 3 } }, value));
-    const line = (label, value) => value && React.createElement("div", { style: { marginTop: 10 } },
-        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.muted } }, label),
-        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.text, marginTop: 3, lineHeight: 1.45, whiteSpace: "pre-wrap" } }, value));
-    return React.createElement("div", { style: { border: "1px solid #2a2a2a", borderRadius: 16, padding: "14px 16px", marginBottom: 16 } },
-        React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 12 } },
-            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: C.amber } }, "Anamnese Inicial"),
-            assessmentAt && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted } }, "preenchido em " + new Date(assessmentAt).toLocaleDateString("pt-BR"))),
-        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12 } },
-            stat("Idade", assessment.idade && assessment.idade + " anos"),
-            stat("Peso", assessment.peso && assessment.peso + " kg"),
-            stat("Altura", assessment.altura && assessment.altura + " cm"),
-            stat("Treina há", assessment.tempoTreino),
-            stat("Sono/estresse", assessment.estresseSono)),
-        line("Objetivo", assessment.objetivo),
-        line("Frequência desejada", assessment.diasSemana && `${assessment.diasSemana}x na semana` + (assessment.tempoSessao ? ` · ${ASSESSMENT_TEMPO_SESSAO_LABELS[assessment.tempoSessao] || assessment.tempoSessao} por sessão` : "")),
-        line("Lesões / restrições relatadas", assessment.lesoes),
-        line("Medicamento contínuo", assessment.medicamentos),
-        line("Grupos com ênfase pedidos pelo aluno", assessment.gruposEnfase),
-        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 12, lineHeight: 1.5 } }, forStudent
-            ? "Essas respostas também foram usadas pra montar sua ficha (objetivo, frequência, restrições, observações) — o professor pode ajustar esses campos a qualquer momento, sem alterar o que você respondeu aqui."
-            : "Essas respostas também foram copiadas pros campos da ficha abaixo (objetivo, frequência, restrições, observações) — editáveis a qualquer momento, sem afetar o que o aluno respondeu aqui."),
-        onRequestNew && React.createElement("div", { style: { marginTop: 12, paddingTop: 12, borderTop: "1px solid #2a2a2a" } },
+    const groups = SECTIONS.filter((s) => s.key !== "enviar").map((s) => {
+        const rows = [];
+        s.steps.forEach((st) => {
+            if (st.showIf && !st.showIf(a)) return;
+            if (st.type === "photo") return;
+            if (st.type === "fields") { st.fields.forEach((fd) => { const v = fmt(fd, a[fd.key]); if (v) rows.push({ q: fd.label, v }); }); if (s.key === "voce" && a.idade) rows.splice(1, 0, { q: "Idade", v: a.idade + " anos" }); return; }
+            if (st.type === "yn") { const yes = a[st.key] === "sim"; if (a[st.key] == null) return; rows.push({ q: st.q, v: yes ? "Sim" + (a[st.key + "Detalhe"] ? " \u2014 " + a[st.key + "Detalhe"] : "") : "N\u00E3o", alert: yes }); return; }
+            const v = fmt(st, a[st.key]); rows.push({ q: st.q, v: v || "\u2014", empty: !v });
+        });
+        return { title: s.title, rows };
+    });
+    const flags = (a.saudeAlertas || []).length;
+    const quick = [["Idade", a.idade && a.idade + " anos"], ["Peso", a.peso && a.peso + " kg"], ["Altura", a.altura && a.altura + " cm"], ["Objetivo", a.objetivo]].filter((x) => x[1]);
+    const btn = { minHeight: 44, fontFamily: F.body, fontSize: 13, fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer" };
+    return React.createElement("div", { style: { borderRadius: 16, boxShadow: `inset 0 0 0 1px ${C.line2}`, padding: "14px 16px", marginBottom: 16 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 } },
+            React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text } }, "Anamnese"),
+            assessmentAt && React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted } }, "respondida em " + new Date(assessmentAt).toLocaleDateString("pt-BR"))),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "10px 16px", marginTop: 12 } }, quick.map(([l, v]) => React.createElement("div", { key: l, style: { flex: "1 1 80px" } },
+            React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted } }, l),
+            React.createElement("div", { style: { fontFamily: F.body, fontSize: 15, color: C.text, marginTop: 2 } }, v)))),
+        flags > 0 && React.createElement("div", { style: { marginTop: 12, fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: C.warn } }, (a.saudeAlertas || []).join(" \u00B7 ")),
+        React.createElement("button", { onClick: () => setOpen((v) => !v), style: { ...btn, color: C.silver, marginTop: 6 } }, open ? "Recolher respostas" : "Ver todas as respostas \u203A"),
+        open && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 18, marginTop: 6 } }, groups.map((g) => React.createElement("div", { key: g.title },
+            React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.muted, marginBottom: 8 } }, g.title),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, g.rows.map((r, i) => React.createElement("div", { key: i },
+                React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, lineHeight: 1.35 } }, r.q),
+                React.createElement("div", { style: { fontFamily: F.body, fontSize: 15, lineHeight: 1.4, marginTop: 2, whiteSpace: "pre-wrap", color: r.alert ? C.warn : r.empty ? "#5A6273" : C.text } }, r.v))))))),
+        onRequestNew && React.createElement("div", { style: { marginTop: 12, paddingTop: 4, borderTop: `1px solid ${C.line}` } },
             !confirming
-                ? React.createElement("button", { onClick: () => setConfirming(true), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.04em", color: C.muted, background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline" } }, "Solicitar nova anamnese")
-                : React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" } },
-                    React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.text } }, forStudent ? "Você vai preencher de novo no seu próximo acesso. Confirma?" : "O aluno vai preencher de novo no próximo acesso. Confirma?"),
-                    React.createElement("button", { onClick: () => { onRequestNew(); setConfirming(false); }, style: { fontFamily: F.mono, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", color: C.amber, background: "none", border: "none", padding: 0, cursor: "pointer" } }, "Confirmar"),
-                    React.createElement("button", { onClick: () => setConfirming(false), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.04em", color: C.muted, background: "none", border: "none", padding: 0, cursor: "pointer" } }, "Cancelar"))));
+                ? React.createElement("button", { onClick: () => setConfirming(true), style: { ...btn, color: C.muted, textDecoration: "underline" } }, "Solicitar nova anamnese")
+                : React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" } },
+                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.text } }, "O aluno preenche de novo no pr\u00F3ximo acesso. Confirma?"),
+                    React.createElement("button", { onClick: () => { onRequestNew(); setConfirming(false); }, style: { ...btn, fontWeight: 700, color: C.text } }, "Confirmar"),
+                    React.createElement("button", { onClick: () => setConfirming(false), style: { ...btn, color: C.muted } }, "Cancelar"))));
 }
 export { AssessmentSummary };

@@ -1,19 +1,23 @@
-import { ASSESSMENT_TEMPO_SESSAO_LABELS, DAYS } from "../styles/tokens";
+import { DAYS } from "../styles/tokens";
+import { SECTIONS } from "../components/assessment/AssessmentInicial";
 import { planSummary } from "./workout";
 
-// ficha + anamnese em página imprimível — o aluno/professor salva como PDF pelo "Imprimir" do
-// celular. Usa um iframe escondido (window.open é bloqueado em PWA no iOS).
+// ficha + anamnese em página imprimível — o aluno/professor salva como PDF pelo "Imprimir" do celular.
+// Usa um iframe escondido (window.open é bloqueado em PWA no iOS).
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 function printStudent({ student, week, dayNames, includeAnamnese = true, includePrivate = false }) {
     const a = student.assessment || {};
     const days = DAYS.filter((d) => (week[d.key] || []).length).map((d) => `<h3>${esc((dayNames || {})[d.key] || d.full)}</h3><table>${(week[d.key] || []).map((ex) => `<tr><td>${esc(ex.name)}${ex.note ? `<div class="n">${esc(ex.note)}</div>` : ""}</td><td class="r">${esc(planSummary(ex))}${ex.rest ? " · " + esc(ex.rest) + "s" : ""}</td></tr>`).join("")}</table>`).join("");
-    const freq = a.diasSemana ? `${a.diasSemana}x na semana` + (a.tempoSessao ? ` · ${ASSESSMENT_TEMPO_SESSAO_LABELS[a.tempoSessao] || a.tempoSessao} por sessão` : "") : "";
-    const rows = includeAnamnese && student.assessment ? [
-        ["Idade", a.idade && a.idade + " anos"], ["Peso", a.peso && a.peso + " kg"], ["Altura", a.altura && a.altura + " cm"],
-        ["Treina há", a.tempoTreino], ["Sono/estresse", a.estresseSono], ["Objetivo", a.objetivo], ["Frequência desejada", freq],
-        ["Lesões / restrições relatadas", a.lesoes], ["Medicamento contínuo", a.medicamentos], ["Grupos com ênfase pedidos", a.gruposEnfase],
-    ].filter(([, v]) => v) : [];
-    const anam = rows.length ? `<table>${rows.map(([q, v]) => `<tr><td class="q">${esc(q)}</td><td>${esc(v)}</td></tr>`).join("")}</table>` : "";
+    const anam = includeAnamnese && student.assessment ? SECTIONS.filter((s) => s.key !== "enviar").map((s) => {
+        const rows = [];
+        s.steps.forEach((st) => {
+            if (st.type === "photo" || (st.showIf && !st.showIf(a))) return;
+            if (st.type === "fields") return st.fields.forEach((fd) => a[fd.key] && rows.push([fd.label, a[fd.key]]));
+            if (st.type === "yn") return a[st.key] != null && rows.push([st.q, a[st.key] === "sim" ? "Sim" + (a[st.key + "Detalhe"] ? " — " + a[st.key + "Detalhe"] : "") : "Não"]);
+            const o = (st.options || []).find((x) => x.value === a[st.key]); if (a[st.key]) rows.push([st.q, o ? o.label : a[st.key]]);
+        });
+        return rows.length ? `<h3>${esc(s.title)}</h3><table>${rows.map(([q, v]) => `<tr><td class="q">${esc(q)}</td><td>${esc(v)}</td></tr>`).join("")}</table>` : "";
+    }).join("") : "";
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(student.name)} · Cancio Club</title><style>
     @page{margin:16mm}body{font:11pt/1.45 -apple-system,system-ui,sans-serif;color:#111;margin:0}h1{font-size:20pt;margin:0}h2{font-size:13pt;margin:22px 0 4px;border-bottom:1px solid #999;padding-bottom:4px}h3{font-size:11pt;margin:14px 0 4px}
     table{width:100%;border-collapse:collapse}td{padding:5px 0;border-bottom:1px solid #ddd;vertical-align:top}td.r{text-align:right;white-space:nowrap;padding-left:12px}td.q{color:#555;width:48%;padding-right:12px}.n{color:#555;font-size:10pt}.m{color:#555}</style></head><body>

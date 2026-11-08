@@ -3,20 +3,19 @@ import { AssessmentInicial } from "./components/assessment/AssessmentInicial";
 import { CardioSection } from "./components/professor/CardioSection";
 import { FichaEditor } from "./components/professor/FichaEditor";
 import { LibraryManager } from "./components/professor/LibraryManager";
-import { PlanVsDone } from "./components/professor/PlanVsDone";
-import { ProfInbox } from "./components/professor/ProfInbox";
 import { PSEModal } from "./components/professor/PSEModal";
 import { RecoverySection } from "./components/professor/RecoverySection";
 import { TemplateBuilder } from "./components/professor/TemplateBuilder";
 import { TemplateCard } from "./components/professor/TemplateCard";
 import { BulkLinkSheet } from "./components/professor/BulkLinkSheet";
 import { VolumeDashboard } from "./components/professor/VolumeDashboard";
-import { AssessmentExport } from "./components/share/AssessmentExport";
 import { LogoCard } from "./components/share/LogoCard";
 import { SerieExport } from "./components/share/SerieExport";
 import { AddButton } from "./components/shared/AddButton";
 import { CatalogPicker } from "./components/shared/CatalogPicker";
 import { Celebration } from "./components/shared/Celebration";
+import { RecordCelebration } from "./components/shared/RecordCelebration";
+import { computeDayRecords } from "./utils/records";
 import { Disclaimer } from "./components/shared/Disclaimer";
 import { DiscoBall } from "./components/shared/DiscoBall";
 import { FeedbackModal } from "./components/shared/FeedbackModal";
@@ -26,26 +25,28 @@ import { Pill } from "./components/shared/Pill";
 import { PremiumEmptyState } from "./components/shared/PremiumEmptyState";
 import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
-import { AlunoProfile } from "./components/student/AlunoProfile";
 import { BottomActionBar } from "./components/student/BottomActionBar";
 import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
-import { ReassessmentHistory } from "./components/student/Reassessment";
 import { DiaryCalendar } from "./components/student/DiaryCalendar";
 import { ExerciseCard } from "./components/student/ExerciseCard";
 import { StudentMessages } from "./components/student/StudentMessages";
+import { ProfInbox } from "./components/professor/ProfInbox";
+import { Reassessment, reassessDue } from "./components/student/Reassessment";
+import { MyData } from "./components/student/MyData";
+import { restrictionFor } from "./utils/restrictions";
+import { printStudent } from "./utils/printStudent";
+import { askNotify, canNotify, notify, setBadge } from "./utils/notify";
 import { setActiveSet } from "./hooks/useActiveSet";
 import { LS_KEY, flushAllPendingSaves, loadData, saveLocal, throttle } from "./hooks/useLocalData";
 import { callStudentApi, deleteStudentFromCloud, saveGlobalToCloud, saveStudentToCloud, sb } from "./lib/supabaseClient";
 import { useDataStore } from "./stores/useDataStore";
-import { BALL_URL, C, DAYS, EASE, F, JS2KEY, MIRROR_GRID, NON_COUNTING_KINDS, PILL_ON, REST_PHRASES, SESS_KEY, TRAIN_PHRASES, flatPanel, glassPanel } from "./styles/tokens";
+import { BALL_URL, SIL_URL, C, DAYS, EASE, F, JS2KEY, MIRROR_GRID, NON_COUNTING_KINDS, PILL_ON, REST_PHRASES, SESS_KEY, TRAIN_PHRASES, flatPanel, glassPanel } from "./styles/tokens";
 import { mapAnamneseToFicha } from "./utils/assessment";
 import { playDisco, playFinishChime } from "./utils/audio";
 import { fmtDate, fmtDateTime, fmtDur, fmtVolume, isWithin7, isoOf, parseWeeklyTarget, todayISO } from "./utils/date";
 import { mergeCloudRows, mergeWorkoutsForStudent, splitGlobalForCloud, splitStudentForCloud } from "./utils/merge";
 import { genCode, greeting, haptic, noop, pickDailyPhrase, uid, uidShort } from "./utils/misc";
-import { askNotify, canNotify, notify, setBadge } from "./utils/notify";
-import { restrictionFor } from "./utils/restrictions";
 import { seed } from "./utils/seedData";
 import { computeStreak, lastCheckinLabel, streakTier, trainingWds } from "./utils/streak";
 import { buildDiary, computeRecords, daySummary, defaultSetPlan, emptyWeek, sortedHistory, workingProgress } from "./utils/workout";
@@ -63,12 +64,12 @@ function CancioClub() {
     const setReady = useDataStore((s) => s.setReady);
     const [role, setRole] = useState(() => { try { return localStorage.getItem("cancio:lastRole") === "prof" ? "prof" : "aluno"; } catch (e) { return "aluno"; } });
     const [profTab, setProfTab] = useState("alunos");
+    const [inboxFocus, setInboxFocus] = useState(null);
     const [profView, setProfView] = useState("home");
     const [fichaTab, setFichaTab] = useState("treino");
     const [rendEx, setRendEx] = useState(null);
     const [noteDraft, setNoteDraft] = useState("");
     const [serieOpen, setSerieOpen] = useState(false);
-    const [assessOpen, setAssessOpen] = useState(false);
     const [profUnlocked, setProfUnlocked] = useState(false);
     const [profKeyInput, setProfKeyInput] = useState("");
     const [profKeyErr, setProfKeyErr] = useState("");
@@ -116,6 +117,7 @@ function CancioClub() {
     const [pickLib, setPickLib] = useState(false);
     const [libFilter, setLibFilter] = useState("");
     const [celebration, setCelebration] = useState(null);
+    const [recordCel, setRecordCel] = useState(null);
     // Trava da comemoração de recorde: o campo de carga salva sozinho a cada toque no +/- e a cada
     // 800ms de digitação (auto-save), sempre comparando com o melhor histórico. Sem essa trava, ajustar
     // o peso aos poucos (20 -> 21 -> 22 -> 23) reabre a animação em TELA CHEIA a cada toque, porque cada
@@ -134,6 +136,24 @@ function CancioClub() {
     const [feedbackModal, setFeedbackModal] = useState(null);
     const [shareCard, setShareCard] = useState(null);
     const [logoCard, setLogoCard] = useState(false);
+    const [myDataOpen, setMyDataOpen] = useState(false);
+    const [reassessOpen, setReassessOpen] = useState(false);
+    const [advOpen, setAdvOpen] = useState(false);
+    const [notifPerm, setNotifPerm] = useState(() => (canNotify() ? Notification.permission : "unsupported"));
+    // recados que chegam pra quem está logado: badge no ícone + aviso do sistema se o app estiver em 2º plano
+    const seenMsgRef = React.useRef(null);
+    useEffect(() => {
+        const all = (data && data.messages) || [];
+        const incoming = all.filter((m) => (role === "aluno" ? m.studentId === alunoId && m.fromProf : !m.fromProf));
+        setBadge(incoming.filter((m) => !m.read).length);
+        const ids = new Set(incoming.map((m) => m.id));
+        if (seenMsgRef.current) {
+            const fresh = incoming.filter((m) => !seenMsgRef.current.has(m.id) && !m.read);
+            if (fresh.length) { const m = fresh[fresh.length - 1]; const st = (data.students || []).find((x) => x.id === m.studentId); notify(role === "aluno" ? "Recado do professor" : "Recado de " + (st ? st.name.split(" ")[0] : "aluno"), m.text); }
+        }
+        seenMsgRef.current = ids;
+    }, [data && data.messages, role, alunoId]);
+    const notifButton = notifPerm === "default" && React.createElement("button", { onClick: async () => setNotifPerm(await askNotify()), style: { minHeight: 44, width: "100%", marginBottom: 12, borderRadius: 10, border: "none", background: C.panel2, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Ativar avisos de recado no celular");
     const [assessmentJustDone, setAssessmentJustDone] = useState(false);
     const [alunoTab, setAlunoTab] = useState("treino");
     const [dayEntryOpen, setDayEntryOpen] = useState(false);
@@ -364,23 +384,7 @@ function CancioClub() {
         const done = ((data.checkins && data.checkins[s.id]) || []).includes(todayISO());
         return { id: s.id, name: s.name, workoutName: dn, done, effort: lastEffortFor(s.id), clinicalAlert: s.clinicalAlert };
     }).filter(Boolean);
-    const unread = messages.filter((m) => !m.read).length;
-    // recados que chegam pra quem está logado: badge no ícone + aviso do sistema se o app estiver
-    // em 2º plano (só local — falta o servidor mandar pra funcionar com o app fechado, ver
-    // utils/notify.js). Pula a 1ª passada (seenMsgRef null) pra não notificar o histórico inteiro.
-    const seenMsgRef = React.useRef(null);
-    React.useEffect(() => {
-        const incoming = messages.filter((m) => (role === "aluno" ? m.studentId === alunoId && m.fromProf : !m.fromProf));
-        setBadge(incoming.filter((m) => !m.read).length);
-        const ids = new Set(incoming.map((m) => m.id));
-        if (seenMsgRef.current) {
-            const fresh = incoming.filter((m) => !seenMsgRef.current.has(m.id) && !m.read);
-            if (fresh.length) { const m = fresh[fresh.length - 1]; const st = students.find((x) => x.id === m.studentId); notify(role === "aluno" ? "Recado do professor" : "Recado de " + (st ? st.name.split(" ")[0] : "aluno"), m.text); }
-        }
-        seenMsgRef.current = ids;
-    }, [messages, role, alunoId]);
-    const [notifPerm, setNotifPerm] = useState(() => (canNotify() ? Notification.permission : "unsupported"));
-    const notifButton = notifPerm === "default" && React.createElement("button", { onClick: async () => setNotifPerm(await askNotify()), style: { minHeight: 44, width: "100%", marginBottom: 12, borderRadius: 10, border: "none", background: C.panel2, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Ativar avisos de recado no celular");
+    const unread = messages.filter((m) => !m.read && !m.fromProf).length;
     const archives = (data?.archives && data.archives[profId]) || [];
     // mesma lógica do dayDone: casa por (date, day) pra achar a sessão DESSE slot hoje, não a
     // última sessão de qualquer slot hoje
@@ -413,7 +417,10 @@ function CancioClub() {
         const hours = Math.floor(weeklyTimeSec / 3600);
         const mins = Math.round((weeklyTimeSec % 3600) / 60);
         const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
-        setShareCard({ isWeeklySummary: true, name: focusStudent.name, freqWeek, streak, tint: tier.tint, dateLabel: "Nesta semana", weeklyVolume, weeklyTime: timeStr });
+        const sess7 = ((data.sessions && data.sessions[focusId]) || []).filter((x) => isWithin7(x.date));
+        const dnW = (data.dayNames && data.dayNames[focusId]) || {};
+        const weekDays = DAYS.map((d) => { const se = sess7.find((x) => x.day === d.key); const sets = se ? (week[d.key] || []).reduce((n, e) => { const h = (e.history || []).find((hh) => hh.date === se.date); return n + (h && h.entries ? h.entries.filter((en) => !NON_COUNTING_KINDS.has(en.kind)).length : 0); }, 0) : 0; return { short: d.short.toUpperCase(), name: se ? (dnW[d.key] || d.full) : null, sets }; });
+        setShareCard({ isWeeklySummary: true, name: focusStudent.name, freqWeek, streak, tint: tier.tint, dateLabel: "Nesta semana", weeklyVolume, weeklyTime: timeStr, weekDays, weeklyTarget: parseWeeklyTarget(focusStudent && focusStudent.freqWeekly) });
     };
     const addExercise = () => { const name = form.name.trim(); if (!name || !focusId)
         return; const loadN = parseFloat(String(form.load).replace(",", ".")); const restN = parseInt(form.rest); const ex = { id: uid(), name, sets: parseInt(form.sets) || 1, reps: form.reps || "1", rest: isNaN(restN) ? undefined : restN, note: form.note.trim() || undefined, url: form.url.trim() || undefined, catalogId: form.catalogId || undefined, setPlan: defaultSetPlan(form.sets, form.reps), history: isNaN(loadN) ? [] : [{ date: dayDate, load: loadN }] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = [...(w[day] || []), ex]; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); setForm({ name: "", sets: "3", reps: "10", load: "", rest: "", note: "", url: "", catalogId: "" }); setAdding(false); setPickLib(false); setExpanded(ex.id); };
@@ -472,13 +479,9 @@ function CancioClub() {
             syncStudentToCloud(next, focusId);
             return next;
         });
-        if (cel) {
-            haptic("record");
-            if (cel.kind === "load")
-                setCelebration({ title: "NOVO RECORDE", subtitle: cel.name, value: cel.value, accent: "#FFFFFF", tint: "#FFFFFF", sound: soundOn ? playDisco : null });
-            else
-                setCelebration({ title: "RECORDE DE REPS", subtitle: cel.name, value: cel.value, accent: "#C7C7CC", tint: "#C7C7CC", sound: soundOn ? playDisco : null });
-        }
+        // 9c: recorde não é mais celebrado no meio do treino (um toque errado na carga virava "recorde").
+        // A decisão acontece em finishWorkout via computeDayRecords.
+        void cel;
     }, [role, focusId, day, syncStudentToCloud, soundOn, markWorkoutStarted]);
     // nota do aluno específica daquele exercício naquele dia — some junto com o registro de séries, o professor vê no histórico
     const updateExerciseNote = React.useCallback((exId, dateStr, note) => {
@@ -605,6 +608,8 @@ function CancioClub() {
                 return sum;
             return sum + daySummary(h).volume;
         }, 0);
+        const setsDone = list.reduce((n, e) => { const h = (e.history || []).find((hh) => hh.date === dayDate); return n + (h && h.entries ? h.entries.filter((en) => !NON_COUNTING_KINDS.has(en.kind)).length : 0); }, 0);
+        const weeklyTargetF = parseWeeklyTarget(focusStudent && focusStudent.freqWeekly);
         setData((p) => {
             const sess = { ...(p.sessions || {}) };
             sess[focusId] = [...(sess[focusId] || []), { id: sid, date: dayDate, day, durationSec, effort }];
@@ -620,14 +625,23 @@ function CancioClub() {
         setPseModal(null);
         const shareData = { name: focusStudent.name, workoutName: sWorkoutName, durationLabel: durationSec ? fmtDur(durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak: sStreak, tint: tier.tint, isRestDay: isRest, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) };
         if (isRest) {
-            setCelebration({ title: "RITMO MANTIDO", subtitle: `Descanso também é treino, ${focusStudent.name}!`, value: "", accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
+            setCelebration({ title: "PISTA FECHADA", subtitle: "DIA DE RECUPERAÇÃO", stats: [[String(freqWeek + 1), "treinos na semana"], [String(sStreak || 0), "dias seguidos"]], weekDone: Math.min(freqWeek + 1, weeklyTargetF || 0), weekTarget: weeklyTargetF || 0, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
         }
         else {
-            setCelebration({ title: "PISTA DOMINADA", subtitle: `Treino concluído, ${focusStudent.name}!`, value: durationSec ? fmtDur(durationSec) : effort, volumeLabel: totalVolume > 0 ? `${fmtVolume(totalVolume)} levantados no treino` : null, accent: C.amber, tint: C.amber, seal: true, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
+            const records = computeDayRecords(list, dayDate);
+            if (records.length) {
+                haptic("record");
+                setRecordCel({ records, sound: soundOn ? playDisco : null, shareData: { ...shareData, records } });
+                return;
+            }
+            setCelebration({ title: (sWorkoutName || "Treino").toUpperCase(), subtitle: "TREINO CONCLUÍDO", stats: [durationSec ? [fmtDur(durationSec), "tempo"] : null, [String(setsDone), "séries"], totalVolume > 0 ? [Math.round(totalVolume).toLocaleString("pt-BR"), "kg levantados"] : null].filter(Boolean), sets: setsDone, weekDone: Math.min(freqWeek + 1, weeklyTargetF || 0), weekTarget: weeklyTargetF || 0, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
         }
     };
     const submitFeedback = (sid, text) => setData((p) => { const sess = { ...(p.sessions || {}) }; sess[focusId] = (sess[focusId] || []).map((s) => (s.id === sid ? { ...s, feedback: text } : s)); const next = { ...p, sessions: sess }; syncStudentToCloud(next, focusId); return next; });
-    const sendMessage = (text, sid, fromProf) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid || focusId, text, date: new Date().toISOString(), read: !!fromProf, fromProf: !!fromProf }] }; syncStudentToCloud(next, sid || focusId); return next; });
+    const sendMessage = (text, sid) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid || focusId, text, date: new Date().toISOString(), read: false }] }; syncStudentToCloud(next, sid || focusId); return next; });
+    const replyMessage = (text, sid) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid, fromProf: true, text, date: new Date().toISOString(), read: false }] }; syncStudentToCloud(next, sid); return next; });
+    const markThreadRead = (sid) => setData((p) => { const next = { ...p, messages: (p.messages || []).map((m) => (m.studentId === sid && !m.fromProf ? { ...m, read: true } : m)) }; syncStudentToCloud(next, sid); return next; });
+    const markProfRead = (sid) => setData((p) => { const next = { ...p, messages: (p.messages || []).map((m) => (m.studentId === sid && m.fromProf && !m.read ? { ...m, read: true } : m)) }; syncStudentToCloud(next, sid); return next; });
     const markRead = (id) => setData((p) => { const msg = (p.messages || []).find((m) => m.id === id); const next = { ...p, messages: (p.messages || []).map((m) => (m.id === id ? { ...m, read: true } : m)) }; if (msg)
         syncStudentToCloud(next, msg.studentId); return next; });
     const exportData = () => { try {
@@ -974,14 +988,14 @@ function CancioClub() {
     // aviso suave só quando a semana já está avançada (sex/sáb/dom) e ainda falta bater a meta —
     // sem travar nada, sem Salva-Vidas
     const weeklyBehind = weeklyTarget != null && freqWeek < weeklyTarget && ["sex", "sab", "dom"].includes(todayKey);
-    const lockCard = { textAlign: "center", padding: "52px 24px", ...flatPanel, borderRadius: 28, maxWidth: 360, margin: "10px auto 0" };
+    const lockCard = { textAlign: "center", padding: "52px 24px", ...flatPanel, borderRadius: 24, maxWidth: 360, margin: "10px auto 0" };
     useEffect(() => { if (role === "aluno" && codeInput.length === 4 && !loginBusy && !codeErr) { const t = setTimeout(() => doLogin(), 250); return () => clearTimeout(t); } }, [codeInput]);
-    const keyInput = { display: "block", margin: "16px auto 0", width: 220, textAlign: "center", fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: "0.28em", color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 12, padding: "12px", outline: "none", boxSizing: "border-box" };
-    const keyErr = { fontFamily: F.mono, fontSize: 11, color: C.amber, marginTop: 10 };
-    const keyBtn = { display: "block", width: 200, margin: "14px auto 0", fontFamily: F.mono, fontSize: 13.5, letterSpacing: "0.04em", color: C.ink, backgroundImage: `linear-gradient(150deg, #EEF3FB, #B9C6D9)`, background: C.amber, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" };
+    const keyInput = { display: "block", margin: "24px auto 0", width: "100%", maxWidth: 320, fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel, border: "none", boxShadow: "inset 0 0 0 1.5px " + C.silver, borderRadius: 10, padding: "14px", outline: "none", boxSizing: "border-box" };
+    const keyErr = { fontFamily: F.body, fontSize: 13, color: C.warn, marginTop: 8 };
+    const keyBtn = { display: "block", width: "100%", maxWidth: 320, height: 54, margin: "16px auto 0", fontFamily: F.body, fontWeight: 800, fontSize: 15, color: C.ink, background: C.text, border: "none", borderRadius: 16, cursor: "pointer" };
     const obsChip = (txt) => (React.createElement("div", { style: { display: "flex", gap: 9, alignItems: "baseline", borderLeft: `2px solid ${C.amberDim}`, padding: "5px 0 5px 10px", marginBottom: 14 } },
-        React.createElement("span", { style: { fontFamily: F.mono, fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted, whiteSpace: "nowrap" } }, "observa\u00E7\u00E3o"),
-        React.createElement("span", { style: { fontFamily: F.body, fontSize: 12.5, color: C.muted, lineHeight: 1.4 } }, txt)));
+        React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted, whiteSpace: "nowrap" } }, "observa\u00E7\u00E3o"),
+        React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, lineHeight: 1.4 } }, txt)));
     if (!ready)
         // esqueleto do que vai aparecer, não um spinner genérico — dá a sensação de que o app já
         // sabe o formato do conteúdo e só está esperando os dados, não "pensando do zero"
@@ -1005,7 +1019,7 @@ function CancioClub() {
         input:focus, textarea:focus { border-color: ${C.silver} !important; }
         ::selection { background: ${C.amber}; color: ${C.ink}; }
         @keyframes cc-glow { 0%,100% { opacity: .18 } 50% { opacity: .34 } }
-        .cc-amb { animation: cc-glow 4.5s ease-in-out infinite; }
+        .cc-amb { opacity: .18; }
         @keyframes cc-twinkle { 0%,100% { opacity: 0; transform: scale(.4) rotate(0deg) } 50% { opacity: .9; transform: scale(1) rotate(25deg) } }
         @keyframes cc-fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
         @keyframes cc-rays { to { transform: rotate(360deg) } }
@@ -1032,37 +1046,38 @@ function CancioClub() {
         @media (prefers-reduced-motion: reduce) { .cc-bar-in, .cc-sheet-in, .cc-fade-in { animation: none } }
         @keyframes cc-sheen { 0% { transform: translateX(-60%) rotate(18deg); } 100% { transform: translateX(60%) rotate(18deg); } }
         .cc-sheen-wrap { position: relative; overflow: hidden; border-radius: 50%; }
-        .cc-sheen { position: absolute; top: -40%; left: -20%; width: 40%; height: 180%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); animation: cc-sheen 4.5s ease-in-out infinite; mix-blend-mode: overlay; pointer-events: none; }
+        .cc-sheen { position: absolute; top: -40%; left: -20%; width: 40%; height: 180%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); display: none; mix-blend-mode: overlay; pointer-events: none; }
         @media (prefers-reduced-motion: reduce) { .cc-amb { animation: none } .cc-view { animation: none } .cc-sheen { animation: none } }
       `),
-        React.createElement("div", { style: { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: `radial-gradient(ellipse 900px 700px at 50% -10%, ${tier.tint}16, transparent 70%), radial-gradient(ellipse 700px 600px at 100% 0%, ${C.amber}0e, transparent 65%), radial-gradient(ellipse 800px 500px at -10% 100%, ${C.silver}0a, transparent 60%)` }, "aria-hidden": "true" }),
-        React.createElement("div", { style: { position: "fixed", top: "-30%", left: "50%", width: 1400, height: 1400, marginLeft: -700, pointerEvents: "none", zIndex: 0, opacity: 0.05, background: `repeating-conic-gradient(from 0deg, transparent 0deg 9deg, ${C.amber} 9deg 10deg, transparent 10deg 40deg)`, animation: "cc-rays 220s linear infinite", WebkitMaskImage: "radial-gradient(circle, #000 0%, transparent 68%)", maskImage: "radial-gradient(circle, #000 0%, transparent 68%)" }, "aria-hidden": "true" }),
+        null,
+        null,
         role === "prof" && React.createElement("div", { className: "cc-amb", style: { position: "fixed", top: -70, right: -60, pointerEvents: "none", zIndex: 0 }, "aria-hidden": "true" },
             React.createElement("div", { className: "cc-sheen-wrap" },
                 React.createElement(DiscoBall, { size: 280, cols: 17, rows: 17, seedN: 42, glow: false, tint: tier.tint }),
                 React.createElement("span", { className: "cc-sheen", style: { animationDuration: "7s" } }))),
-        celebration && React.createElement(Celebration, { ...celebration, onDone: () => { const t = celebration.then; setCelebration(null); if (t)
+        recordCel && React.createElement(RecordCelebration, { records: recordCel.records, sound: recordCel.sound, onShare: () => { const s = recordCel.shareData; setRecordCel(null); setShareCard(s); }, onClose: () => setRecordCel(null) }),
+        celebration && React.createElement(Celebration, { ...celebration, onClose: () => setCelebration(null), onDone: () => { const t = celebration.then; setCelebration(null); if (t)
                 t(); } }),
-        pseModal && React.createElement(PSEModal, { onSelect: (effort) => finalizeWorkout(effort), onCancel: () => setPseModal(false) }),
+        pseModal && React.createElement(PSEModal, { summary: [dayName || dayFull, workoutStart ? fmtDur(Math.round((Date.now() - (typeof workoutStart === "number" ? workoutStart : Date.parse(workoutStart))) / 1000)) : null].filter(Boolean).join(" · "), onSelect: (effort) => finalizeWorkout(effort), onCancel: () => setPseModal(false) }),
         feedbackModal && React.createElement(FeedbackModal, { question: feedbackModal.question, onSend: (txt) => { submitFeedback(feedbackModal.sessionId, txt); const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); }, onSkip: () => { const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); } }),
-        shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 12, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
+        shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 13, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         serieOpen && profStudent && React.createElement(SerieExport, { student: profStudent, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, initialDay: day, onClose: () => setSerieOpen(false) }),
-        assessOpen && profStudent && React.createElement(AssessmentExport, { student: profStudent, onClose: () => setAssessOpen(false) }),
-        role === "aluno" && alunoStudent && !alunoStudent.ackAt && React.createElement(Disclaimer, { onAccept: () => updateStudent(alunoId, { ackAt: new Date().toISOString() }) }),
-        role === "aluno" && alunoStudent && alunoStudent.ackAt && (!alunoStudent.assessmentAt || assessmentJustDone) && (React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 95, overflowY: "auto", background: C.ink, padding: "32px 16px 64px", boxSizing: "border-box" } },
+        role === "aluno" && alunoStudent && (!alunoStudent.ackAt || !alunoStudent.consentAt) && React.createElement(Disclaimer, { onAccept: () => { const now = new Date().toISOString(); updateStudent(alunoId, { ackAt: alunoStudent.ackAt || now, consentAt: now }); } }),
+        role === "aluno" && alunoStudent && myDataOpen && React.createElement(MyData, { student: alunoStudent, onClose: () => setMyDataOpen(false), onDownload: () => { const mine = { aluno: { ...alunoStudent, clinicalAlert: undefined }, treinos: (data.workouts || {})[alunoId], sessoes: (data.sessions || {})[alunoId], cardio: (data.cardioLog || {})[alunoId], recados: messages.filter((m) => m.studentId === alunoId), exportadoEm: new Date().toISOString() }; const url = URL.createObjectURL(new Blob([JSON.stringify(mine, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = url; a.download = "meus-dados-cancio-club.json"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); printStudent({ student: alunoStudent, week: (data.workouts || {})[alunoId] || emptyWeek(), dayNames: (data.dayNames || {})[alunoId] || {} }); }, onRequestDelete: () => { updateStudent(alunoId, { deletionRequestedAt: new Date().toISOString() }); sendMessage("Pedido de exclus\u00E3o dos meus dados (LGPD)."); } }),
+        role === "aluno" && alunoStudent && reassessOpen && React.createElement(Reassessment, { onClose: () => setReassessOpen(false), onSubmit: (entry) => { updateStudent(alunoId, { reassessments: [...(alunoStudent.reassessments || []), entry] }); setReassessOpen(false); } }),
+        role === "aluno" && alunoStudent && alunoStudent.ackAt && (!alunoStudent.assessmentAt || assessmentJustDone) && (React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 95, overflowY: "auto", background: C.ink } },
             React.createElement("div", { style: { maxWidth: 540, margin: "0 auto" } },
-                React.createElement(AssessmentInicial, { defaultName: alunoStudent.name, onSubmit: (formData) => {
-                        updateStudent(alunoId, mapAnamneseToFicha(formData, alunoStudent));
+                React.createElement(AssessmentInicial, { defaultName: alunoStudent.name, onEnter: () => setAssessmentJustDone(false), onSubmit: (formData) => {
                         setAssessmentJustDone(true);
-                        setTimeout(() => setAssessmentJustDone(false), 2200);
+                        updateStudent(alunoId, mapAnamneseToFicha(formData, alunoStudent));
                     } })))),
         role === "aluno" && alunoStudent && dayEntryOpen && React.createElement(DayEntryScreen, { week: week, todayKey: todayKey, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, cardio: cardioFocus, onBegin: () => { setDay(todayKey); setExpanded(null); setDayEntryOpen(false); }, onPickOther: (k) => { setDay(k); setExpanded(null); setDayEntryOpen(false); }, onClose: () => setDayEntryOpen(false) }),
         role === "aluno" && !isStandalone && (React.createElement("div", { style: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 10, background: C.panel2, padding: "9px 16px" } },
-            React.createElement("span", { style: { flex: 1, fontFamily: F.mono, fontSize: 10.5, color: C.silver, lineHeight: 1.5 } }, "Para experi\u00EAncia VIP em tela cheia, adicione o Cancio Club \u00E0 sua Tela de In\u00EDcio (Compartilhar \u2192 Adicionar \u00E0 Tela de In\u00EDcio)"),
-            React.createElement("button", { onClick: () => setIsStandalone(true), "aria-label": "Dispensar", style: { flexShrink: 0, fontFamily: F.mono, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px" } }, "\u00D7"))),
+            React.createElement("span", { style: { flex: 1, fontFamily: F.mono, fontSize: 11, color: C.silver, lineHeight: 1.5 } }, "Para experi\u00EAncia VIP em tela cheia, adicione o Cancio Club \u00E0 sua Tela de In\u00EDcio (Compartilhar \u2192 Adicionar \u00E0 Tela de In\u00EDcio)"),
+            React.createElement("button", { onClick: () => setIsStandalone(true), "aria-label": "Dispensar", style: { minHeight: 44, flexShrink: 0, fontFamily: F.mono, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px" } }, "\u00D7"))),
         React.createElement("div", { key: role + "-" + day, className: "cc-view", style: { position: "relative", zIndex: 1, maxWidth: 660, margin: "0 auto", padding: "calc(28px + env(safe-area-inset-top)) 20px 190px" } },
             !cloudSynced && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.panel2, borderRadius: 999, padding: "7px 14px", marginBottom: 18, width: "fit-content" } },
                 React.createElement("span", { style: { width: 7, height: 7, borderRadius: "50%", background: C.warn, flexShrink: 0 } }),
@@ -1077,39 +1092,40 @@ function CancioClub() {
                         React.createElement("span", { className: "cc-sheen" })),
                     React.createElement(Sparkles, { color: tier.accent })),
                 React.createElement("div", null,
-                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 25, letterSpacing: "0.08em", lineHeight: 1, color: C.text } }, "CANCIO CLUB"))),
+                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 24, letterSpacing: "0.08em", lineHeight: 1, color: C.text } }, "CANCIO CLUB"))),
             role === "prof" && React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 24, alignItems: "center" } },
                 React.createElement("div", { style: { marginLeft: "auto", display: "flex", gap: 7 } },
-                    React.createElement("button", { onClick: toggleSound, title: "Som das comemora\u00E7\u00F5es", style: { fontFamily: F.mono, fontSize: 11.5, letterSpacing: "0.06em", color: soundOn ? C.amber : C.muted, background: "none", border: `1px solid ${soundOn ? C.amberDim : C.line}`, borderRadius: 999, padding: "7px 12px", cursor: "pointer" } },
+                    React.createElement("button", { onClick: toggleSound, title: "Som das comemora\u00E7\u00F5es", style: { minHeight: 44, fontFamily: F.mono, fontSize: 11, letterSpacing: "0.06em", color: soundOn ? C.amber : C.muted, background: "none", border: `1px solid ${soundOn ? C.amberDim : C.line}`, borderRadius: 999, padding: "7px 12px", cursor: "pointer" } },
                         "som ",
                         soundOn ? "on" : "off"),
-                    React.createElement("button", { onClick: () => switchRole("aluno"), style: { fontFamily: F.body, fontWeight: 600, fontSize: 11.5, color: C.silver, background: "none", border: `1px solid ${C.line}`, borderRadius: 999, padding: "7px 12px", cursor: "pointer" } }, "\u00C1rea do aluno"),
-                    role === "prof" && profUnlocked && React.createElement("button", { onClick: lockProf, style: { fontFamily: F.mono, fontSize: 11.5, letterSpacing: "0.06em", color: C.muted, background: C.panel2, borderRadius: 999, padding: "7px 12px", cursor: "pointer" } }, "Bloquear"))),
+                    React.createElement("button", { onClick: () => switchRole("aluno"), style: { minHeight: 44, fontFamily: F.body, fontWeight: 600, fontSize: 11, color: C.silver, background: "none", border: `1px solid ${C.line}`, borderRadius: 999, padding: "7px 12px", cursor: "pointer" } }, "\u00C1rea do aluno"),
+                    role === "prof" && profUnlocked && React.createElement("button", { onClick: lockProf, style: { minHeight: 44, fontFamily: F.mono, fontSize: 11, letterSpacing: "0.06em", color: C.muted, background: C.panel2, borderRadius: 999, padding: "7px 12px", cursor: "pointer" } }, "Bloquear"))),
             role === "prof" && !profUnlocked && (React.createElement("div", { style: lockCard },
                 React.createElement("div", { style: { display: "inline-block", marginBottom: 20 } },
-                    React.createElement(DiscoBall, { size: 96, seedN: 5 })),
-                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 18, letterSpacing: "0.04em" } }, "\u00C1rea do professor"),
-                React.createElement("div", { style: { fontFamily: F.mono, fontSize: 12, color: C.muted, marginTop: 8, lineHeight: 1.6 } }, "Digite sua senha de acesso."),
+                    React.createElement("img", { src: BALL_URL, alt: "", width: 64, height: 64, style: { display: "block" } })),
+                React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.silver } }, "\u00C1REA DO PROFESSOR"),
+                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, marginTop: 6 } }, "ENTRAR"),
+                React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.5 } }, "Digite sua senha de acesso."),
                 React.createElement("input", { type: "password", value: profKeyInput, onChange: (e) => { setProfKeyInput(e.target.value); setProfKeyErr(""); }, onKeyDown: (e) => e.key === "Enter" && !loginBusy && unlockProf(), placeholder: "senha", style: keyInput }),
                 profKeyErr && React.createElement("div", { style: keyErr }, profKeyErr),
-                React.createElement("button", { onClick: unlockProf, disabled: loginBusy, style: { ...keyBtn, cursor: loginBusy ? "default" : "pointer", opacity: loginBusy ? 0.7 : 1 } }, loginBusy ? "Buscando…" : "Entrar"),
-                React.createElement("button", { onClick: () => switchRole("aluno"), style: { display: "block", margin: "14px auto 0", fontFamily: F.body, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 8, cursor: "pointer" } }, "\u2039 Sou aluno"))),
+                React.createElement("button", { onClick: unlockProf, disabled: loginBusy, style: { minHeight: 44, ...keyBtn, cursor: loginBusy ? "default" : "pointer", opacity: loginBusy ? 0.7 : 1 } }, loginBusy ? "Buscando…" : "Entrar"),
+                React.createElement("button", { onClick: () => switchRole("aluno"), style: { minHeight: 44, display: "block", margin: "14px auto 0", fontFamily: F.body, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 8, cursor: "pointer" } }, "\u2039 Sou aluno"))),
             role === "prof" && profUnlocked && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: { position: "fixed", left: 12, right: 12, bottom: "calc(16px + env(safe-area-inset-bottom))", zIndex: 91, maxWidth: 636, margin: "0 auto" } },
-                    React.createElement("div", { style: { display: "flex", gap: 2, padding: 6, borderRadius: 20, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}, 0 -16px 40px rgba(5,6,10,.9)` } },
+                    React.createElement("div", { style: { display: "flex", gap: 2, padding: 6, borderRadius: 16, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}, 0 -16px 40px rgba(5,6,10,.9)` } },
                         [
                             ["alunos", "Alunos", () => { setProfTab("alunos"); setProfView("home"); setRendEx(null); setExpanded(null); }],
                             ["modelos", "Modelos", () => { setProfTab("modelos"); setExpanded(null); }],
-                            ["recados", React.createElement(React.Fragment, { key: "r" }, "Recados", unread > 0 && React.createElement("span", { style: { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 16, height: 16, marginLeft: 6, borderRadius: 999, background: profTab === "recados" ? C.ink : C.warn, color: profTab === "recados" ? "#fff" : C.ink, fontFamily: F.mono, fontSize: 9.5, fontWeight: 700, padding: "0 4px" } }, unread)), () => { setProfTab("recados"); setExpanded(null); }],
+                            ["recados", React.createElement(React.Fragment, { key: "r" }, "Recados", unread > 0 && React.createElement("span", { style: { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 16, height: 16, marginLeft: 6, borderRadius: 999, background: profTab === "recados" ? C.ink : C.warn, color: profTab === "recados" ? "#fff" : C.ink, fontFamily: F.mono, fontSize: 11, fontWeight: 700, padding: "0 4px" } }, unread)), () => { setProfTab("recados"); setExpanded(null); }],
                             ["mais", "Mais", () => { setProfTab("painel"); setExpanded(null); }],
                         ].map(([key, label, onClick]) => {
                             const active = key === "mais" ? (profTab === "painel" || profTab === "biblioteca") : profTab === key;
-                            return React.createElement("button", { key: key, className: "cc-tap", onClick, style: { flex: 1, fontFamily: F.display, fontWeight: active ? 700 : 600, fontSize: 13, padding: "11px 0", borderRadius: 14, border: "none", cursor: "pointer", color: active ? C.ink : C.muted, background: active ? PILL_ON : "transparent" } }, label);
+                            return React.createElement("button", { key: key, className: "cc-tap", onClick, style: { minHeight: 44, flex: 1, fontFamily: F.display, fontWeight: active ? 700 : 600, fontSize: 13, padding: "11px 0", borderRadius: 16, border: "none", cursor: "pointer", color: active ? C.ink : C.muted, background: active ? PILL_ON : "transparent" } }, label);
                         }))),
                 profTab === "alunos" && (React.createElement(React.Fragment, null,
                     (() => {
                         const fmtK = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
-                        const tiny = { fontFamily: F.display, fontWeight: 700, fontSize: 9.5, letterSpacing: "0.16em", color: C.muted };
+                        const tiny = { fontFamily: F.display, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.muted };
                         if (profView === "home") {
                             const q = studentSearch.trim().toLowerCase();
                             const rosterById = {}; todayRoster.forEach((r) => { rosterById[r.id] = r; });
@@ -1120,27 +1136,39 @@ function CancioClub() {
                                 const r = rosterById[s.id];
                                 const sess = ((data.sessions && data.sessions[s.id]) || []).filter((x) => x.date === todayISO()).slice(-1)[0];
                                 const sub = r ? (r.done ? "Treinou hoje" + (sess && sess.durationSec ? " \u00B7 " + fmtDur(sess.durationSec) : "") : r.workoutName + " hoje \u00B7 ainda n\u00E3o veio") : "\u00DAltimo treino " + st.last;
-                                const alert = s.clinicalAlert ? { k: "ALERTA", t: s.clinicalAlert } : lastEffortFor(s.id) === "destruidor" ? { k: "FADIGA", t: "\u00DAltimo treino veio como Destruidor" } : (st.week === 0 && planned > 0 ? { k: "SUMIDO", t: "Nenhum treino nos \u00FAltimos 7 dias" } : null);
+                                const unreadN = messages.filter((m) => m.studentId === s.id && !m.read && !m.fromProf).length;
+                                const newAnam = s.assessmentAt && Date.now() - new Date(s.assessmentAt).getTime() < 7 * 864e5;
+                                // só o que pede ação hoje — o alerta clínico é permanente e fica na ficha, senão ocupa a faixa pra sempre
+                                const reasons = [
+                                    s.deletionRequestedAt && { k: "LGPD", t: "Pediu exclus\u00E3o dos dados" },
+                                    unreadN > 0 && { k: "RECADO", t: unreadN + (unreadN > 1 ? " recados sem resposta" : " recado sem resposta") },
+                                    lastEffortFor(s.id) === "destruidor" && { k: "FADIGA", t: "\u00DAltimo treino veio como Destruidor" },
+                                    st.week === 0 && planned > 0 && { k: "SUMIDO", t: "Nenhum treino nos \u00FAltimos 7 dias" },
+                                    newAnam && { k: "ANAMNESE", t: "Respondeu a anamnese \u2014 vale revisar" },
+                                    (() => { const rl = s.reassessments || []; const lr = rl[rl.length - 1]; return lr && Date.now() - new Date(lr.date).getTime() < 7 * 864e5 && { k: "REAVALIA\u00C7\u00C3O", t: "Mandou peso e medidas novas" }; })(),
+                                ].filter(Boolean);
+                                const alert = reasons[0] ? { ...reasons[0], more: reasons.length - 1 } : null;
                                 return { s, st, planned, sub, done: r && r.done, wait: r && !r.done, alert, order: r ? (r.done ? 1 : 0) : 2 };
                             });
                             const open = (s) => { setActive(s.id); setProfView("aluno"); setFichaTab("treino"); setRendEx(null); setExpanded(null); setFichaOpen(false); setHistOpen(false); };
                             const alerts = rows.filter((r) => r.alert);
                             const list = rows.filter((r) => r.s.name.toLowerCase().includes(q)).sort((a, b) => a.order - b.order || a.s.name.localeCompare(b.s.name));
                             return React.createElement("section", { style: { marginBottom: 26 } },
-                                alerts.length > 0 && React.createElement("div", { style: { display: "flex", gap: 8, overflowX: "auto", margin: "0 -20px 18px", padding: "0 20px", scrollbarWidth: "none" } }, alerts.map((r) => React.createElement("button", { key: r.s.id, className: "cc-tap", onClick: () => open(r.s), style: { flex: "none", width: 200, textAlign: "left", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: C.panel, boxShadow: "inset 0 0 0 1px rgba(232,121,75,.35)", color: C.text } },
-                                    React.createElement("span", { style: { display: "block", ...tiny, color: C.warn } }, r.alert.k),
+                                alerts.length > 0 && React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 10 } }, "Precisa de aten\u00E7\u00E3o hoje \u00B7 " + alerts.length),
+                                alerts.length > 0 && React.createElement("div", { style: { display: "flex", gap: 8, overflowX: "auto", margin: "0 -20px 18px", padding: "0 20px", scrollbarWidth: "none" } }, alerts.map((r) => React.createElement("button", { key: r.s.id, className: "cc-tap", onClick: () => { if (r.alert.k === "RECADO") { setInboxFocus(r.s.id); setProfTab("recados"); markThreadRead(r.s.id); } else open(r.s); }, style: { minHeight: 44, flex: "none", width: 200, textAlign: "left", padding: 14, borderRadius: 16, border: "none", cursor: "pointer", background: C.panel, boxShadow: ["RECADO", "ANAMNESE", "REAVALIA\u00C7\u00C3O"].includes(r.alert.k) ? `inset 0 0 0 1px ${C.line2}` : "inset 0 0 0 1px rgba(232,121,75,.35)", color: C.text } },
+                                    React.createElement("span", { style: { display: "block", ...tiny, color: ["RECADO", "ANAMNESE", "REAVALIA\u00C7\u00C3O"].includes(r.alert.k) ? C.silver : C.warn } }, r.alert.k + (r.alert.more ? "  +" + r.alert.more : "")),
                                     React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 700, fontSize: 15, marginTop: 6 } }, r.s.name),
-                                    React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 12, lineHeight: 1.35, color: C.muted, marginTop: 3 } }, r.alert.t)))),
+                                    React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 13, lineHeight: 1.35, color: C.muted, marginTop: 3 } }, r.alert.t)))),
                                 React.createElement("div", { style: { display: "flex", gap: 8 } },
-                                    React.createElement("input", { value: studentSearch, onChange: (e) => setStudentSearch(e.target.value), placeholder: "Buscar aluno", style: { flex: 1, minWidth: 0, boxSizing: "border-box", fontFamily: F.body, fontSize: 14, color: C.text, background: C.panel, border: "none", borderRadius: 12, padding: "12px 14px", outline: "none" } }),
-                                    React.createElement("button", { className: "cc-tap", onClick: () => setAddStudentOpen(true), "aria-label": "Novo aluno", style: { flexShrink: 0, width: 44, height: 44, fontFamily: F.display, fontWeight: 700, fontSize: 20, color: C.text, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, border: "none", borderRadius: 12, cursor: "pointer" } }, "+")),
+                                    React.createElement("input", { value: studentSearch, onChange: (e) => setStudentSearch(e.target.value), placeholder: "Buscar aluno", style: { flex: 1, minWidth: 0, boxSizing: "border-box", fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "12px 14px", outline: "none" } }),
+                                    React.createElement("button", { className: "cc-tap", onClick: () => setAddStudentOpen(true), "aria-label": "Novo aluno", style: { flexShrink: 0, width: 44, height: 44, fontFamily: F.display, fontWeight: 700, fontSize: 18, color: C.text, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, border: "none", borderRadius: 10, cursor: "pointer" } }, "+")),
                                 (() => {
                                     const trainToday = list.filter((r) => r.done || r.wait);
                                     const others = list.filter((r) => !r.done && !r.wait);
-                                    const row = (r) => React.createElement("button", { key: r.s.id, onClick: () => open(r.s), style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 0", border: "none", borderBottom: "1px solid #15181F", background: "none", textAlign: "left", cursor: "pointer", color: C.text } },
+                                    const row = (r) => React.createElement("button", { key: r.s.id, onClick: () => open(r.s), style: { minHeight: 44, width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 0", border: "none", borderBottom: "1px solid #15181F", background: "none", textAlign: "left", cursor: "pointer", color: C.text } },
                                         React.createElement("span", { style: { flex: 1, minWidth: 0 } },
                                             React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 600, fontSize: 15 } }, r.s.name),
-                                            React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: F.body, fontSize: 12, marginTop: 2, color: r.wait ? C.silver : C.muted } }, r.done && React.createElement("span", { style: { color: C.silver } }, "\u2713"), r.wait && React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.silver } }), r.sub)),
+                                            React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: F.body, fontSize: 13, marginTop: 2, color: r.wait ? C.silver : C.muted } }, r.done && React.createElement("span", { style: { color: C.silver } }, "\u2713"), r.wait && React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.silver } }), r.sub)),
                                         React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 18, fontVariantNumeric: "tabular-nums" } }, Math.min(r.st.week, 99), React.createElement("span", { style: { color: "#3A404C" } }, "/" + (r.planned || "\u2013"))));
                                     return React.createElement(React.Fragment, null,
                                         trainToday.length > 0 && React.createElement(React.Fragment, null,
@@ -1151,26 +1179,34 @@ function CancioClub() {
                                             others.map(row)));
                                 })(),
                                 addStudentOpen && React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 110, background: "rgba(5,6,10,.8)" }, onClick: () => setAddStudentOpen(false) },
-                                    React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "cc-sheet-in", style: { position: "absolute", left: 10, right: 10, bottom: "calc(16px + env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto", borderRadius: 28, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}`, padding: "20px 18px 18px" } },
-                                        React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontSize: 10, letterSpacing: "0.2em", color: C.muted } }, "NOVO ALUNO"),
-                                        React.createElement("input", { autoFocus: true, value: nStudent, onChange: (e) => setNStudent(e.target.value), onKeyDown: (e) => e.key === "Enter" && nStudent.trim() && (addStudent(), setAddStudentOpen(false)), placeholder: "Nome do aluno", style: { display: "block", width: "100%", boxSizing: "border-box", marginTop: 12, fontFamily: F.body, fontSize: 15, color: C.text, background: C.ink, border: "none", borderRadius: 12, padding: "13px 14px", outline: "none" } }),
-                                        React.createElement("button", { className: "cc-tap", disabled: !nStudent.trim(), onClick: () => { addStudent(); setAddStudentOpen(false); }, style: { width: "100%", marginTop: 12, fontFamily: F.display, fontWeight: 800, fontSize: 15, color: C.ink, background: nStudent.trim() ? PILL_ON : C.line, border: "none", borderRadius: 14, padding: "14px 0", cursor: nStudent.trim() ? "pointer" : "default" } }, "Adicionar"))));
+                                    React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "cc-sheet-in", style: { position: "absolute", left: 10, right: 10, bottom: "calc(16px + env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto", borderRadius: 24, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}`, padding: "20px 18px 18px" } },
+                                        React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontSize: 11, letterSpacing: "0.2em", color: C.muted } }, "NOVO ALUNO"),
+                                        React.createElement("input", { autoFocus: true, value: nStudent, onChange: (e) => setNStudent(e.target.value), onKeyDown: (e) => e.key === "Enter" && nStudent.trim() && (addStudent(), setAddStudentOpen(false)), placeholder: "Nome do aluno", style: { display: "block", width: "100%", boxSizing: "border-box", marginTop: 12, fontFamily: F.body, fontSize: 15, color: C.text, background: C.ink, border: "none", borderRadius: 10, padding: "13px 14px", outline: "none" } }),
+                                        React.createElement("button", { className: "cc-tap", disabled: !nStudent.trim(), onClick: () => { addStudent(); setAddStudentOpen(false); }, style: { minHeight: 44, width: "100%", marginTop: 12, fontFamily: F.display, fontWeight: 800, fontSize: 15, color: C.ink, background: nStudent.trim() ? PILL_ON : C.line, border: "none", borderRadius: 16, padding: "14px 0", cursor: nStudent.trim() ? "pointer" : "default" } }, "Adicionar"))));
                         }
                         if (!profStudent) return null;
                         const ps = profStudent;
-                        const header = React.createElement("div", { style: { position: "relative", margin: "-12px -20px 0", height: 170, background: MIRROR_GRID(15) + ",linear-gradient(118deg,#1E222B 0%,#8D97A9 24%,#E9EEF6 34%,#5B6373 48%,#2B3039 62%,#B8C3D4 78%,#3A404C 100%)" } },
-                            React.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(5,6,10,.1) 0%,#05060A 100%)" } }),
-                            React.createElement("button", { className: "cc-tap", onClick: () => { setProfView("home"); setRendEx(null); setExpanded(null); }, style: { position: "absolute", left: 18, top: 16, fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.ink, background: "rgba(242,245,250,.88)", padding: "7px 12px", borderRadius: 999, border: "none", cursor: "pointer" } }, "\u2039 Alunos"),
-                            React.createElement("div", { style: { position: "absolute", left: 20, right: 20, bottom: 8, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12 } },
-                                React.createElement("div", { style: { minWidth: 0 } },
-                                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1, textTransform: "uppercase", color: C.text } }, ps.name),
-                                    React.createElement("div", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 12.5, color: C.silver, marginTop: 6 } }, [ps.goal, ps.freqWeekly, ps.startDate ? "desde " + fmtDate(ps.startDate) : ""].filter(Boolean).join(" \u00B7 "))),
-                                React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } },
-                                    React.createElement("div", { style: { ...tiny, fontSize: 8.5 } }, "C\u00D3DIGO"),
-                                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 20, letterSpacing: "0.16em", color: C.text } }, ps.code))));
-                        const statB = (v, l) => React.createElement("span", null, React.createElement("b", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 16, color: C.text } }, v), " " + l);
-                        const chips = [ps.clinicalAlert && "Alerta \u00B7 " + ps.clinicalAlert, lastEffortFor(profId) === "destruidor" && "Fadiga \u00B7 \u00FAltimo treino Destruidor", !ps.ackAt && "Termo pendente", ps.deletionRequestedAt && "LGPD \u00B7 Pediu exclus\u00E3o dos dados"].filter(Boolean);
-                        const tabs = React.createElement("div", { style: { display: "flex", gap: 4, marginTop: 14, padding: 4, borderRadius: 12, background: C.panel } }, [["treino", "Treino"], ["rend", "Rendimento"], ["volume", "Volume"], ["ficha", "Ficha"]].map(([k, l]) => React.createElement("button", { key: k, onClick: () => { setFichaTab(k); setRendEx(null); }, style: { flex: 1, padding: 9, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, fontWeight: fichaTab === k ? 700 : 500, background: fichaTab === k ? "#1E222A" : "transparent", color: fichaTab === k ? C.text : C.muted } }, l)));
+                        // 11a — carteirinha do aluno abre a ficha (foto da anamnese + dados), alerta de saúde logo abaixo
+                        const psAge = ps.assessment && ps.assessment.idade;
+                        const header = React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } },
+                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                                React.createElement("button", { className: "cc-tap", onClick: () => { setProfView("home"); setRendEx(null); setExpanded(null); }, style: { minHeight: 44, padding: "0 10px 0 0", fontFamily: F.body, fontSize: 15, color: C.silver, background: "none", border: "none", cursor: "pointer" } }, "\u2039 Alunos"),
+                                React.createElement("button", { className: "cc-tap", onClick: () => setFichaTab("ficha"), style: { minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Editar")),
+                            React.createElement("div", { style: { position: "relative", overflow: "hidden", borderRadius: 16, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, padding: 16, display: "flex", gap: 14, alignItems: "center" } },
+                                React.createElement("img", { src: SIL_URL, alt: "", "aria-hidden": "true", style: { position: "absolute", right: -30, top: -30, width: 130, height: 130, opacity: 0.12, pointerEvents: "none" } }),
+                                React.createElement("div", { style: { width: 68, height: 68, borderRadius: "50%", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: ps.photo ? C.panel : "repeating-linear-gradient(135deg,#15181F 0 6px,#0E1015 6px 12px)", boxShadow: ps.photo ? "none" : `inset 0 0 0 1.5px ${C.line2}` } },
+                                    ps.photo ? React.createElement("img", { src: ps.photo, alt: "", style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontSize: 24, color: C.muted } }, (ps.name || "?").trim().charAt(0).toUpperCase())),
+                                React.createElement("div", { style: { position: "relative", minWidth: 0, display: "flex", flexDirection: "column", gap: 4 } },
+                                    React.createElement("span", { style: { fontFamily: F.body, fontWeight: 800, fontSize: 18, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ps.name),
+                                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, [psAge && psAge + " anos", ps.goal, ps.freqWeekly].filter(Boolean).join(" \u00B7 ")),
+                                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, "c\u00F3digo " + ps.code + (ps.startDate ? " \u00B7 desde " + fmtDate(ps.startDate) : "")))),
+                            ps.clinicalAlert && React.createElement("button", { className: "cc-tap", onClick: () => setFichaTab("ficha"), style: { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", minHeight: 44, borderRadius: 10, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px rgba(232,121,75,.4)", textAlign: "left", cursor: "pointer" } },
+                                React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.warn, flexShrink: 0 } }, "SA\u00DADE"),
+                                React.createElement("span", { style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 13, color: "#C9D0DC", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ps.clinicalAlert.split("\n")[0].replace(/^Triagem \(relatado pelo aluno\): /, "")),
+                                React.createElement("span", { style: { color: "#5A6273" } }, "\u203A")));
+                        const statB = (v, l) => React.createElement("span", null, React.createElement("b", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 15, color: C.text } }, v), " " + l);
+                        const chips = [lastEffortFor(profId) === "destruidor" && "Fadiga \u00B7 \u00FAltimo treino Destruidor", !ps.ackAt && "Termo pendente"].filter(Boolean);
+                        const tabs = React.createElement("div", { style: { display: "flex", gap: 4, marginTop: 14, padding: 4, borderRadius: 10, background: C.panel } }, [["treino", "Treino"], ["rend", "Rendimento"], ["volume", "Volume"], ["ficha", "Ficha"]].map(([k, l]) => React.createElement("button", { key: k, onClick: () => { setFichaTab(k); setRendEx(null); }, style: { minHeight: 44, flex: 1, padding: 9, borderRadius: 10, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, fontWeight: fichaTab === k ? 700 : 500, background: fichaTab === k ? "#1E222A" : "transparent", color: fichaTab === k ? C.text : C.muted } }, l)));
                         let body = null;
                         const wkP = (data.workouts && data.workouts[profId]) || emptyWeek();
                         const allEx = []; DAYS.forEach((d) => (wkP[d.key] || []).forEach((e) => allEx.push({ ...e, _day: d.key })));
@@ -1184,22 +1220,21 @@ function CancioClub() {
                                 const setsTxt = (x) => { const es = Array.isArray(x.raw.entries) ? x.raw.entries.filter((e) => !NON_COUNTING_KINDS.has(e.kind) && typeof e.load === "number") : []; return es.length ? fmtK(Math.max(...es.map((e) => e.load))) + " \u00D7 " + es.map((e) => e.reps).join(" \u00B7 ") : fmtK(x.load) + (x.reps ? " \u00D7 " + x.reps : ""); };
                                 const saveNote = (val) => setData((p) => { const w = { ...p.workouts[profId] }; w[ex._day] = (w[ex._day] || []).map((e) => (e.id === ex.id ? { ...e, profNote: val } : e)); const next = { ...p, workouts: { ...p.workouts, [profId]: w } }; syncStudentToCloud(next, profId); return next; });
                                 body = React.createElement("div", { className: "cc-view", style: { marginTop: 16 } },
-                                    React.createElement("button", { onClick: () => setRendEx(null), style: { fontFamily: F.body, fontSize: 14, fontWeight: 500, color: C.silver, background: "none", border: "none", padding: 0, cursor: "pointer" } }, "\u2039 Rendimento"),
-                                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 22, lineHeight: 1.05, textTransform: "uppercase", marginTop: 14 } }, ex.name),
+                                    React.createElement("button", { onClick: () => setRendEx(null), style: { minHeight: 44, fontFamily: F.body, fontSize: 15, fontWeight: 500, color: C.silver, background: "none", border: "none", padding: 0, cursor: "pointer" } }, "\u2039 Rendimento"),
+                                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1.05, textTransform: "uppercase", marginTop: 14 } }, ex.name),
                                     last && React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 10, marginTop: 14 } },
-                                        React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 48, lineHeight: 1 } }, fmtK(last.load), React.createElement("span", { style: { fontSize: 20, color: C.muted } }, " kg")),
+                                        React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 48, lineHeight: 1 } }, fmtK(last.load), React.createElement("span", { style: { fontSize: 18, color: C.muted } }, " kg")),
                                         first && hs.length > 1 && React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, (last.load > first.load ? "+" + fmtK(last.load - first.load) + " kg desde " + fmtDate(first.date) : last.load === first.load ? "est\u00E1vel desde " + fmtDate(first.date) : fmtK(last.load - first.load) + " kg desde " + fmtDate(first.date)))),
                                     hs.length > 1 ? React.createElement("svg", { viewBox: "0 0 300 160", style: { width: "100%", height: 170, marginTop: 18, overflow: "visible" } },
                                         [10, 80, 150].map((y) => React.createElement("line", { key: y, x1: 0, x2: 300, y1: y, y2: y, stroke: "#1E222A", strokeDasharray: "3 4" })),
                                         React.createElement("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: C.silver, strokeWidth: 2, strokeLinejoin: "round" }),
                                         pts.map((p, i) => React.createElement("circle", { key: i, cx: p[0], cy: p[1], r: i === pts.length - 1 ? 6 : 3, fill: i === pts.length - 1 ? C.text : C.ink, stroke: C.silver, strokeWidth: 1.5 }))) : React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 18 } }, "Ainda sem hist\u00F3rico suficiente pra um gr\u00E1fico."),
-                                    React.createElement("div", { style: { marginTop: 20 } }, React.createElement(PlanVsDone, { ex: ex, plan: ex.setPlan || defaultSetPlan(ex.sets, ex.reps) })),
                                     React.createElement("div", { style: { ...tiny, marginTop: 20 } }, "\u00DALTIMAS SESS\u00D5ES \u00B7 S\u00C9RIES DE TRABALHO"),
                                     [...hs].reverse().slice(0, 5).map((x) => React.createElement("div", { key: x.date, style: { display: "flex", gap: 10, alignItems: "baseline", padding: "11px 0", borderBottom: "1px solid #15181F" } },
-                                        React.createElement("span", { style: { width: 52, fontFamily: F.body, fontSize: 12.5, color: C.muted } }, fmtDate(x.date)),
-                                        React.createElement("span", { style: { flex: 1, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontSize: 14 } }, setsTxt(x)))),
-                                    React.createElement("div", { style: { marginTop: 14, padding: "12px 14px", borderRadius: 12, background: C.panel, boxShadow: "inset 0 0 0 1px #1E222A" } },
-                                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 8 } }, React.createElement("span", { style: tiny }, "NOTA DO PROFESSOR"), React.createElement("span", { style: { fontFamily: F.body, fontSize: 10.5, color: "#5A6273" } }, "opcional \u00B7 aluno v\u00EA no exerc\u00EDcio")),
+                                        React.createElement("span", { style: { width: 52, fontFamily: F.body, fontSize: 13, color: C.muted } }, fmtDate(x.date)),
+                                        React.createElement("span", { style: { flex: 1, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontSize: 15 } }, setsTxt(x)))),
+                                    React.createElement("div", { style: { marginTop: 14, padding: "12px 14px", borderRadius: 10, background: C.panel, boxShadow: "inset 0 0 0 1px #1E222A" } },
+                                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 8 } }, React.createElement("span", { style: tiny }, "NOTA DO PROFESSOR"), React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: "#5A6273" } }, "opcional \u00B7 aluno v\u00EA no exerc\u00EDcio")),
                                         React.createElement("textarea", { value: noteDraft, onChange: (e) => setNoteDraft(e.target.value), onBlur: () => saveNote(noteDraft.trim()), placeholder: "Escreva uma orienta\u00E7\u00E3o pra pr\u00F3xima vez\u2026", style: { width: "100%", boxSizing: "border-box", minHeight: 56, background: "none", border: "none", outline: "none", resize: "none", padding: 0, fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: C.text } })));
                             }
                         }
@@ -1227,24 +1262,24 @@ function CancioClub() {
                             const num = (v, l, first) => React.createElement("div", { style: { padding: first ? "12px 0" : "12px 0 12px 12px", borderLeft: first ? "none" : "1px solid #1E222A" } }, React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 24, lineHeight: 1 } }, v), React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 } }, l));
                             body = React.createElement("div", { className: "cc-view", style: { marginTop: 16 } },
                                 React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", borderTop: "1px solid #1E222A", borderBottom: "1px solid #1E222A" } }, num(freqPct != null ? freqPct + "%" : "\u2013", "frequ\u00EAncia \u00B7 8 sem", true), num(volDelta != null ? (volDelta > 0 ? "+" : "") + volDelta + "%" : "\u2013", "volume semanal"), num(prTotal + " \u2605", "recordes")),
-                                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 18 } }, React.createElement("span", { style: tiny }, "VOLUME POR SEMANA"), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontSize: 12 } }, fmtVolume(vols[7]))),
+                                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 18 } }, React.createElement("span", { style: tiny }, "VOLUME POR SEMANA"), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontSize: 13 } }, fmtVolume(vols[7]))),
                                 React.createElement("div", { style: { height: 74, display: "flex", alignItems: "flex-end", gap: 5, marginTop: 10 } }, vols.map((v, i) => React.createElement("div", { key: i, style: { flex: 1, height: Math.max(2, (v / vmax) * 74), borderRadius: 3, background: i === 7 ? "linear-gradient(180deg,#FFFFFF,#AEB9CB)" : v ? "#2A2F39" : "#1A1D24" } }))),
-                                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 9.5, color: "#5A6273", marginTop: 5 } }, React.createElement("span", null, "8 semanas atr\u00E1s"), React.createElement("span", null, "esta semana")),
+                                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 11, color: "#5A6273", marginTop: 5 } }, React.createElement("span", null, "8 semanas atr\u00E1s"), React.createElement("span", null, "esta semana")),
                                 React.createElement("div", { style: { ...tiny, marginTop: 18 } }, "CARGA POR EXERC\u00CDCIO \u00B7 TOQUE PRA ABRIR"),
                                 progs.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, padding: "12px 0" } }, "Os gr\u00E1ficos aparecem depois de 2 treinos registrados."),
-                                progs.map((p) => React.createElement("button", { key: p.e.id, onClick: () => { setRendEx(p.e.id); setNoteDraft(p.e.profNote || ""); }, style: { width: "100%", display: "grid", gridTemplateColumns: "1fr 70px 56px", gap: 10, alignItems: "center", padding: "10px 0", border: "none", borderBottom: "1px solid #15181F", background: "none", textAlign: "left", cursor: "pointer", color: C.text } },
-                                    React.createElement("span", { style: { minWidth: 0 } }, React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 600, fontSize: 13.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, p.e.name + (p.prs ? " \u2605" : "")), React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 } }, p.a === p.b ? fmtK(p.b) + " kg" : fmtK(p.a) + " \u2192 " + fmtK(p.b) + " kg")),
+                                progs.map((p) => React.createElement("button", { key: p.e.id, onClick: () => { setRendEx(p.e.id); setNoteDraft(p.e.profNote || ""); }, style: { minHeight: 44, width: "100%", display: "grid", gridTemplateColumns: "1fr 70px 56px", gap: 10, alignItems: "center", padding: "10px 0", border: "none", borderBottom: "1px solid #15181F", background: "none", textAlign: "left", cursor: "pointer", color: C.text } },
+                                    React.createElement("span", { style: { minWidth: 0 } }, React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, p.e.name + (p.prs ? " \u2605" : "")), React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 } }, p.a === p.b ? fmtK(p.b) + " kg" : fmtK(p.a) + " \u2192 " + fmtK(p.b) + " kg")),
                                     React.createElement("svg", { viewBox: "0 0 100 28", preserveAspectRatio: "none", style: { width: 70, height: 24, overflow: "visible" } }, React.createElement("polyline", { points: p.pts, fill: "none", stroke: C.silver, strokeWidth: 1.6, strokeLinejoin: "round", vectorEffect: "non-scaling-stroke" })),
-                                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 14, textAlign: "right" } }, p.delta))),
+                                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 15, textAlign: "right" } }, p.delta))),
                                 effN > 0 && React.createElement(React.Fragment, null,
                                     React.createElement("div", { style: { ...tiny, marginTop: 18 } }, "ESFOR\u00C7O RELATADO \u00B7 " + effN + " TREINOS"),
                                     React.createElement("div", { style: { display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 2, marginTop: 10 } }, eff.facil > 0 && React.createElement("span", { style: { flex: eff.facil, background: "#3A404C" } }), eff.medida > 0 && React.createElement("span", { style: { flex: eff.medida, background: "#8D97A9" } }), eff.destruidor > 0 && React.createElement("span", { style: { flex: eff.destruidor, background: C.warn } })),
-                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 10.5, color: C.muted, marginTop: 6 } }, React.createElement("span", null, "f\u00E1cil " + eff.facil), React.createElement("span", null, "na medida " + eff.medida), React.createElement("span", { style: { color: C.warn } }, "destruidor " + eff.destruidor))),
+                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 6 } }, React.createElement("span", null, "f\u00E1cil " + eff.facil), React.createElement("span", null, "na medida " + eff.medida), React.createElement("span", { style: { color: C.warn } }, "destruidor " + eff.destruidor))),
                                 React.createElement("div", { style: { ...tiny, marginTop: 20 } }, "SESS\u00D5ES (" + profSessions.length + ")"),
                                 profSessions.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, padding: "12px 0" } }, "Nenhuma sess\u00E3o registrada ainda."),
                                 [...profSessions].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 12).map((x) => React.createElement("div", { key: x.id, style: { padding: "11px 0", borderBottom: "1px solid #15181F" } },
-                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, fontFamily: F.body, fontSize: 13 } }, React.createElement("span", null, fmtDate(x.date) + " \u00B7 " + ((data.dayNames && data.dayNames[profId] && data.dayNames[profId][x.day]) || "ficha " + ((DAYS.find((d) => d.key === x.day) || {}).short || x.day || ""))), React.createElement("span", { style: { color: C.muted } }, [x.durationSec ? fmtDur(x.durationSec) : "", x.effort ? ({ facil: "f\u00E1cil", medida: "na medida", destruidor: "destruidor", descanso: "recupera\u00E7\u00E3o" }[x.effort] || x.effort) : ""].filter(Boolean).join(" \u00B7 "))),
-                                    x.feedback && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12.5, lineHeight: 1.4, color: "#C9D0DC", marginTop: 4 } }, "\u201C" + x.feedback + "\u201D"))));
+                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, fontFamily: F.body, fontSize: 13 } }, React.createElement("span", null, fmtDate(x.date) + " \u00B7 " + ((DAYS.find((d) => d.key === x.day) || {}).short || x.day || "")), React.createElement("span", { style: { color: C.muted } }, [x.durationSec ? fmtDur(x.durationSec) : "", x.effort ? ({ facil: "f\u00E1cil", medida: "na medida", destruidor: "destruidor", descanso: "recupera\u00E7\u00E3o" }[x.effort] || x.effort) : ""].filter(Boolean).join(" \u00B7 "))),
+                                    x.feedback && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.4, color: "#C9D0DC", marginTop: 4 } }, "\u201C" + x.feedback + "\u201D"))));
                         }
                         else if (fichaTab === "volume") {
                             const unmatched = buildWeeklyVolumeReport(allEx, 0).unmatched;
@@ -1260,44 +1295,60 @@ function CancioClub() {
                         }
                         else if (fichaTab === "ficha") {
                             body = React.createElement("div", { className: "cc-view", style: { marginTop: 6 } },
-                                React.createElement(FichaEditor, { student: ps, onSave: (patch) => updateStudent(profId, patch) }),
-                                React.createElement(ReassessmentHistory, { student: ps, onSave: (patch) => updateStudent(profId, patch) }),
+                                React.createElement(FichaEditor, { student: ps, onSave: (patch) => updateStudent(profId, patch), onPrint: () => printStudent({ student: ps, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, includePrivate: true }), onDelete: () => { removeStudent(profId); setProfView("home"); } }),
                                 React.createElement("div", { style: { ...tiny, marginTop: 24 } }, "FASES ARQUIVADAS"),
                                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
-                                    React.createElement("input", { value: archLabel, onChange: (e) => setArchLabel(e.target.value), placeholder: "R\u00F3tulo (ex.: Fase 1 \u00B7 Adapta\u00E7\u00E3o)", style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 13.5, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "11px 12px", outline: "none" } }),
-                                    React.createElement("button", { className: "cc-tap", onClick: archiveWorkout, style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "0 14px", cursor: "pointer" } }, "Arquivar semana")),
-                                archives.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12.5, color: C.muted, marginTop: 10 } }, "Nenhuma fase arquivada ainda."),
+                                    React.createElement("input", { value: archLabel, onChange: (e) => setArchLabel(e.target.value), placeholder: "R\u00F3tulo (ex.: Fase 1 \u00B7 Adapta\u00E7\u00E3o)", style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 13, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "11px 12px", outline: "none" } }),
+                                    React.createElement("button", { className: "cc-tap", onClick: archiveWorkout, style: { minHeight: 44, fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "0 14px", cursor: "pointer" } }, "Arquivar semana")),
+                                archives.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 10 } }, "Nenhuma fase arquivada ainda."),
                                 [...archives].sort((a, b) => (a.date < b.date ? 1 : -1)).map((a) => React.createElement("div", { key: a.id, style: { display: "flex", alignItems: "center", gap: 8, padding: "12px 0", borderBottom: "1px solid #15181F" } },
-                                    React.createElement("div", { style: { flex: 1, minWidth: 0 } }, React.createElement("div", { style: { fontFamily: F.body, fontSize: 14 } }, a.label), React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 } }, fmtDateTime(a.date) + " \u00B7 " + DAYS.reduce((n, d) => n + ((a.week[d.key] || []).length), 0) + " exerc\u00EDcios")),
-                                    React.createElement("button", { onClick: () => restoreArchive(a), style: { fontFamily: F.body, fontSize: 12, color: C.silver, background: C.panel, border: "none", borderRadius: 8, padding: "8px 11px", cursor: "pointer" } }, "restaurar"),
-                                    React.createElement("button", { onClick: () => deleteArchive(a.id), "aria-label": "Apagar", style: { fontSize: 16, color: C.muted, background: "none", border: "none", cursor: "pointer" } }, "\u00D7"))),
-                                React.createElement("button", { onClick: () => { if (window.confirm(`Remover ${ps.name}? Isso apaga a ficha, hist\u00F3rico e c\u00F3digo dele(a) da nuvem. N\u00E3o pode ser desfeito por aqui \u2014 s\u00F3 restaurando de um backup exportado antes.`)) { removeStudent(profId); setProfView("home"); } }, style: { marginTop: 32, fontFamily: F.body, fontSize: 12.5, color: C.warn, background: "none", border: `1px solid ${C.warn}55`, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Remover aluno"));
+                                    React.createElement("div", { style: { flex: 1, minWidth: 0 } }, React.createElement("div", { style: { fontFamily: F.body, fontSize: 15 } }, a.label), React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 } }, fmtDateTime(a.date) + " \u00B7 " + DAYS.reduce((n, d) => n + ((a.week[d.key] || []).length), 0) + " exerc\u00EDcios")),
+                                    React.createElement("button", { onClick: () => restoreArchive(a), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: C.silver, background: C.panel, border: "none", borderRadius: 10, padding: "8px 11px", cursor: "pointer" } }, "restaurar"),
+                                    React.createElement("button", { onClick: () => deleteArchive(a.id), "aria-label": "Apagar", style: { minHeight: 44, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer" } }, "\u00D7"))),
+                                React.createElement("button", { onClick: () => { if (window.confirm(`Remover ${ps.name}? Isso apaga a ficha, hist\u00F3rico e c\u00F3digo dele(a) da nuvem. N\u00E3o pode ser desfeito por aqui \u2014 s\u00F3 restaurando de um backup exportado antes.`)) { removeStudent(profId); setProfView("home"); } }, style: { minHeight: 44, marginTop: 32, fontFamily: F.body, fontSize: 13, color: C.warn, background: "none", border: `1px solid ${C.warn}55`, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Remover aluno"));
                         }
                         return React.createElement("section", { style: { marginBottom: fichaTab === "treino" ? 14 : 26 } },
                             header,
-                            React.createElement("div", { style: { display: "flex", gap: 18, marginTop: 12, fontFamily: F.body, fontSize: 12, color: C.muted } }, statB(streak, "seguidos"), statB(freqWeek, "semana"), statB(freqTotal, "total")),
-                            chips.length > 0 && React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 } }, chips.map((c) => React.createElement("span", { key: c, style: { fontFamily: F.body, fontSize: 11, color: C.warn, background: "rgba(232,121,75,.12)", borderRadius: 999, padding: "4px 10px" } }, c))),
-                            lastProfSession && lastProfSession.feedback && React.createElement("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: 10, background: C.panel, fontFamily: F.body, fontSize: 12.5, lineHeight: 1.45, color: "#C9D0DC" } }, "\u201C" + lastProfSession.feedback + "\u201D ", React.createElement("span", { style: { color: "#5A6273" } }, "\u00B7 " + fmtDate(lastProfSession.date))),
+                            React.createElement("div", { style: { display: "flex", gap: 18, marginTop: 12, fontFamily: F.body, fontSize: 13, color: C.muted } }, statB(streak, "seguidos"), statB(freqWeek, "semana"), statB(freqTotal, "total")),
+                            chips.length > 0 && React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 } }, chips.map((c) => React.createElement("span", { key: c, style: { fontFamily: F.body, fontSize: 11, color: C.warn, background: "transparent", boxShadow: "inset 0 0 0 1px rgba(232,121,75,.4)", borderRadius: 999, padding: "5px 10px" } }, c))),
+                            lastProfSession && lastProfSession.feedback && React.createElement("div", { style: { marginTop: 12, padding: "10px 12px", borderRadius: 10, background: C.panel, fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: "#C9D0DC" } }, "\u201C" + lastProfSession.feedback + "\u201D ", React.createElement("span", { style: { color: "#5A6273" } }, "\u00B7 " + fmtDate(lastProfSession.date))),
                             tabs,
                             body);
                     })(),
                     (profView === "home" && students.length > 0) || (profView === "aluno" && fichaTab !== "treino") ? null : students.length === 0 && loadingRoster ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, [0, 1, 2].map((i) => React.createElement(SkeletonCard, { key: i }))) : students.length === 0 ? React.createElement(PremiumEmptyState, { icon: "personPlus", compact: false, title: "Nenhum aluno na casa ainda.", sub: "Cadastre o primeiro e a pista come\u00E7a a girar." }) : (React.createElement(React.Fragment, null,
                         profStudent && profStudent.obs && obsChip(profStudent.obs),
                         profStudent && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } },
-                            React.createElement("button", { onClick: () => setProfViewMode("edit"), style: { flex: 1, fontFamily: F.mono, fontSize: 12, letterSpacing: "0.04em", color: profViewMode === "edit" ? C.ink : C.muted, background: profViewMode === "edit" ? C.silver : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo Edi\u00E7\u00E3o"),
-                            React.createElement("button", { onClick: () => setProfViewMode("aula"), style: { flex: 1, fontFamily: F.mono, fontSize: 12, letterSpacing: "0.04em", color: profViewMode === "aula" ? C.ink : C.muted, background: profViewMode === "aula" ? C.amber : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo Aula (Personal)"),
-                            React.createElement("button", { className: "cc-tap", onClick: () => setSerieOpen(true), style: { flex: "none", fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Baixar s\u00E9rie"),
-                            profStudent.assessment && React.createElement("button", { className: "cc-tap", onClick: () => setAssessOpen(true), style: { flex: "none", fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Baixar anamnese"))),
-                        profStudent && profViewMode === "aula" && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 14, lineHeight: 1.5 } },
+                            React.createElement("button", { onClick: () => setProfViewMode("edit"), style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: profViewMode === "edit" ? C.ink : C.muted, background: profViewMode === "edit" ? C.silver : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo Edi\u00E7\u00E3o"),
+                            React.createElement("button", { onClick: () => setProfViewMode("aula"), style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: profViewMode === "aula" ? C.ink : C.muted, background: profViewMode === "aula" ? C.amber : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo Aula (Personal)"),
+                            React.createElement("button", { className: "cc-tap", onClick: () => setSerieOpen(true), style: { minHeight: 44, flex: "none", fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Baixar s\u00E9rie"))),
+                        profStudent && profViewMode === "aula" && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginBottom: 14, lineHeight: 1.5 } },
                             "Registrando presencialmente em nome de ",
                             profStudent.name,
                             " \u2014 os dados v\u00E3o direto pro hist\u00F3rico dele, como se ele mesmo tivesse registrado."),
-                        React.createElement(DayTabs, { week: week, day: day, onPick: (k) => { setDay(k); setExpanded(null); setPickTpl(false); setSavingTpl(false); }, cardio: cardioFocus }),
+                        (() => { // 11a — semana em cartões, um por dia com treino; dias vazios numa linha só
+                            const dnP = (data.dayNames && data.dayNames[profId]) || {};
+                            const sessP = (data.sessions && data.sessions[profId]) || [];
+                            const doneDays = new Set(sessP.filter((x) => isWithin7(x.date)).map((x) => x.day));
+                            const withW = DAYS.filter((d) => (week[d.key] || []).length || (cardioFocus && cardioFocus[d.key]));
+                            const empty = DAYS.filter((d) => !withW.includes(d));
+                            const pick = (k) => { setDay(k); setExpanded(null); setPickTpl(false); setSavingTpl(false); };
+                            return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 } },
+                                withW.map((d) => { const list = week[d.key] || []; const sel = d.key === day; const sets = list.reduce((n, e) => n + ((e.setPlan || []).filter((s) => !NON_COUNTING_KINDS.has(s.kind)).length || Number(e.sets) || 0), 0); const st = doneDays.has(d.key) ? "\u2713 feito" : d.key === todayKeyGlobal ? "hoje" : "\u203A";
+                                    return React.createElement("button", { key: d.key, className: "cc-tap", onClick: () => pick(d.key), style: { minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, border: "none", textAlign: "left", cursor: "pointer", background: sel ? C.panel : "transparent", boxShadow: `inset 0 0 0 1px ${sel ? C.line2 : C.line}` } },
+                                        React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 3, minWidth: 0 } },
+                                            React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.muted } }, d.full.toUpperCase()),
+                                            React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, dnP[d.key] || (list.length ? "Treino" : "Cardio")),
+                                            React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, list.length ? `${list.length} exercício${list.length > 1 ? "s" : ""}${sets ? ` · ${sets} séries` : ""}` : "cardio")),
+                                        React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, flexShrink: 0, color: st === "\u2713 feito" ? C.silver : sel ? C.text : "#5A6273" } }, st)); }),
+                                empty.length > 0 && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", paddingTop: 2 } },
+                                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: "#5A6273", marginRight: 4 } }, "Sem treino:"),
+                                    empty.map((d) => React.createElement("button", { key: d.key, className: "cc-tap", onClick: () => pick(d.key), style: { minHeight: 36, padding: "0 12px", borderRadius: 999, border: "none", fontFamily: F.body, fontSize: 13, cursor: "pointer", ...(d.key === day ? { background: C.text, color: C.ink, fontWeight: 700 } : { background: "transparent", color: C.muted, boxShadow: `inset 0 0 0 1px ${C.line}` }) } }, "+ " + d.short))));
+                        })(),
                         React.createElement("div", { style: { marginBottom: 14 } },
-                            React.createElement("input", { value: dayName, onChange: (e) => updateDayName(profId, day, e.target.value), placeholder: `Nome do treino de ${dayFull} (ex.: Treino A · Superiores)`, style: { width: "100%", boxSizing: "border-box", fontFamily: F.body, fontSize: 14, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", outline: "none" } })),
-                        list.length === 0 && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14, background: C.panel, border: `1px solid ${cardioOn ? C.amber : C.line}`, borderRadius: 12, padding: "12px 14px" } },
-                            React.createElement("div", { style: { flex: 1, fontFamily: F.mono, fontSize: 11.5, color: C.muted, lineHeight: 1.4 } }, "Dia sem treino de for\u00E7a. O aluno j\u00E1 pode registrar cardio em qualquer dia \u2014 esse marcador \u00E9 s\u00F3 pra voc\u00EA planejar/lembrar que este \u00E9 um dia de cardio."),
-                            React.createElement("button", { onClick: () => toggleCardio(profId, day), style: { fontFamily: F.mono, fontSize: 12, letterSpacing: "0.04em", color: cardioOn ? C.ink : C.silver, background: cardioOn ? C.amber : "transparent", border: `1px solid ${cardioOn ? C.amber : C.line}`, borderRadius: 999, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" } }, cardioOn ? "Marcado" : "Marcar como dia de cardio"))),
+                            React.createElement("input", { value: dayName, onChange: (e) => updateDayName(profId, day, e.target.value), placeholder: `Nome do treino de ${dayFull} (ex.: Treino A · Superiores)`, style: { width: "100%", boxSizing: "border-box", fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", outline: "none" } })),
+                        list.length === 0 && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14, background: C.panel, border: `1px solid ${cardioOn ? C.amber : C.line}`, borderRadius: 10, padding: "12px 14px" } },
+                            React.createElement("div", { style: { flex: 1, fontFamily: F.mono, fontSize: 11, color: C.muted, lineHeight: 1.4 } }, "Dia sem treino de for\u00E7a. O aluno j\u00E1 pode registrar cardio em qualquer dia \u2014 esse marcador \u00E9 s\u00F3 pra voc\u00EA planejar/lembrar que este \u00E9 um dia de cardio."),
+                            React.createElement("button", { onClick: () => toggleCardio(profId, day), style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: cardioOn ? C.ink : C.silver, background: cardioOn ? C.amber : "transparent", border: `1px solid ${cardioOn ? C.amber : C.line}`, borderRadius: 999, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap" } }, cardioOn ? "Marcado" : "Marcar como dia de cardio"))),
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 } },
                             list.length === 0 && !adding && React.createElement(PremiumEmptyState, { icon: "dumbbell", title: `Nenhum treino em ${dayFull} \u2014 a ficha t\u00E1 em branco.`, sub: "Monte um exerc\u00EDcio do zero ou aplique um modelo salvo." }),
                             list.map((ex, i) => profViewMode === "aula"
@@ -1305,29 +1356,29 @@ function CancioClub() {
                                 : React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "prof", idx: i + 1, expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExercise, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint, dayDate: dayDate }))),
                         profViewMode === "edit" && (React.createElement(React.Fragment, null,
                             React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 } },
-                                templates.length > 0 && React.createElement("button", { onClick: () => { setPickTpl((v) => !v); setSavingTpl(false); }, style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Aplicar modelo"),
-                                list.length > 0 && React.createElement("button", { onClick: () => { setSavingTpl((v) => !v); setPickTpl(false); }, style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Salvar dia como modelo")),
-                            pickTpl && (React.createElement("div", { style: { background: C.panel, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 12, padding: 10, marginBottom: 14, display: "flex", flexDirection: "column", gap: 8 } }, templates.map((t) => (React.createElement("div", { key: t.id, style: { background: C.panel2, borderRadius: 8, padding: "10px 12px" } },
-                                React.createElement("div", { style: { fontFamily: F.body, fontSize: 14, color: C.text, marginBottom: 8 } },
+                                templates.length > 0 && React.createElement("button", { onClick: () => { setPickTpl((v) => !v); setSavingTpl(false); }, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Aplicar modelo"),
+                                list.length > 0 && React.createElement("button", { onClick: () => { setSavingTpl((v) => !v); setPickTpl(false); }, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Salvar dia como modelo")),
+                            pickTpl && (React.createElement("div", { style: { background: C.panel, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: 10, marginBottom: 14, display: "flex", flexDirection: "column", gap: 8 } }, templates.map((t) => (React.createElement("div", { key: t.id, style: { background: C.panel2, borderRadius: 10, padding: "10px 12px" } },
+                                React.createElement("div", { style: { fontFamily: F.body, fontSize: 15, color: C.text, marginBottom: 8 } },
                                     t.name,
                                     " ",
                                     React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted } },
                                         "\u00B7 ",
                                         t.exercises.length,
                                         " exerc\u00EDcios")),
-                                React.createElement("div", { style: { display: "flex", gap: 4 } }, DAYS.map((d) => (React.createElement("button", { key: d.key, onClick: () => applyTemplate(t, d.key), title: `Aplicar em ${d.full}`, style: { flex: 1, fontFamily: F.mono, fontSize: 11.5, fontWeight: 700, color: d.key === day ? C.ink : C.silver, background: d.key === day ? C.amber : C.panel, border: "none", borderRadius: 6, padding: "8px 0", cursor: "pointer" } }, d.short[0]))))))))),
+                                React.createElement("div", { style: { display: "flex", gap: 4 } }, DAYS.map((d) => (React.createElement("button", { key: d.key, onClick: () => applyTemplate(t, d.key), title: `Aplicar em ${d.full}`, style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: d.key === day ? C.ink : C.silver, background: d.key === day ? C.amber : C.panel, border: "none", borderRadius: 6, padding: "8px 0", cursor: "pointer" } }, d.short[0]))))))))),
                             savingTpl && React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } },
-                                React.createElement("input", { value: tplName, onChange: (e) => setTplName(e.target.value), onKeyDown: (e) => e.key === "Enter" && saveDayAsTemplate(), placeholder: "Nome do modelo", style: { flex: 1, fontFamily: F.body, fontSize: 14, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", outline: "none" } }),
-                                React.createElement("button", { onClick: saveDayAsTemplate, style: { fontFamily: F.mono, fontSize: 13, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer" } }, "Salvar")),
-                            adding ? (React.createElement("div", { style: { ...glassPanel, borderRadius: 22, padding: 20 } },
+                                React.createElement("input", { value: tplName, onChange: (e) => setTplName(e.target.value), onKeyDown: (e) => e.key === "Enter" && saveDayAsTemplate(), placeholder: "Nome do modelo", style: { flex: 1, fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", outline: "none" } }),
+                                React.createElement("button", { onClick: saveDayAsTemplate, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer" } }, "Salvar")),
+                            adding ? (React.createElement("div", { style: { ...glassPanel, borderRadius: 24, padding: 20 } },
                                 library.length > 0 && (React.createElement("div", { style: { marginBottom: 12 } },
-                                    React.createElement("button", { onClick: () => setPickLib((v) => !v), style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, pickLib ? "Fechar biblioteca" : "Escolher da biblioteca"),
-                                    pickLib && (React.createElement("div", { style: { marginTop: 10, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 12, padding: 10 } },
-                                        React.createElement("input", { value: libFilter, onChange: (e) => setLibFilter(e.target.value), placeholder: "filtrar\u2026", style: { width: "100%", boxSizing: "border-box", fontFamily: F.body, fontSize: 13.5, color: C.text, ...glassPanel, borderRadius: 8, padding: "8px 10px", outline: "none", marginBottom: 8 } }),
-                                        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, maxHeight: 200, overflowY: "auto" } }, library.filter((e) => e.name.toLowerCase().includes(libFilter.trim().toLowerCase())).map((e) => (React.createElement("button", { key: e.id, onClick: () => { setForm((fm) => ({ ...fm, name: e.name, url: e.url || "" })); setPickLib(false); setLibFilter(""); }, style: { textAlign: "left", fontFamily: F.body, fontSize: 14, color: C.text, background: C.panel, border: "none", borderRadius: 8, padding: "9px 11px", cursor: "pointer" } },
+                                    React.createElement("button", { onClick: () => setPickLib((v) => !v), style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, pickLib ? "Fechar biblioteca" : "Escolher da biblioteca"),
+                                    pickLib && (React.createElement("div", { style: { marginTop: 10, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: 10 } },
+                                        React.createElement("input", { value: libFilter, onChange: (e) => setLibFilter(e.target.value), placeholder: "filtrar\u2026", style: { width: "100%", boxSizing: "border-box", fontFamily: F.body, fontSize: 13, color: C.text, ...glassPanel, borderRadius: 10, padding: "8px 10px", outline: "none", marginBottom: 8 } }),
+                                        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, maxHeight: 200, overflowY: "auto" } }, library.filter((e) => e.name.toLowerCase().includes(libFilter.trim().toLowerCase())).map((e) => (React.createElement("button", { key: e.id, onClick: () => { setForm((fm) => ({ ...fm, name: e.name, url: e.url || "" })); setPickLib(false); setLibFilter(""); }, style: { minHeight: 44, textAlign: "left", fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "9px 11px", cursor: "pointer" } },
                                             e.name,
-                                            e.tag && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 9, letterSpacing: "0.04em", color: C.ink, background: C.silver, borderRadius: 999, padding: "2px 7px", marginLeft: 7 } }, e.tag),
-                                            e.url ? React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.silver } }, " \u00B7 v\u00EDdeo") : "")))))))),
+                                            e.tag && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.ink, background: C.silver, borderRadius: 999, padding: "2px 7px", marginLeft: 7 } }, e.tag),
+                                            e.url ? React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, color: C.silver } }, " \u00B7 v\u00EDdeo") : "")))))))),
                                 React.createElement(Field, { label: "Exerc\u00EDcio", type: "text", placeholder: "Ex.: Agachamento livre", value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }) }),
                                 React.createElement("div", { style: { marginTop: 12 } },
                                     React.createElement(CatalogPicker, { label: "Ligar ao cat\u00E1logo (volume por m\u00FAsculo)", value: form.catalogId, onChange: (v) => setForm({ ...form, catalogId: v }) })),
@@ -1339,58 +1390,66 @@ function CancioClub() {
                                 React.createElement("div", { style: { marginTop: 12 } },
                                     React.createElement(Field, { label: "Link do v\u00EDdeo (opcional)", type: "text", placeholder: "cole o link", value: form.url, onChange: (e) => setForm({ ...form, url: e.target.value }) })),
                                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14 } },
-                                    React.createElement("button", { onClick: addExercise, style: { flex: 1, fontFamily: F.mono, fontSize: 13.5, letterSpacing: "0.04em", color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Adicionar exerc\u00EDcio"),
-                                    React.createElement("button", { onClick: () => { setAdding(false); setPickLib(false); }, style: { fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "12px 16px", cursor: "pointer" } }, "Cancelar")))) : React.createElement(AddButton, { onClick: () => setAdding(true), label: `+ Adicionar exercício em ${DAYS.find((d) => d.key === day).short}` }))),
+                                    React.createElement("button", { onClick: addExercise, style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Adicionar exerc\u00EDcio"),
+                                    React.createElement("button", { onClick: () => { setAdding(false); setPickLib(false); }, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "12px 16px", cursor: "pointer" } }, "Cancelar")))) : React.createElement(AddButton, { onClick: () => setAdding(true), label: `+ Adicionar exercício em ${DAYS.find((d) => d.key === day).short}` }))),
                         profViewMode === "aula" && profStudent && (React.createElement(React.Fragment, null,
-                            todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
+                            todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
                             React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                             list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
                             React.createElement("button", { className: "cc-tap", onClick: () => { flushAllPendingSaves(); if (!hasLoggedSomething || dayDone)
                                     return; haptic("confirm"); if (isRestDay)
                                     finalizeWorkout("descanso");
                                 else
-                                    setPseModal(true); }, disabled: !hasLoggedSomething || dayDone, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: hasLoggedSomething && !dayDone ? C.amber : C.muted, background: hasLoggedSomething && !dayDone ? "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)" : C.panel2, boxShadow: hasLoggedSomething && !dayDone ? "inset 0 0 0 1px rgba(255,255,255,0.06)" : "none", border: "none", borderRadius: 18, padding: "17px", cursor: hasLoggedSomething && !dayDone ? "pointer" : "default", marginBottom: 6, transition: `transform .18s ${EASE.spring}` } }, dayDone ? (isRestDay ? "✓ Recuperação registrada" : "✓ Treino finalizado") : (isRestDay ? "✓ Salvar Recuperação" : "Finalizar Treino")),
-                            !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 14 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
-                            React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), side: "prof", onSend: (text) => sendMessage(text, profId, true) }))))))),
+                                    setPseModal(true); }, disabled: !hasLoggedSomething || dayDone, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: hasLoggedSomething && !dayDone ? C.ink : C.muted, background: hasLoggedSomething && !dayDone ? C.text : C.panel2, boxShadow: hasLoggedSomething && !dayDone ? "inset 0 0 0 1px rgba(255,255,255,0.06)" : "none", border: "none", borderRadius: 16, padding: "17px", cursor: hasLoggedSomething && !dayDone ? "pointer" : "default", marginBottom: 6, transition: `transform .18s ${EASE.spring}` } }, dayDone ? (isRestDay ? "✓ Recuperação registrada" : "✓ Treino finalizado") : (isRestDay ? "✓ Salvar Recuperação" : "Finalizar Treino")),
+                            !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 11, color: C.muted, marginBottom: 14 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
+                            React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), onSend: (text) => sendMessage(text, profId) }))))))),
                 profTab === "modelos" && (React.createElement(React.Fragment, null,
-                    React.createElement("p", { style: { fontFamily: F.mono, fontSize: 12, color: C.muted, lineHeight: 1.7, marginTop: 0, marginBottom: 18 } }, "Dias de treino prontos. Crie aqui ou salve um dia montado, e aplique em qualquer aluno com um toque."),
+                    React.createElement("p", { style: { fontFamily: F.mono, fontSize: 13, color: C.muted, lineHeight: 1.7, marginTop: 0, marginBottom: 18 } }, "Dias de treino prontos. Crie aqui ou salve um dia montado, e aplique em qualquer aluno com um toque."),
                     React.createElement(TemplateBuilder, { onSave: addTemplate, library: library }),
                     React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
                         templates.length === 0 && React.createElement(PremiumEmptyState, { icon: "grid", title: "Nenhum modelo salvo ainda.", sub: "Crie o primeiro acima e reaproveite em qualquer aluno." }),
                         templates.map((t) => React.createElement(TemplateCard, { key: t.id, tpl: t, targetLabel: `${profStudent ? profStudent.name : "—"} · ${dayFull}`, onApply: () => applyTemplate(t, day), onRemove: () => deleteTemplate(t.id) }))))),
-                profTab === "recados" && React.createElement(React.Fragment, null, notifButton, React.createElement(ProfInbox, { messages: messages, students: students, onReply: (text, sid) => sendMessage(text, sid, true), onOpen: (sid) => messages.filter((m) => m.studentId === sid && !m.read && !m.fromProf).forEach((m) => markRead(m.id)) })),
+                profTab === "recados" && (React.createElement(React.Fragment, null,
+                    React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 12 } },
+                        "Recados",
+                        unread > 0 ? ` · ${unread} novo${unread > 1 ? "s" : ""}` : ""),
+                    React.createElement("div", { style: { marginBottom: 26 } },
+                        notifButton,
+                        React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead })))),
                 profTab === "painel" && (React.createElement(React.Fragment, null,
-                    React.createElement("button", { onClick: () => setProfTab("biblioteca"), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", marginBottom: 22, background: "none", border: "none", borderBottom: `1px solid ${C.line}`, cursor: "pointer", color: C.text, textAlign: "left" } }, React.createElement("span", null, React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 500, fontSize: 15 } }, "Biblioteca de exerc\u00EDcios"), React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 12, color: "#5A6273", marginTop: 2 } }, library.length + " exerc\u00EDcios com v\u00EDdeo e tag")), React.createElement("span", { style: { color: "#3A404C", fontSize: 18 } }, "\u203A")),
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, marginBottom: 12 } }, "Backup"),
+                    React.createElement("button", { onClick: () => setProfTab("biblioteca"), style: { minHeight: 44, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", marginBottom: 22, background: "none", border: "none", borderBottom: `1px solid ${C.line}`, cursor: "pointer", color: C.text, textAlign: "left" } }, React.createElement("span", null, React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 500, fontSize: 15 } }, "Biblioteca de exerc\u00EDcios"), React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 13, color: "#5A6273", marginTop: 2 } }, library.length + " exerc\u00EDcios com v\u00EDdeo e tag")), React.createElement("span", { style: { color: "#3A404C", fontSize: 18 } }, "\u203A")),
+                    React.createElement("button", { onClick: () => setAdvOpen((v) => !v), style: { minHeight: 44, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 8 } }, "Avan\u00E7ado \u00B7 backup e restaura\u00E7\u00E3o", React.createElement("span", { style: { color: C.muted, transform: advOpen ? "rotate(90deg)" : "none" } }, "\u203A")),
+                    advOpen && React.createElement(React.Fragment, null,
                     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
-                        React.createElement("button", { onClick: exportData, style: { fontFamily: F.mono, fontSize: 12.5, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Exportar dados"),
-                        React.createElement("label", { style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "11px 16px", cursor: "pointer" } },
+                        React.createElement("button", { onClick: exportData, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Exportar dados"),
+                        React.createElement("label", { style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "11px 16px", cursor: "pointer" } },
                             "Importar",
                             React.createElement("input", { type: "file", accept: "application/json", onChange: (e) => { importData(e.target.files[0]); e.target.value = ""; }, style: { display: "none" } }))),
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 10, lineHeight: 1.5 } }, "Exporta tudo num arquivo .json. Importar substitui os dados atuais pelos do arquivo."),
-                    React.createElement("label", { style: { display: "inline-block", marginTop: 10, fontFamily: F.mono, fontSize: 12, color: C.muted, background: "none", border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 14px", cursor: "pointer" } },
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 10, lineHeight: 1.5 } }, "Exporta tudo num arquivo .json. Importar substitui os dados atuais pelos do arquivo."),
+                    React.createElement("label", { style: { minHeight: 44, display: "inline-block", marginTop: 10, fontFamily: F.mono, fontSize: 13, color: C.muted, background: "none", border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 14px", cursor: "pointer" } },
                         "Restaurar 1 aluno de um backup antigo",
                         React.createElement("input", { type: "file", accept: "application/json", onChange: (e) => { pickRestoreFile(e.target.files[0]); e.target.value = ""; }, style: { display: "none" } })),
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 6, lineHeight: 1.5 } }, "Pra recuperar um aluno removido sem mexer nos outros — não substitui nada."),
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 6, lineHeight: 1.5 } }, "Pra recuperar um aluno removido sem mexer nos outros — não substitui nada."),
                     restorePicker && React.createElement("div", { style: { marginTop: 10, ...glassPanel, borderRadius: 16, padding: 14 } },
-                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.muted, marginBottom: 8 } }, "Quem restaurar deste backup?"),
-                        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, restorePicker.candidates.map((s) => React.createElement("button", { key: s.id, onClick: () => restoreStudentFromBackup(s.id), style: { textAlign: "left", fontFamily: F.body, fontSize: 13.5, color: C.text, background: C.panel2, border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, s.name))),
-                        React.createElement("button", { onClick: () => setRestorePicker(null), style: { marginTop: 10, fontFamily: F.mono, fontSize: 11.5, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } }, "cancelar")),
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, margin: "22px 0 10px" } }, "Marca"),
-                    React.createElement("button", { onClick: () => setLogoCard(true), style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Selo Cancio Club"),
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 8, lineHeight: 1.5 } }, "Uma imagem do selo do app pra usar como perfil ou postar nas redes."))),
+                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.06em", color: C.muted, marginBottom: 8 } }, "Quem restaurar deste backup?"),
+                        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, restorePicker.candidates.map((s) => React.createElement("button", { key: s.id, onClick: () => restoreStudentFromBackup(s.id), style: { minHeight: 44, textAlign: "left", fontFamily: F.body, fontSize: 13, color: C.text, background: C.panel2, border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, s.name))),
+                        React.createElement("button", { onClick: () => setRestorePicker(null), style: { minHeight: 44, marginTop: 10, fontFamily: F.mono, fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } }, "cancelar"))),
+                    React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, margin: "22px 0 10px" } }, "Marca"),
+                    React.createElement("button", { onClick: () => setLogoCard(true), style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Selo Cancio Club"),
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 8, lineHeight: 1.5 } }, "Uma imagem do selo do app pra usar como perfil ou postar nas redes."))),
                 profTab === "biblioteca" && (React.createElement(LibraryManager, { library: library, onAdd: addLibrary, onUpdate: updateLibrary, onRemove: removeLibrary })))),
             role === "aluno" && !alunoStudent && (() => {
-                const boxes = [0, 1, 2, 3].map((i) => React.createElement("span", { key: i, style: { width: 56, height: 68, borderRadius: 14, background: C.panel, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 30, color: C.text, boxShadow: codeErr ? "inset 0 0 0 1.5px " + C.warn : codeInput[i] ? "inset 0 0 0 1px #2E333D" : i === codeInput.length ? "inset 0 0 0 1.5px " + C.silver : "inset 0 0 0 1px #1E222A" } }, codeInput[i] || ""));
+                const boxes = [0, 1, 2, 3].map((i) => React.createElement("span", { key: i, style: { width: 60, height: 72, borderRadius: 16, background: codeInput[i] && !codeErr ? C.text : "transparent", transition: "background .15s ease", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 38, color: codeInput[i] && !codeErr ? C.ink : C.text, boxShadow: codeErr ? "inset 0 0 0 1.5px " + C.warn : codeInput[i] ? "none" : i === codeInput.length ? "inset 0 0 0 1.5px " + C.silver : "inset 0 0 0 1px #2A2E37" } }, codeInput[i] || ""));
                 const press = (k) => { if (loginBusy) return; haptic("tick"); setCodeErr(false); if (k === "\u232B") setCodeInput((c) => c.slice(0, -1)); else setCodeInput((c) => (c.length >= 4 ? c : c + k)); };
-                const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "\u232B"].map((k, i) => React.createElement("button", { key: i, className: "cc-tap", onClick: () => k && press(k), style: { visibility: k ? "visible" : "hidden", padding: "14px 0", borderRadius: 14, border: "none", cursor: "pointer", background: k === "\u232B" ? "transparent" : C.panel, color: k === "\u232B" ? C.muted : C.text, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontSize: 24 } }, k));
+                const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "\u232B"].map((k, i) => React.createElement("button", { key: i, className: "cc-tap", onClick: () => k && press(k), style: { visibility: k ? "visible" : "hidden", height: 58, borderRadius: 16, border: "none", cursor: "pointer", background: "transparent", boxShadow: k === "\u232B" ? "none" : "inset 0 0 0 1px #1E222A", color: k === "\u232B" ? C.muted : C.text, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontSize: k === "\u232B" ? 20 : 26 } }, k));
                 return React.createElement("div", { className: "cc-full-h", style: { display: "flex", flexDirection: "column", alignItems: "center", maxWidth: 400, margin: "-44px auto 0", padding: "calc(40px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom))", boxSizing: "border-box" } },
-                    React.createElement("img", { src: BALL_URL, alt: "", width: 150, height: 150, style: { width: 150, height: 150, marginTop: 24 } }),
-                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, letterSpacing: "0.08em", marginTop: 6 } }, "CANCIO CLUB"),
-                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.muted, marginTop: 8, textAlign: "center" } }, loginBusy ? "Buscando sua ficha\u2026" : codeErr ? "C\u00F3digo n\u00E3o encontrado. Confira com seu professor." : "Digite o c\u00F3digo que o professor te passou"),
+                    React.createElement("div", { "aria-hidden": "true", style: { position: "fixed", inset: 0, background: "radial-gradient(60% 34% at 50% 22%, rgba(198,210,228,.12), transparent 70%)", pointerEvents: "none" } }),
+                    React.createElement("img", { src: BALL_URL, alt: "", width: 84, height: 84, style: { position: "relative", width: 84, height: 84, marginTop: 52 } }),
+                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, letterSpacing: "0.06em", marginTop: 14 } }, "CANCIO CLUB"),
+                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 8, textAlign: "center" } }, loginBusy ? "Buscando sua ficha\u2026" : codeErr ? "C\u00F3digo n\u00E3o encontrado. Confira com seu professor." : "Digite o c\u00F3digo que o professor te passou"),
                     React.createElement("div", { style: { display: "flex", gap: 10, marginTop: "auto", paddingTop: 28 } }, boxes),
-                    React.createElement("div", { style: { width: "100%", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginTop: 28 } }, keys),
-                    React.createElement("button", { onClick: () => switchRole("prof"), style: { marginTop: 14, fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 10, cursor: "pointer" } }, "Sou professor \u203A"));
+                    React.createElement("div", { style: { width: "100%", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 28, padding: "0 24px", boxSizing: "border-box" } }, keys),
+                    React.createElement("button", { className: "cc-tap", onClick: () => switchRole("prof"), style: { minHeight: 44, marginTop: 10, fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 10, cursor: "pointer" } }, "Sou professor \u203A"));
             })(),
             // esqueleto do que está prestes a aparecer (resumo + treino), em vez de deixar a tela
             // parada enquanto a Edge Function busca o aluno pelo código
@@ -1400,6 +1459,7 @@ function CancioClub() {
                     const parts = String(dayName || dayFull || "Treino").split("\u00B7").map((s) => s.trim()).filter(Boolean);
                     const title = (parts[0] || "Treino").toUpperCase();
                     const sub = list.length ? [parts.slice(1).join(" \u00B7 "), prog.done + " de " + prog.total + " s\u00E9ries"].filter(Boolean).join(" \u00B7 ") : "Dia de recupera\u00E7\u00E3o";
+                    const tiny = { fontFamily: F.body, fontSize: 13, fontWeight: 500, color: "#5A6273", background: "none", border: "none", padding: 4, cursor: "pointer" };
                     const sairPill = { flexShrink: 0, height: 44, padding: "0 18px", fontFamily: F.body, fontSize: 13, fontWeight: 600, color: C.text, background: "none", boxShadow: `inset 0 0 0 1px ${C.line2}`, borderRadius: 999, border: "none", cursor: "pointer" };
                     return React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 18, marginBottom: 20 } },
                         React.createElement(MirrorGlobe, { size: 108, tile: 9, mask: `linear-gradient(0deg,#000 ${prog.pct}%,transparent ${prog.pct}%)` }),
@@ -1409,25 +1469,32 @@ function CancioClub() {
                                 React.createElement("button", { className: "cc-tap", onClick: logout, style: sairPill }, "Sair")),
                             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 28, lineHeight: 0.95, marginTop: 6, color: "#FFFFFF" } }, title),
                             React.createElement("div", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.silver, marginTop: 5 } }, sub),
-                            weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`)));
+                            weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`),
+                            alunoTab === "treino" && React.createElement("button", { onClick: () => setDayEntryOpen(true), style: { minHeight: 44, ...tiny, padding: "6px 0 0", color: C.silver, fontWeight: 700 } }, "Trocar treino \u203A"),
+                            React.createElement("button", { onClick: () => setLogoCard(true), style: { minHeight: 44, ...tiny, padding: "6px 0 0" } }, "Selo Cancio Club \u203A"),
+                            React.createElement("button", { onClick: () => setMyDataOpen(true), style: { minHeight: 44, ...tiny, padding: "6px 0 0" } }, "Meus dados \u203A")));
                 })(),
+                reassessDue(alunoStudent) && React.createElement("button", { className: "cc-tap", onClick: () => setReassessOpen(true), style: { width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginBottom: 14, borderRadius: 16, border: "none", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.text, cursor: "pointer" } },
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15 } }, "Hora da reavalia\u00E7\u00E3o"),
+                        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 2 } }, "Peso e medidas, 2 minutos. Seu professor compara com o in\u00EDcio.")),
+                    React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, "Fazer \u203A")),
                 alunoStudent.obs && obsChip(alunoStudent.obs),
-                React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 10 } },
+                (() => { const fresh = messages.filter((m) => m.studentId === alunoId && m.fromProf && !m.read); if (!fresh.length) return null; const last = fresh[fresh.length - 1];
+                    return React.createElement("button", { className: "cc-tap", onClick: () => { setAlunoTab("treino"); markProfRead(alunoId); setTimeout(() => { const el = document.getElementById("cc-chat"); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: "smooth" }); }, 60); }, style: { width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginBottom: 14, borderRadius: 16, border: "none", background: C.text, color: C.ink, cursor: "pointer" } },
+                        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                            React.createElement("div", { style: { fontFamily: F.body, fontWeight: 800, fontSize: 13 } }, fresh.length > 1 ? fresh.length + " recados novos do professor" : "Recado novo do professor"),
+                            React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, last.text)),
+                        React.createElement("span", { style: { fontFamily: F.body, fontWeight: 800, fontSize: 13, flexShrink: 0 } }, "Ver \u203A")); })(),
+                React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 14 } },
                     React.createElement(Pill, { active: alunoTab === "treino", onClick: () => setAlunoTab("treino") }, "Treino"),
-                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio"),
-                    React.createElement(Pill, { active: alunoTab === "perfil", onClick: () => setAlunoTab("perfil") }, "Perfil")),
-                // antes eram links cinza 12px escondidos embaixo do t\u00EDtulo \u2014 f\u00E1ceis de nunca notar.
-                // Bot\u00F5es com contorno (mesmo estilo do "Baixar s\u00E9rie"/"Baixar anamnese" do professor)
-                // ficam claramente clic\u00E1veis sem competir visualmente com as abas Treino/Di\u00E1rio acima.
-                React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" } },
-                    alunoTab === "treino" && React.createElement("button", { className: "cc-tap", onClick: () => setDayEntryOpen(true), style: { fontFamily: F.body, fontWeight: 600, fontSize: 12.5, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Trocar treino \u203A"),
-                    React.createElement("button", { className: "cc-tap", onClick: () => setLogoCard(true), style: { fontFamily: F.body, fontWeight: 600, fontSize: 12.5, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Selo Cancio Club \u203A")),
+                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio")),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
                         list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema \u2014 registre seu cardio abaixo, se fez." }),
                         list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, alunoStudent, "aluno"), role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })))),
-                todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
+                todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
                 React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                 list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
                 React.createElement(BottomActionBar, {
@@ -1450,14 +1517,15 @@ function CancioClub() {
                             setPseModal(true);
                     },
                 }),
-                !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 100 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
-                hasLoggedSomething && !dayDone && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontFamily: F.body, fontSize: 12, color: C.amber, marginBottom: 100, opacity: 0.9 } },
-                    React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.amber, flexShrink: 0, animation: "cc-glow 1.6s ease-in-out infinite" } }),
+                !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 11, color: C.muted, marginBottom: 100 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
+                hasLoggedSomething && !dayDone && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontFamily: F.body, fontSize: 13, color: C.amber, marginBottom: 100, opacity: 0.9 } },
+                    React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.amber, flexShrink: 0} }),
                     "n\u00e3o esque\u00e7a de finalizar o treino pra guardar seu resumo e a sequ\u00eancia"),
-                notifButton,
-                React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: sendMessage }))),
-                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }),
-                alunoTab === "perfil" && React.createElement(AlunoProfile, { student: alunoStudent, streak: streak, freqWeek: freqWeek, freqTotal: freqTotal, bestStreak: bestStreak, records: records, week: week, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, assessmentAt: alunoStudent.assessmentAt, onRequestNewAssessment: () => updateStudent(alunoId, { assessmentAt: undefined }), onRequestDelete: () => { updateStudent(alunoId, { deletionRequestedAt: new Date().toISOString() }); sendMessage("Pedido de exclusão dos meus dados (LGPD)."); }, onSubmitReassessment: (entry) => updateStudent(alunoId, { reassessments: [...(alunoStudent.reassessments || []), entry] }) }))),
-            role === "prof" && React.createElement("footer", { style: { marginTop: 40, textAlign: "center", fontFamily: F.mono, fontSize: 10, letterSpacing: "0.22em", color: "rgba(255,255,255,0.18)" } }, "CANCIO CLUB"))));
+                React.createElement("div", { id: "cc-chat", style: { marginTop: 22 } },
+                    React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 12 } }, "Conversa com o professor"),
+                    notifButton,
+                    React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })))),
+                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }))),
+            null)));
 }
 export { CancioClub };

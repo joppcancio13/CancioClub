@@ -1,15 +1,12 @@
 import React from "react";
-import { C, EMPTY_ICON_PATHS, F, glassPanel } from "../../styles/tokens";
+import { C, F } from "../../styles/tokens";
 
-// substitui os antigos EmptyBox/EmptyLine (texto cinza centralizado) — ícone fino + frase com
-// atitude, no lugar de um aviso burocrático de "não há dados". compact=true pra quando já está
-// dentro de um painel (sem outro glassPanel aninhado); compact=false pro caso isolado (onboarding).
-function PremiumEmptyState({ icon, title, sub, compact = true }) {
-    const draw = EMPTY_ICON_PATHS[icon] || EMPTY_ICON_PATHS.rest;
-    const strokeProps = { fill: "none", stroke: C.silver, strokeWidth: 1, strokeLinecap: "round", strokeLinejoin: "round" };
-    return (React.createElement("div", { style: { textAlign: "center", padding: compact ? "30px 16px" : "60px 24px", ...(compact ? {} : glassPanel), borderRadius: compact ? 0 : 26 } },
-        React.createElement("svg", { width: 34, height: 34, viewBox: "0 0 32 32", "aria-hidden": "true", style: { display: "block", margin: "0 auto 14px", opacity: 0.55 } }, draw(strokeProps)),
-        React.createElement("div", { style: { fontFamily: F.body, fontSize: 14.5, fontWeight: 600, color: C.text, lineHeight: 1.5, maxWidth: 280, marginLeft: "auto", marginRight: "auto" } }, title),
-        sub && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11.5, color: C.muted, marginTop: 8, lineHeight: 1.6, maxWidth: 260, marginLeft: "auto", marginRight: "auto" } }, sub)));
+// 16d — estado vazio: três pastilhas apagadas + frase + ação opcional
+function PremiumEmptyState({ title, sub, compact = true, action, onAction }) {
+    return React.createElement("div", { style: { padding: compact ? "26px 18px" : "40px 22px", borderRadius: 16, boxShadow: compact ? "none" : `inset 0 0 0 1px ${C.line}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" } },
+        React.createElement("div", { "aria-hidden": "true", style: { display: "flex", gap: 3 } }, [0, 1, 2].map((i) => React.createElement("span", { key: i, style: { width: 18, height: 8, borderRadius: 1.5, boxShadow: "inset 0 0 0 1px #2A2E37" } }))),
+        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text } }, title),
+        sub && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: C.muted, maxWidth: 300 } }, sub),
+        action && React.createElement("button", { className: "cc-tap", onClick: onAction, style: { minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, action));
 }
 export { PremiumEmptyState };

@@ -1,17 +1,11 @@
 import React from "react";
-import { glassPanel } from "../../styles/tokens";
+import { C } from "../../styles/tokens";
 
-// mesmo formato do cabeçalho recolhido do ExerciseCard (avatar + 2 linhas + número), só que em
-// barras cinza com um brilho passando da esquerda pra direita — usado enquanto o app ainda não
-// tem certeza do que vai mostrar (só no boot hoje; fica pronto pro que mais precisar de loading)
+// 16d — cartão fantasma no formato real (nome + pastilhas), com brilho passando
 function SkeletonCard() {
-    return (React.createElement("div", { style: { position: "relative", overflow: "hidden", ...glassPanel, borderRadius: 26 } },
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "16px 18px" } },
-            React.createElement("div", { style: { flexShrink: 0, width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.06)" } }),
-            React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 } },
-                React.createElement("div", { style: { width: "58%", height: 12, borderRadius: 6, background: "rgba(255,255,255,0.07)" } }),
-                React.createElement("div", { style: { width: "38%", height: 9, borderRadius: 5, background: "rgba(255,255,255,0.05)" } })),
-            React.createElement("div", { style: { flexShrink: 0, width: 44, height: 20, borderRadius: 6, background: "rgba(255,255,255,0.06)" } })),
-        React.createElement("div", { className: "cc-shimmer", "aria-hidden": "true" })));
+    return React.createElement("div", { style: { position: "relative", overflow: "hidden", padding: "14px 16px", borderRadius: 16, boxShadow: `inset 0 0 0 1px ${C.line}`, display: "flex", flexDirection: "column", gap: 10 } },
+        React.createElement("span", { style: { width: "55%", height: 12, borderRadius: 3, background: "#15181F" } }),
+        React.createElement("div", { style: { display: "flex", gap: 3 } }, [0, 1, 2, 3].map((i) => React.createElement("span", { key: i, style: { width: 22, height: 8, borderRadius: 1.5, background: "#15181F" } }))),
+        React.createElement("div", { className: "cc-shimmer", "aria-hidden": "true" }));
 }
 export { SkeletonCard };

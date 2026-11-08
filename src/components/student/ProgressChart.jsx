@@ -7,7 +7,7 @@ import { daySummary, sortedHistory } from "../../utils/workout";
 const FacetDot = (props) => { const { cx, cy } = props; if (cx == null || cy == null)
     return null; return React.createElement("rect", { x: cx - 3.4, y: cy - 3.4, width: 6.8, height: 6.8, transform: `rotate(45 ${cx} ${cy})`, fill: C.amber, stroke: C.ink, strokeWidth: 1.4 }); };
 function ChartTip({ active, payload, label, unit, formatValue }) { if (!active || !payload || !payload.length)
-    return null; return React.createElement("div", { style: { ...glassPanel, borderRadius: 8, padding: "7px 10px", fontFamily: F.mono, fontSize: 12 } },
+    return null; return React.createElement("div", { style: { ...glassPanel, borderRadius: 10, padding: "7px 10px", fontFamily: F.mono, fontSize: 13 } },
     React.createElement("div", { style: { color: C.muted } }, label),
     React.createElement("div", { style: { color: C.amber } },
         formatValue ? formatValue(payload[0].value) : payload[0].value,
@@ -18,7 +18,7 @@ function ProgressChart({ ex, metric }) {
     const hist = summarized.filter((h) => (metric === "reps" ? typeof h.reps === "number" : metric === "volume" ? h.volume > 0 : typeof h.load === "number"));
     const rawData = hist.map((h) => ({ date: fmtDate(h.date), v: metric === "reps" ? h.reps : metric === "volume" ? h.volume : h.load }));
     if (rawData.length < 2)
-        return React.createElement("div", { style: { fontFamily: F.mono, fontSize: 12.5, color: C.muted, padding: "22px 0", textAlign: "center", lineHeight: 1.6 } }, metric === "reps" ? "Registre reps em 2+ sessões para ver a evolução." : metric === "volume" ? "Registre séries de trabalho em 2+ sessões para ver a tonelagem." : "Registre a carga em 2+ sessões para acender o gráfico.");
+        return React.createElement("div", { style: { fontFamily: F.mono, fontSize: 13, color: C.muted, padding: "22px 0", textAlign: "center", lineHeight: 1.6 } }, metric === "reps" ? "Registre reps em 2+ sessões para ver a evolução." : metric === "volume" ? "Registre séries de trabalho em 2+ sessões para ver a tonelagem." : "Registre a carga em 2+ sessões para acender o gráfico.");
     // tonelagem alta fica mais legível em toneladas — decidido pela série inteira (não ponto a ponto),
     // senão o eixo mistura "0,8" com "1200" quando um dia foge muito da média
     const useTons = metric === "volume" && Math.max(...rawData.map((d) => d.v)) >= 1000;

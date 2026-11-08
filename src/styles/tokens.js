@@ -7,15 +7,15 @@ const C = {
     ink: "#05060A", panel: "#0E1015", panel2: "#171B22", line: "#1E222A", line2: "#2E333D",
     text: "#F2F5FA", muted: "#7D8698", silver: "#C6D2E4", amber: "#DCE4F0", amberDim: "#2A303B", warn: "#E8794B",
 };
-const cardShadow = "0 1px 0 rgba(255,255,255,.05) inset, 0 22px 48px rgba(0,0,0,.42), 0 3px 10px rgba(0,0,0,.3)";
+// 12a · chapado prata: sem sombra nem vidro. Raios: 10 botão/campo/chip · 16 card · 24 sheet. Texto: 11 · 13 · 15 · 18 · 24.
+const R = { field: 10, row: 16, card: 16, sheet: 24, btn: 10 };
+const cardShadow = `inset 0 0 0 1px ${C.line}`;
 // vidro fosco — usado nos painéis do professor (mantém a profundidade translúcida original)
+// (nome mantido por compatibilidade — agora é chapado, sem blur/sombra)
 const glassPanel = {
-    borderRadius: 24,
-    background: "linear-gradient(168deg, rgba(23,27,34,0.72), rgba(11,13,18,0.74))",
-    backdropFilter: "blur(18px) saturate(160%)",
-    WebkitBackdropFilter: "blur(18px) saturate(160%)",
-    border: "1px solid rgba(198,210,228,0.10)",
-    boxShadow: "0 18px 40px rgba(0,0,0,0.5)",
+    borderRadius: 16,
+    background: C.panel,
+    boxShadow: `inset 0 0 0 1px ${C.line}`,
 };
 // fundo chapado, só com fio — usado nas telas do aluno no lugar do glassPanel (redesign estético 4:
 // "sem glassPanel/sombras, fundo chapado, cards só com fio")
@@ -90,7 +90,11 @@ const FEEDBACK_QUESTIONS = [
     "Como foi o pique hoje?", "Valeu o esforço? Conta pra gente.", "Missão cumprida! Como foi?",
     "Como está se sentindo depois do treino?", "Deixa aqui como foi o seu treino.",
 ];
-const BALL_URL = "selo-bola-transparente.png?v=14";
+const BALL_URL = "selo-bola-transparente.png?v=15";
+// 17d — silhueta chapada (mesmo degradê das pastilhas, juntas transparentes): card, figurinhas, estados vazios.
+// A pequena (8 fileiras) é pra tamanhos abaixo de ~32px, onde a de 14 fileiras embaralha.
+const SIL_URL = "selo-silhueta.png?v=15";
+const SIL_SMALL_URL = "selo-silhueta-pequena.png?v=15";
 // pontinhos de brilho fixos (sem jitter entre renders) ao redor da bola — assinatura "disco club"
 const SPARKLE_SPOTS = [
     { x: -6, y: 4, delay: 0, size: 5 },
@@ -104,9 +108,10 @@ const MIRROR_GRID = (px) => `linear-gradient(90deg,#05060A ${px * 0.17}px,transp
 // já incluso — a marca completa com bola + "CANCIO CLUB"), publicado junto com o index.html no
 // Netlify. Não é desenhado no Canvas em tempo de execução: é mais leve e o navegador só
 // baixa/exibe uma imagem, sem gastar tempo de CPU redesenhando a bola toda vez.
-// (nome anterior apontava para "selo-cancio-club-transparente.png", um arquivo que nunca
-// chegou a existir no projeto — por isso o selo parava de aparecer/baixar.)
-const SELO_URL = "selo-cancio-club.png?v=14";
+// Baixar/compartilhar usa SEMPRE o PNG transparente (2160×2160) — é o adesivo. Nunca converter p/ JPG/WebP.
+// O de fundo preto (selo-cancio-club.png) fica como fallback se o transparente falhar.
+const SELO_URL = "selo-cancio-club-transparente.png?v=15";
+const SELO_FALLBACK_URL = "selo-cancio-club.png?v=15";
 // versão só-a-bola, fundo transparente, sem o texto "CANCIO CLUB" — usada como selo decorativo
 // dentro dos cards de compartilhamento (a marca com texto completo fica só no LogoCard)
 const SEAL_MARK_URL = BALL_URL;
@@ -147,7 +152,7 @@ const ASSESSMENT_OBJETIVO_OPTIONS = ["Hipertrofia", "Redução de percentual de 
 const ASSESSMENT_DIAS_OPTIONS = [2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: String(n) }));
 const ASSESSMENT_TEMPO_SESSAO_OPTIONS = [{ value: "45min", label: "45 min" }, { value: "60min", label: "60 min" }, { value: "90min", label: "+1 hora" }];
 const ASSESSMENT_ESTRESSE_OPTIONS = ["Ruim", "Razoável", "Boa", "Excelente"].map((v) => ({ value: v, label: v }));
-const assessmentLabelStyle = { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted };
+const assessmentLabelStyle = { fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.muted };
 const ASSESSMENT_CSS = `
 .cc-assess-choice:hover:not(.cc-assess-choice--active) { border-color:#3a3a3a; background:rgba(255,255,255,0.06); }
 .cc-assess-choice:active { transform:scale(.94); }
@@ -158,4 +163,4 @@ const ASSESSMENT_CSS = `
 .cc-assess-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(10,10,12,0.35); border-top-color:#0A0A0C; animation: cc-boot-spin .7s linear infinite; flex-shrink:0; }
 `;
 const ASSESSMENT_TEMPO_SESSAO_LABELS = { "45min": "45 min", "60min": "60 min", "90min": "+1 hora" };
-export { C, cardShadow, glassPanel, flatPanel, PILL_ON, PILL_OFF_SHADOW, F, EASE, DAYS, JS2KEY, MILESTONES, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, TRAIN_PHRASES, REST_PHRASES, SHARE_PHRASES, GREET_MANHA, GREET_TARDE, GREET_NOITE, SESS_KEY, FEEDBACK_QUESTIONS, BALL_URL, SPARKLE_SPOTS, MIRROR_GRID, SELO_URL, SEAL_MARK_URL, DIARY_EFFORT_LABELS, CALENDAR_WEEKDAY_SHORT, EMPTY_ICON_PATHS, ASSESSMENT_TEMPO_TREINO_OPTIONS, ASSESSMENT_OBJETIVO_OPTIONS, ASSESSMENT_DIAS_OPTIONS, ASSESSMENT_TEMPO_SESSAO_OPTIONS, ASSESSMENT_ESTRESSE_OPTIONS, assessmentLabelStyle, ASSESSMENT_CSS, ASSESSMENT_TEMPO_SESSAO_LABELS };
+export { SIL_URL, SIL_SMALL_URL, C, R, cardShadow, glassPanel, flatPanel, PILL_ON, PILL_OFF_SHADOW, F, EASE, DAYS, JS2KEY, MILESTONES, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, TRAIN_PHRASES, REST_PHRASES, SHARE_PHRASES, GREET_MANHA, GREET_TARDE, GREET_NOITE, SESS_KEY, FEEDBACK_QUESTIONS, BALL_URL, SPARKLE_SPOTS, MIRROR_GRID, SELO_URL, SELO_FALLBACK_URL, SEAL_MARK_URL, DIARY_EFFORT_LABELS, CALENDAR_WEEKDAY_SHORT, EMPTY_ICON_PATHS, ASSESSMENT_TEMPO_TREINO_OPTIONS, ASSESSMENT_OBJETIVO_OPTIONS, ASSESSMENT_DIAS_OPTIONS, ASSESSMENT_TEMPO_SESSAO_OPTIONS, ASSESSMENT_ESTRESSE_OPTIONS, assessmentLabelStyle, ASSESSMENT_CSS, ASSESSMENT_TEMPO_SESSAO_LABELS };

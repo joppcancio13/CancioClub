@@ -35,14 +35,17 @@ function validateAssessment(data) {
 // de sobrescrever.
 function mapAnamneseToFicha(formData, student) {
     const clinicalParts = [];
+    (formData.saudeAlertas || []).forEach((a) => clinicalParts.push("Triagem (relatado pelo aluno): " + a));
     if (formData.lesoes && formData.lesoes.trim())
         clinicalParts.push("Lesão/restrição (relatado pelo aluno): " + formData.lesoes.trim());
     if (formData.medicamentos && formData.medicamentos.trim() && formData.medicamentos.trim().toLowerCase() !== "nenhum")
         clinicalParts.push("Medicamento contínuo: " + formData.medicamentos.trim());
     const clinicalAlert = [student.clinicalAlert, clinicalParts.join("\n")].filter(Boolean).join("\n\n") || undefined;
     const obs = [student.obs, formData.gruposEnfase && formData.gruposEnfase.trim() ? "Grupos com ênfase (relatado pelo aluno): " + formData.gruposEnfase.trim() : ""].filter(Boolean).join("\n\n") || undefined;
+    const { foto, ...assessment } = formData;
     return {
-        assessment: formData,
+        assessment,
+        ...(foto ? { photo: foto } : {}),
         assessmentAt: new Date().toISOString(),
         goal: formData.objetivo,
         freqWeekly: formData.diasSemana ? `${formData.diasSemana}x na semana` : undefined,

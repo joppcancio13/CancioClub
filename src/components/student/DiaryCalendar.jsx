@@ -23,33 +23,39 @@ function DiaryCalendar({ diary, records, month, onMonthChange }) {
     const monthLabelRaw = first.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
     const monthLabel = monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1);
     const monthHasEntries = diary.some((e) => e.date.slice(0, 7) === monthKey);
+    const monthEntries = diary.filter((e) => e.date.slice(0, 7) === monthKey && e.effort !== "descanso");
+    const monthRecords = monthEntries.filter((e) => e.hasRecord).length;
+    const latestIso = monthEntries.map((e) => e.date).sort().pop() || null;
     const selectedEntry = selectedDate ? byDate[selectedDate] : null;
-    useEffect(() => { setSelectedDate(null); }, [month.year, month.month]);
+    // 7a: abre já no treino mais recente do mês, em vez de um calendário "vazio" de detalhes
+    useEffect(() => { setSelectedDate(latestIso); }, [month.year, month.month, latestIso]);
+    const monthName = first.toLocaleDateString("pt-BR", { month: "long" }).toUpperCase();
+    const navName = (delta) => new Date(month.year, month.month + delta, 1).toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
     return (React.createElement("div", null,
-        records.length > 0 && React.createElement("div", { style: { display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 16, scrollbarWidth: "none" } }, records.map((r) => React.createElement("div", { key: r.name, style: { flexShrink: 0, background: C.panel, borderRadius: 12, padding: "10px 12px", minWidth: 96, maxWidth: 150 } },
-            React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "★ " + r.name),
-            React.createElement("div", { style: { fontFamily: F.display, fontStretch: "75%", fontSize: 20, fontWeight: 900, color: C.text, marginTop: 3 } },
-                String(r.best).replace(".", ","),
-                React.createElement("span", { style: { fontSize: 10, color: C.muted, fontWeight: 500 } }, " kg"))))),
         React.createElement("div", { style: { padding: "4px 0 6px", marginBottom: 14 } },
-            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } },
-                React.createElement("button", { onClick: () => onMonthChange(-1), style: { fontFamily: F.mono, fontSize: 16, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "4px 12px" } }, "‹"),
-                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "115%", fontSize: 15, color: C.text } }, monthLabel),
-                React.createElement("button", { onClick: () => onMonthChange(1), style: { fontFamily: F.mono, fontSize: 16, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "4px 12px" } }, "›")),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6, maxWidth: 420, marginLeft: "auto", marginRight: "auto" } }, CALENDAR_WEEKDAY_SHORT.map((w, i) => React.createElement("div", { key: i, style: { textAlign: "center", fontFamily: F.mono, fontSize: 9, color: C.muted } }, w))),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, maxWidth: 420, margin: "0 auto" } }, cells.map((d, i) => {
+            React.createElement("div", { style: { display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 16 } },
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
+                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1, color: C.text } }, monthName),
+                    React.createElement("div", { style: { display: "flex", gap: 4, marginLeft: -10 } },
+                        React.createElement("button", { className: "cc-tap", onClick: () => onMonthChange(-1), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "0 10px" } }, "\u2039 " + navName(-1)),
+                        React.createElement("button", { className: "cc-tap", onClick: () => onMonthChange(1), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "0 10px" } }, navName(1) + " \u203A"))),
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", paddingBottom: 10 } },
+                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 40, lineHeight: 0.9, color: C.text } }, monthEntries.length),
+                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 } }, (monthEntries.length === 1 ? "treino" : "treinos") + (monthRecords ? ` · ${monthRecords} \u2605` : "")))),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginBottom: 6, maxWidth: 420, marginLeft: "auto", marginRight: "auto" } }, CALENDAR_WEEKDAY_SHORT.map((w, i) => React.createElement("div", { key: i, style: { textAlign: "center", fontFamily: F.body, fontSize: 11, color: "#5A6273" } }, w))),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, maxWidth: 420, margin: "0 auto 18px" } }, cells.map((d, i) => {
                 if (d == null)
                     return React.createElement("div", { key: i });
                 const iso = isoFor(d);
                 const entry = byDate[iso];
                 const isToday = iso === todayISO();
                 const isSelected = iso === selectedDate;
-                return React.createElement("button", { key: i, className: entry ? "cc-tap" : undefined, onClick: () => entry && setSelectedDate(isSelected ? null : iso), disabled: !entry, style: { aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 6, border: "none", background: entry ? "linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)" : "transparent", boxShadow: isSelected ? "0 0 0 2px #05060A, 0 0 0 3.5px #F2F5FA" : entry ? "none" : isToday ? "inset 0 0 0 1.5px " + C.silver : "inset 0 0 0 1px #15181F", color: entry ? C.ink : isToday ? C.text : "#3A404C", fontFamily: F.display, fontWeight: entry ? 800 : 500, fontStretch: entry ? "75%" : "100%", fontSize: 13, cursor: entry ? "pointer" : "default", padding: 0, transition: "box-shadow .2s ease" } },
+                return React.createElement("button", { key: i, className: entry ? "cc-tap" : undefined, onClick: () => entry && setSelectedDate(isSelected ? null : iso), disabled: !entry, style: { minHeight: 44, aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 6, border: "none", background: entry ? "linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)" : "transparent", boxShadow: isSelected ? "0 0 0 2px #05060A, 0 0 0 3.5px #F2F5FA" : entry ? "none" : isToday ? "inset 0 0 0 1.5px " + C.silver : "none", color: entry ? C.ink : isToday ? C.text : "#5A6273", position: "relative", fontFamily: F.display, fontWeight: entry ? 800 : 500, fontStretch: entry ? "75%" : "100%", fontSize: 13, cursor: entry ? "pointer" : "default", padding: 0, transition: "box-shadow .2s ease" } },
                     d,
-                    entry && entry.hasRecord && React.createElement("span", { style: { fontSize: 8, lineHeight: 1 } }, "★"));
+                    entry && entry.hasRecord && React.createElement("span", { style: { position: "absolute", top: 1, right: 3, fontSize: 11, lineHeight: 1 } }, "★"));
             }))),
         selectedEntry
-            ? React.createElement(DiaryEntryCard, { entry: selectedEntry })
+            ? React.createElement("div", { style: { borderTop: `1px solid ${C.line}`, paddingTop: 14 } }, React.createElement(DiaryEntryCard, { entry: selectedEntry, bare: true }))
             : !monthHasEntries && React.createElement(PremiumEmptyState, { icon: "calendar", title: "Nenhum treino registrado neste mês.", sub: "Toque num dia com marcação pra ver os detalhes." })));
 }
 export { DiaryCalendar };

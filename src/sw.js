@@ -13,7 +13,7 @@
 //   Isso teria que ficar sempre fresco da rede — cachear resultaria em ver
 //   dados desatualizados até muito tempo depois de a internet voltar.
 
-const CACHE_NAME = "cancio-club-v31";
+const CACHE_NAME = "cancio-club-v36";
 
 // self.__WB_MANIFEST é substituído em build time (vite-plugin-pwa, strategy "injectManifest")
 // pela lista real de assets com hash ([{url, revision}, ...]) — por isso o pré-cache não precisa
@@ -76,4 +76,17 @@ self.addEventListener("fetch", (event) => {
       return fromNetwork || new Response("Offline e sem versão em cache para este recurso.", { status: 503, statusText: "Offline" });
     })
   );
+});
+
+// avisos: toque na notificação abre/foca o app; "push" já fica pronto pro servidor (Web Push/VAPID)
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+    const open = list.find((c) => "focus" in c);
+    return open ? open.focus() : self.clients.openWindow("./");
+  }));
+});
+self.addEventListener("push", (event) => {
+  let d = {}; try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data && event.data.text() }; }
+  event.waitUntil(self.registration.showNotification(d.title || "Cancio Club", { body: d.body || "Você tem um recado novo.", icon: "icon-192.png", badge: "favicon-32.png", tag: "cancio-recado", renotify: true }));
 });

@@ -8,15 +8,15 @@ function RecoverySection({ state, onToggle }) {
         { key: "sleep", label: "Sono 7h+" },
         { key: "mobility", label: "Mobilidade" },
     ];
-    return (React.createElement("div", { style: { ...glassPanel, borderRadius: 22, padding: 20, marginBottom: 14 } },
+    return (React.createElement("div", { style: { ...glassPanel, borderRadius: 24, padding: 20, marginBottom: 14 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14 } },
             React.createElement(DiscoBall, { size: 34, seedN: 21 }),
             React.createElement("div", null,
-                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 700, fontSize: 14.5, color: "#FFFFFF" } }, "Descanso tamb\u00E9m \u00E9 treino"),
-                React.createElement("div", { style: { fontFamily: F.body, fontSize: 11.5, color: C.muted, marginTop: 1 } }, "Sem carga hoje \u2014 s\u00F3 cuidado."))),
-        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, marginBottom: 4 } }, "Recupera\u00E7\u00E3o Ativa"),
-        React.createElement("div", { style: { fontFamily: F.body, fontSize: 12.5, color: C.muted, marginBottom: 14, lineHeight: 1.5 } }, "Hoje \u00E9 dia de descanso \u2014 marque o que voc\u00EA cuidou."),
-        React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, items.map((it) => (React.createElement("button", { key: it.key, onClick: () => onToggle(it.key), style: { fontFamily: F.body, fontSize: 13.5, color: state[it.key] ? C.ink : C.text, background: state[it.key] ? C.amber : C.panel2, border: "none", borderRadius: 999, padding: "10px 16px", cursor: "pointer" } },
+                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 700, fontSize: 15, color: "#FFFFFF" } }, "Descanso tamb\u00E9m \u00E9 treino"),
+                React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 1 } }, "Sem carga hoje \u2014 s\u00F3 cuidado."))),
+        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 4 } }, "Recupera\u00E7\u00E3o Ativa"),
+        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginBottom: 14, lineHeight: 1.5 } }, "Hoje \u00E9 dia de descanso \u2014 marque o que voc\u00EA cuidou."),
+        React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, items.map((it) => (React.createElement("button", { key: it.key, onClick: () => onToggle(it.key), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: state[it.key] ? C.ink : C.text, background: state[it.key] ? C.amber : C.panel2, border: "none", borderRadius: 999, padding: "10px 16px", cursor: "pointer" } },
             it.label,
             state[it.key] ? " ✓" : ""))))));
 }

@@ -3,8 +3,9 @@ import { CatalogPicker } from "../shared/CatalogPicker";
 import { Field, TextArea } from "../shared/FormFields";
 import { MediaEmbed } from "../shared/MediaEmbed";
 import { PressStep } from "../shared/PressStep";
-import { Stat } from "../shared/Stat";
 import { EvolutionSummary } from "./EvolutionSummary";
+import { PlanVsDone } from "../professor/PlanVsDone";
+import { Stat } from "../shared/Stat";
 import { RestTimer, useActiveRest } from "./RestTimer";
 import { activeSet, setActiveSet } from "../../hooks/useActiveSet";
 import { pendingFlushes } from "../../hooks/useLocalData";
@@ -26,10 +27,12 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     // se a aba do dia mudar enquanto o card já está montado, realinha a data-alvo do auto-save —
     // sem isso, um toque na aba de Segunda numa Terça gravaria o treino como se fosse de terça
     useEffect(() => { setDate(dayDate || todayISO()); }, [dayDate]);
+    // troca autorizada: o professor deixa alternativas; o aluno escolhe uma só pro dia (máquina ocupada etc.)
+    const swapName = ex.swap && ex.swap.date === date ? ex.swap.name : null;
     const [metric, setMetric] = useState("volume");
     const [showVideo, setShowVideo] = useState(false);
-    const [f, setF] = useState({ name: ex.name, rest: ex.rest ?? "", note: ex.note ?? "", url: ex.url ?? "" });
-    useEffect(() => { setF({ name: ex.name, rest: ex.rest ?? "", note: ex.note ?? "", url: ex.url ?? "" }); setShowVideo(false); }, [ex.id]);
+    const [f, setF] = useState({ name: ex.name, rest: ex.rest ?? "", note: ex.note ?? "", url: ex.url ?? "", alts: (ex.alts || []).join(", ") });
+    useEffect(() => { setF({ name: ex.name, rest: ex.rest ?? "", note: ex.note ?? "", url: ex.url ?? "", alts: (ex.alts || []).join(", ") }); setShowVideo(false); }, [ex.id]);
     const plan = (ex.setPlan && ex.setPlan.length) ? ex.setPlan : defaultSetPlan(ex.sets, ex.reps);
     const [planReps, setPlanReps] = useState(plan.map((s) => s.reps));
     useEffect(() => { setPlanReps(plan.map((s) => s.reps)); }, [ex.id, plan.length]);
@@ -132,12 +135,13 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     const isNewPR = priorBestLoad != null && todaySummary && typeof todaySummary.load === "number" && todaySummary.load > priorBestLoad;
     const prevIsNewPRRef = React.useRef(isNewPR);
     const [prGlow, setPrGlow] = useState(false);
+    // 16a — tocar no tipo abre chips com todas as opções (antes ciclava a cada toque)
+    const [kindPick, setKindPick] = useState(null);
     useEffect(() => {
         if (isNewPR && !prevIsNewPRRef.current) {
-            setPrGlow(true);
-            const t = setTimeout(() => setPrGlow(false), 1600);
+            // 9c: nada de brilho/tela cheia no meio do treino — recorde só é celebrado ao finalizar
             prevIsNewPRRef.current = isNewPR;
-            return () => clearTimeout(t);
+            return;
         }
         prevIsNewPRRef.current = isNewPR;
     }, [isNewPR]);
@@ -255,36 +259,37 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     }, [role, expanded, pendingIdx, ex.id, ex.name, pendingRow && pendingRow.load, pendingRow && pendingRow.reps]);
     // Modo Foco: exercício concluído hoje + recolhido -> cartão fino, só nome + check, pra limpar a rolagem
     if (!expanded && role === "aluno" && isFullyLogged && !settling) {
-        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...flatPanel, borderRadius: 22, overflow: "hidden" } },
+        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...flatPanel, borderRadius: 24, overflow: "hidden" } },
             React.createElement("button", { onClick: () => onToggle(ex.id), style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" } },
-                React.createElement("span", { style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ex.name),
+                React.createElement("span", { style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 15, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ex.name),
                 cur > 0 && React.createElement("span", { style: { flexShrink: 0, fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 15, color: C.silver } }, cur + " kg"),
                 React.createElement("div", { style: { flexShrink: 0, display: "flex", gap: 2.5 } }, workingPlanCount > 0 && Array.from({ length: workingPlanCount }).map((_, i) => React.createElement("span", { key: i, style: { width: 10, height: 6, borderRadius: 2, backgroundImage: PILL_ON, boxShadow: "none" } }))))));
     }
     // exercício "pulado" (aluno decidiu não fazer hoje) + recolhido -> cartão apagado, nome riscado, sem poluir a lista mental
     if (!expanded && role === "aluno" && isSkipped && !hasAnySetToday && !settling) {
-        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...flatPanel, borderRadius: 22, overflow: "hidden", opacity: 0.55, transition: "opacity .4s ease" } },
+        return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { ...flatPanel, borderRadius: 24, overflow: "hidden", opacity: 0.55, transition: "opacity .4s ease" } },
             React.createElement("button", { onClick: () => onToggle(ex.id), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" } },
-                React.createElement("span", { style: { flex: 1, fontFamily: F.body, fontSize: 13.5, color: C.muted, textDecoration: "line-through" } }, ex.name),
-                React.createElement("span", { style: { fontFamily: F.mono, fontSize: 9.5, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase" } }, "pulado"))));
+                React.createElement("span", { style: { flex: 1, fontFamily: F.body, fontSize: 13, color: C.muted, textDecoration: "line-through" } }, ex.name),
+                React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase" } }, "pulado"))));
     }
     const shell = role === "aluno" ? flatPanel : glassPanel;
     const nextSetLabel = (() => { if (!pendingRow) return null; const warmupsBefore = rows.slice(0, pendingIdx + 1).filter((r) => r.kind === "warmup").length; return "S" + (pendingIdx + 1 - warmupsBefore); })();
-    return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { position: "relative", ...shell, borderRadius: 26, overflow: "hidden", opacity: settling ? 0.55 : 1, boxShadow: prGlow ? `0 0 0 1.5px ${C.amber}, 0 0 28px ${C.amber}88, 0 8px 32px rgba(0,0,0,0.4)` : isNextUp ? `0 0 0 1.5px ${tint || C.amber}, 0 0 22px ${(tint || C.amber)}55, 0 8px 32px rgba(0,0,0,0.4)` : shell.boxShadow, transition: "opacity .4s ease, box-shadow .5s ease" } },
-        isNextUp && React.createElement("div", { style: { position: "absolute", top: 10, left: 18, zIndex: 2, fontFamily: F.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.ink, background: tint || C.amber, borderRadius: 999, padding: "3px 9px", animation: "cc-glow 2.2s ease-in-out infinite" } }, "Comece aqui"),
+    return (React.createElement("div", { onTouchStart: (e) => e.stopPropagation(), style: { position: "relative", ...shell, borderRadius: 24, overflow: "hidden", opacity: settling ? 0.55 : 1, boxShadow: prGlow ? `0 0 0 1.5px ${C.amber}, 0 0 28px ${C.amber}88, 0 8px 32px rgba(0,0,0,0.4)` : isNextUp ? `0 0 0 1.5px ${tint || C.amber}, 0 0 22px ${(tint || C.amber)}55, 0 8px 32px rgba(0,0,0,0.4)` : shell.boxShadow, transition: "opacity .4s ease, box-shadow .5s ease" } },
+        isNextUp && React.createElement("div", { style: { position: "absolute", top: 10, left: 18, zIndex: 2, fontFamily: F.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.ink, background: tint || C.amber, borderRadius: 999, padding: "3px 9px", animation: "cc-glow 2.2s ease-in-out infinite" } }, "Comece aqui"),
         React.createElement("div", { style: { position: "absolute", top: 16, right: 16, width: 7, height: 7, borderRadius: "50%", background: tint || C.line, zIndex: 1, boxShadow: tint ? `0 0 10px 2px ${tint}88` : "none" } }),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: isNextUp ? "34px 18px 16px" : "16px 18px" } },
             React.createElement("button", { onClick: () => onToggle(ex.id), style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 12, background: "transparent", border: "none", cursor: "pointer", textAlign: "left", padding: 0 } },
-                role === "prof" && React.createElement("div", { style: { flexShrink: 0, width: 38, height: 38, borderRadius: 12, background: `linear-gradient(145deg, ${(tint || C.amber)}30, ${(tint || C.amber)}0a)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: tint || C.amber } }, idx ? String(idx) : ex.name.charAt(0).toUpperCase()),
+                role === "prof" && React.createElement("div", { style: { flexShrink: 0, width: 38, height: 38, borderRadius: 10, background: C.panel2, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: tint || C.amber } }, idx ? String(idx) : ex.name.charAt(0).toUpperCase()),
                 React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-                    React.createElement("div", { style: { fontFamily: F.display, fontSize: 17, color: C.text, fontWeight: 700, letterSpacing: "-0.015em" } }, ex.name),
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 12, color: C.muted, marginTop: 3 } },
-                        isResting && activeRest ? (React.createElement("span", null, React.createElement("span", { style: { color: C.silver, fontWeight: 700 } }, "DESCANSO"), " \u00B7 pr\u00F3xima: " + (nextSetLabel || "\u2014") + (cur ? " \u00B7 " + cur + " kg" : ""))) : React.createElement(React.Fragment, null,
+                    React.createElement("div", { style: { fontFamily: F.display, fontSize: 18, color: C.text, fontWeight: 700, letterSpacing: "-0.015em" } }, swapName || ex.name),
+                    swapName && React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 } }, "no lugar de " + ex.name),
+                    restriction && React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, fontFamily: F.body, fontWeight: 600, fontSize: 11, color: C.warn, background: "rgba(232,121,75,.12)", borderRadius: 999, padding: "3px 9px" } }, "\u26A0 " + (role === "aluno" ? "Cuidado com o " + restriction.region + " \u2014 doeu, pare e avise" : restriction.text)),
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 13, color: C.muted, marginTop: 3 } },
+                        isResting && activeRest ? ("pr\u00F3xima: " + (nextSetLabel || "\u2014") + (cur ? " \u00B7 " + cur + " kg" : "")) : React.createElement(React.Fragment, null,
                             planSummary(ex),
                             ex.rest ? ` · desc ${ex.rest}s` : "",
                             ex.url ? React.createElement("span", { style: { color: C.silver } }, " \u00B7 v\u00EDdeo") : "",
-                            ex.note ? React.createElement("span", { style: { color: C.amber } }, " \u00B7 obs") : "",
-                            restriction ? React.createElement("span", { title: restriction.text, style: { color: C.warn } }, " \u00B7 \u26A0 " + restriction.region) : ""))),
+                            ex.note ? React.createElement("span", { style: { color: C.amber } }, " \u00B7 obs") : ""))),
                 isResting && activeRest ? (() => {
                     const remaining = Math.max(0, Math.ceil((activeRest.endTime - Date.now()) / 1000));
                     const p = activeRest.total > 0 ? Math.min(100, Math.max(0, (1 - remaining / activeRest.total) * 100)) : 0;
@@ -293,70 +298,68 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                         React.createElement("svg", { width: 76, height: 76, viewBox: "0 0 76 76" },
                             React.createElement("circle", { cx: 38, cy: 38, r: ringR, fill: "none", stroke: C.line2, strokeWidth: 4 }),
                             React.createElement("circle", { cx: 38, cy: 38, r: ringR, fill: "none", stroke: C.silver, strokeWidth: 4, strokeLinecap: "round", strokeDasharray: ringC, strokeDashoffset: ringC * (1 - p / 100), transform: "rotate(-90 38 38)", style: { transition: "stroke-dashoffset .3s linear" } })),
-                        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" } },
-                            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 19, color: C.text, fontVariantNumeric: "tabular-nums" } }, mmss(remaining))));
+                        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" } },
+                            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 18, color: C.text, fontVariantNumeric: "tabular-nums" } }, mmss(remaining)),
+                            React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.1em", color: C.muted, marginTop: 1 } }, "DESCANSO")));
                 })() : React.createElement("div", { style: { textAlign: "right" } },
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 22 } },
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 24 } },
                         ceilingHit && React.createElement("span", { title: "Teto de reps atingido \u2014 hora de subir a carga", style: { color: C.amber, marginRight: 5 } }, "\u2191"),
                         React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, letterSpacing: "-0.03em", color: "#FFFFFF", fontSize: 27 } }, cur),
-                        React.createElement("span", { style: { fontSize: 12, fontWeight: 500, color: C.muted } }, " kg")),
+                        React.createElement("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted } }, " kg")),
                     role === "aluno"
-                        ? (delta !== 0 && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, fontWeight: 600, color: C.muted, marginTop: 5, textAlign: "right" } }, (delta >= 0 ? "+" : "") + delta + " kg"))
-                        : React.createElement("div", { style: { display: "inline-flex", fontFamily: F.mono, fontSize: 10.5, fontWeight: 600, color: delta >= 0 ? C.ink : C.muted, background: delta >= 0 ? C.amber : "rgba(255,255,255,0.08)", borderRadius: 999, padding: "2px 8px", marginTop: 5 } },
+                        ? (delta !== 0 && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, fontWeight: 600, color: C.muted, marginTop: 5, textAlign: "right" } }, (delta >= 0 ? "+" : "") + delta + " kg"))
+                        : React.createElement("div", { style: { display: "inline-flex", fontFamily: F.mono, fontSize: 11, fontWeight: 600, color: delta >= 0 ? C.ink : C.muted, background: delta >= 0 ? C.amber : "rgba(255,255,255,0.08)", borderRadius: 999, padding: "2px 8px", marginTop: 5 } },
                             delta >= 0 ? "+" : "",
                             delta,
                             " kg")),
                 React.createElement("span", { style: { color: C.muted, fontFamily: F.mono, fontSize: 13, transform: expanded ? "rotate(90deg)" : "none", transition: "transform .2s" } }, "\u203A")),
             role === "aluno" && !hasAnySetToday && (React.createElement("button", { onClick: () => { if (expanded)
                     onToggle(ex.id); if (!isSkipped)
-                    startSettle(); setIsSkipped((v) => !v); }, style: { flexShrink: 0, fontFamily: F.mono, fontSize: 10.5, color: isSkipped ? C.silver : C.muted, background: C.panel2, border: "none", borderRadius: 999, padding: "7px 11px", cursor: "pointer" } }, isSkipped ? "Desfazer" : "Pular exerc\u00EDcio"))),
+                    startSettle(); setIsSkipped((v) => !v); }, style: { flexShrink: 0, fontFamily: F.mono, fontSize: 11, color: isSkipped ? C.silver : C.muted, background: C.panel2, border: "none", borderRadius: 999, padding: "7px 11px", cursor: "pointer" } }, isSkipped ? "Desfazer" : "Pular exerc\u00EDcio"))),
         role === "aluno" && workingPlanCount > 0 && React.createElement("div", { style: { display: "flex", gap: 2.5, padding: "0 18px 14px" } },
             Array.from({ length: workingPlanCount }).map((_, i) => React.createElement("span", { key: i, style: { width: 22, height: 8, borderRadius: 3, backgroundImage: i < workingToday.length ? PILL_ON : undefined, boxShadow: i < workingToday.length ? "none" : PILL_OFF_SHADOW, animation: (i === workingToday.length) ? "cc-glow 1.4s ease-in-out infinite" : "none" } }))),
         React.createElement("div", { className: `cc-accordion${expanded ? " cc-open" : ""}` },
             React.createElement("div", { className: "cc-accordion-inner" },
                 React.createElement("div", { style: { borderTop: `1px solid ${C.line}`, padding: 16 } },
-                    role === "aluno" && !isFullyLogged && (React.createElement("button", { className: "cc-tap", onClick: () => { haptic("confirm"); setManuallyCompleted(true); }, style: { width: "100%", fontFamily: F.mono, fontSize: 11.5, letterSpacing: "0.04em", color: C.silver, background: C.panel2, border: "none", borderRadius: 12, padding: "10px", cursor: "pointer", marginBottom: 14, transition: `transform .18s ${EASE.spring}` } }, "Concluir Exerc\u00EDcio")),
+                    role === "aluno" && !isFullyLogged && (React.createElement("button", { className: "cc-tap", onClick: () => { haptic("confirm"); setManuallyCompleted(true); }, style: { width: "100%", fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.silver, background: C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer", marginBottom: 14, transition: `transform .18s ${EASE.spring}` } }, "Concluir Exerc\u00EDcio")),
                     ceilingHit && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, background: "rgba(228,228,233,.10)", borderRadius: 10, padding: "11px 14px", marginBottom: 14 } },
                         React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.amber } }, "\u2191 Teto atingido! Hora de subir a carga"))),
-                    role === "aluno" && ex.profNote && React.createElement("div", { style: { background: C.panel2, borderRadius: 10, padding: "10px 12px", marginBottom: 10 } }, React.createElement("div", { style: { fontFamily: F.display, fontWeight: 700, fontSize: 9, letterSpacing: "0.16em", color: C.muted } }, "NOTA DO PROFESSOR"), React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: C.text, marginTop: 4 } }, ex.profNote)),
+                    role === "aluno" && Array.isArray(ex.alts) && ex.alts.length > 0 && React.createElement("div", { style: { marginBottom: 14 } },
+                        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginBottom: 8 } }, swapName ? "Trocado hoje. Voltar ao original?" : "Aparelho ocupado? Troque por uma op\u00E7\u00E3o aprovada:"),
+                        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } }, [...(swapName ? [ex.name] : []), ...ex.alts.filter((a) => a !== swapName)].map((a) => React.createElement("button", { key: a, className: "cc-tap", onClick: () => { haptic("confirm"); onUpdate(ex.id, { swap: a === ex.name ? null : { date, name: a } }); }, style: { minHeight: 44, padding: "0 14px", borderRadius: 10, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #2A2E37", color: C.text, fontFamily: F.body, fontSize: 13, cursor: "pointer" } }, a === ex.name ? "\u21A9 " + a : a)))),
+                    role === "aluno" && ex.profNote && React.createElement("div", { style: { background: C.panel2, borderRadius: 10, padding: "10px 12px", marginBottom: 10 } }, React.createElement("div", { style: { fontFamily: F.display, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.muted } }, "NOTA DO PROFESSOR"), React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: C.text, marginTop: 4 } }, ex.profNote)),
                     ex.note && (React.createElement("div", { style: { borderLeft: `2px solid ${C.amber}`, background: C.panel2, borderRadius: "0 8px 8px 0", padding: "10px 12px", marginBottom: 14 } },
-                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 9.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.amber, marginBottom: 4 } }, "Observa\u00E7\u00E3o"),
-                        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.text, lineHeight: 1.5 } }, ex.note))),
+                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.amber, marginBottom: 4 } }, "Observa\u00E7\u00E3o"),
+                        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.text, lineHeight: 1.5 } }, ex.note))),
                     ex.url && (React.createElement("div", { style: { marginBottom: 14 } },
-                        React.createElement("button", { onClick: () => setShowVideo((v) => !v), style: { fontFamily: F.mono, fontSize: 12, letterSpacing: "0.03em", color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 14px", cursor: "pointer" } }, showVideo ? "Ocultar demonstração" : "Ver demonstração"),
+                        React.createElement("button", { onClick: () => setShowVideo((v) => !v), style: { fontFamily: F.mono, fontSize: 13, letterSpacing: "0.03em", color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 14px", cursor: "pointer" } }, showVideo ? "Ocultar demonstração" : "Ver demonstração"),
                         showVideo && React.createElement(MediaEmbed, { url: ex.url }))),
                     role === "aluno" && React.createElement(RestTimer, { seconds: ex.rest, autoStart: restTrigger, overrideSeconds: lastSavedKind === "warmup" ? 60 : undefined, timerKey: ex.id, hidden: true }),
-                    React.createElement(EvolutionSummary, { ex: ex, role: role }),
                     role === "prof" ? (React.createElement(React.Fragment, null,
-                        React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 14 } },
-                            React.createElement(Stat, { value: `${cur}`, label: "carga (kg)", accent: C.silver }),
-                            React.createElement(Stat, { value: lr != null ? lr : "—", label: "reps", accent: "#E4E4E9" }),
-                            React.createElement(Stat, { value: hist.length, label: "sess\u00F5es" })),
+                        React.createElement(PlanVsDone, { ex: ex, plan: plan }),
+                        React.createElement(EvolutionSummary, { ex: ex, role: "prof" }),
                         React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8 } },
-                            React.createElement("button", { onClick: () => setMetric("load"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "load" ? C.ink : C.muted, background: metric === "load" ? C.silver : "transparent", border: `1px solid ${metric === "load" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Carga"),
-                            React.createElement("button", { onClick: () => setMetric("reps"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "reps" ? C.ink : C.muted, background: metric === "reps" ? C.silver : "transparent", border: `1px solid ${metric === "reps" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Reps"),
-                            React.createElement("button", { onClick: () => setMetric("volume"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "volume" ? C.ink : C.muted, background: metric === "volume" ? C.silver : "transparent", border: `1px solid ${metric === "volume" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Tonelagem")),
-                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: -4, marginBottom: 10 } }, metric === "volume" ? "tonelagem = soma de carga × reps de todas as séries de trabalho do dia" : "gráfico considera a série de trabalho mais pesada do dia"),
+                            React.createElement("button", { onClick: () => setMetric("load"), style: { fontFamily: F.mono, fontSize: 11, color: metric === "load" ? C.ink : C.muted, background: metric === "load" ? C.silver : "transparent", border: `1px solid ${metric === "load" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Carga"),
+                            React.createElement("button", { onClick: () => setMetric("reps"), style: { fontFamily: F.mono, fontSize: 11, color: metric === "reps" ? C.ink : C.muted, background: metric === "reps" ? C.silver : "transparent", border: `1px solid ${metric === "reps" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Reps"),
+                            React.createElement("button", { onClick: () => setMetric("volume"), style: { fontFamily: F.mono, fontSize: 11, color: metric === "volume" ? C.ink : C.muted, background: metric === "volume" ? C.silver : "transparent", border: `1px solid ${metric === "volume" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Tonelagem")),
+                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: -4, marginBottom: 10 } }, metric === "volume" ? "tonelagem = soma de carga × reps de todas as séries de trabalho do dia" : "gráfico considera a série de trabalho mais pesada do dia"),
                         React.createElement(React.Suspense, { fallback: chartFallback }, React.createElement(ProgressChart, { ex: ex, metric: metric })))) : (React.createElement("div", { style: { marginBottom: 14 } },
-                        React.createElement("button", { onClick: () => setShowHistory((v) => !v), style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: F.mono, fontSize: 11.5, letterSpacing: "0.03em", color: C.muted, background: "rgba(255,255,255,0.03)", border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer" } },
+                        React.createElement("button", { onClick: () => setShowHistory((v) => !v), style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: F.mono, fontSize: 11, letterSpacing: "0.03em", color: C.muted, background: "rgba(255,255,255,0.03)", border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer" } },
                             showHistory ? "Ocultar histórico e progressão" : "Ver histórico e progressão",
                             " ",
                             React.createElement("span", { style: { transform: showHistory ? "rotate(90deg)" : "none", transition: "transform .2s" } }, "\u203A")),
                         showHistory && (React.createElement("div", { style: { marginTop: 12 } },
-                            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 14 } },
-                                React.createElement(Stat, { value: `${cur}`, label: "carga (kg)", accent: C.silver }),
-                                React.createElement(Stat, { value: lr != null ? lr : "—", label: "reps", accent: "#E4E4E9" }),
-                                React.createElement(Stat, { value: hist.length, label: "sess\u00F5es" })),
+                            React.createElement(EvolutionSummary, { ex: ex, role: "aluno" }),
                             React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8 } },
-                                React.createElement("button", { onClick: () => setMetric("load"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "load" ? C.ink : C.muted, background: metric === "load" ? C.silver : "transparent", border: `1px solid ${metric === "load" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Carga"),
-                                React.createElement("button", { onClick: () => setMetric("reps"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "reps" ? C.ink : C.muted, background: metric === "reps" ? C.silver : "transparent", border: `1px solid ${metric === "reps" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Reps"),
-                                React.createElement("button", { onClick: () => setMetric("volume"), style: { fontFamily: F.mono, fontSize: 11.5, color: metric === "volume" ? C.ink : C.muted, background: metric === "volume" ? C.silver : "transparent", border: `1px solid ${metric === "volume" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Tonelagem")),
-                            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: -4, marginBottom: 10 } }, metric === "volume" ? "tonelagem = soma de carga × reps de todas as séries de trabalho do dia" : "gráfico considera a série de trabalho mais pesada do dia"),
+                                React.createElement("button", { onClick: () => setMetric("load"), style: { fontFamily: F.mono, fontSize: 11, color: metric === "load" ? C.ink : C.muted, background: metric === "load" ? C.silver : "transparent", border: `1px solid ${metric === "load" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Carga"),
+                                React.createElement("button", { onClick: () => setMetric("reps"), style: { fontFamily: F.mono, fontSize: 11, color: metric === "reps" ? C.ink : C.muted, background: metric === "reps" ? C.silver : "transparent", border: `1px solid ${metric === "reps" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Reps"),
+                                React.createElement("button", { onClick: () => setMetric("volume"), style: { fontFamily: F.mono, fontSize: 11, color: metric === "volume" ? C.ink : C.muted, background: metric === "volume" ? C.silver : "transparent", border: `1px solid ${metric === "volume" ? C.silver : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" } }, "Tonelagem")),
+                            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: -4, marginBottom: 10 } }, metric === "volume" ? "tonelagem = soma de carga × reps de todas as séries de trabalho do dia" : "gráfico considera a série de trabalho mais pesada do dia"),
                             React.createElement(React.Suspense, { fallback: chartFallback }, React.createElement(ProgressChart, { ex: ex, metric: metric })))))),
                     role === "aluno" && (React.createElement(React.Fragment, null,
                         React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } },
                             React.createElement(Field, { label: "Data", type: "date", value: date, onChange: (e) => setDate(e.target.value), flex: "0 1 140px" }),
-                            React.createElement("button", { onClick: () => setShowNote((v) => !v), style: { fontFamily: F.mono, fontSize: 11.5, color: (todayEntry && todayEntry.studentNote) ? C.amber : C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } },
+                            React.createElement("button", { onClick: () => setShowNote((v) => !v), style: { fontFamily: F.mono, fontSize: 11, color: (todayEntry && todayEntry.studentNote) ? C.amber : C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } },
                                 "Anota\u00E7\u00E3o",
                                 (todayEntry && todayEntry.studentNote) ? " ✓" : "")),
                         showNote && (React.createElement(TextArea, { label: "Nota sobre este exerc\u00EDcio hoje", rows: 2, placeholder: "Ex.: senti dor no ombro, m\u00E1quina nova, aumentei a amplitude\u2026", value: noteText, onChange: (e) => setNoteText(e.target.value), onBlur: () => onNote(ex.id, date, noteText.trim()) })),
@@ -370,17 +373,19 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                             const formatLoad = (v) => (Number.isInteger(v) ? String(v) : String(Math.round(v * 2) / 2));
                             const isPending = role === "aluno" && i === pendingIdx;
                             const kindLabel = isChild ? null
-                                : isPending ? "AGORA"
+                                : isPending ? `AGORA · alvo ${r.targetReps}`
                                     : r.kind === "warmup" ? `Aquec. · alvo ${r.targetReps}`
                                         : r.kind === "recon" ? `Reconhec. · alvo ${r.targetReps}`
                                             : `S${i + 1 - plan.slice(0, i + 1).filter((s) => NON_COUNTING_KINDS.has(s.kind)).length} · alvo ${r.targetReps}`;
-                            return (React.createElement("div", { key: r.setId, className: flashId === r.setId ? "cc-flash-row" : "", style: { background: "rgba(255,255,255,0.03)", borderRadius: 18, padding: "10px 10px", marginLeft: isChild ? 24 : 0, opacity: isWork ? 1 : 0.6, boxShadow: saved ? `inset 0 0 0 1.5px ${C.amber}55` : isPending ? `inset 0 0 0 1.5px ${C.line2}` : "none" } },
+                            return (React.createElement("div", { key: r.setId, className: flashId === r.setId ? "cc-flash-row" : "", style: { background: "rgba(255,255,255,0.03)", borderRadius: 16, padding: "10px 10px", marginLeft: isChild ? 24 : 0, opacity: isWork ? 1 : 0.6, boxShadow: saved ? `inset 0 0 0 1.5px ${C.amber}55` : isPending ? `inset 0 0 0 1.5px ${C.line2}` : "none" } },
+                                kindPick === r.setId && React.createElement("div", { className: "cc-view", style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, KIND_CYCLE.map((kd) => React.createElement("button", { key: kd, className: "cc-tap", onClick: () => { setRowKind(i, kd); setKindPick(null); }, style: { minHeight: 34, padding: "0 12px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(r.kind === kd ? { background: C.text, color: C.ink, fontWeight: 700 } : { background: "transparent", color: C.muted, boxShadow: "inset 0 0 0 1px #2A2E37" }) } }, KIND_LABELS[kd]))),
                                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 } },
-                                    React.createElement("button", { onClick: () => setRowKind(i, KIND_CYCLE[(KIND_CYCLE.indexOf(r.kind) + 1) % KIND_CYCLE.length]), style: { background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 } },
-                                        React.createElement("span", { style: { fontFamily: F.mono, fontSize: 10.5, color: r.kind === "warmup" ? C.muted : r.kind === "recon" ? C.amber : C.text } }, isChild ? React.createElement(React.Fragment, null,
+                                    React.createElement("button", { onClick: () => setKindPick(kindPick === r.setId ? null : r.setId), style: { background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 } },
+                                        React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, color: r.kind === "warmup" ? C.muted : r.kind === "recon" ? C.amber : C.text } }, isChild ? React.createElement(React.Fragment, null,
                                             "\u21B3 ",
                                             React.createElement("span", { style: { color: C.warn } }, KIND_LABELS[r.kind])) : kindLabel),
-                                        !isChild && (r.kind === "rest-pause" || r.kind === "cluster" || r.kind === "back-off") && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 7.5, letterSpacing: "0.02em", textTransform: "uppercase", color: C.warn, background: "rgba(232,121,75,.14)", borderRadius: 4, padding: "1px 4px" } }, KIND_LABELS[r.kind])),
+                                        !isChild && saved && !NON_COUNTING_KINDS.has(r.kind) && priorBestLoad != null && Number(String(r.load).replace(",", ".")) > priorBestLoad && React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: C.silver } }, "acima do recorde \u2713"),
+                                        !isChild && (r.kind === "rest-pause" || r.kind === "cluster" || r.kind === "back-off") && React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.02em", textTransform: "uppercase", color: C.warn, background: "rgba(232,121,75,.14)", borderRadius: 4, padding: "1px 4px" } }, KIND_LABELS[r.kind])),
                                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
                                         saved && React.createElement("span", { style: { color: C.amber, fontFamily: F.mono, fontSize: 13 } }, "\u2713"),
                                         React.createElement("button", { onClick: () => removeSetRow(i), title: "Remover", style: { color: C.muted, background: "none", border: "none", cursor: "pointer", fontFamily: F.mono, fontSize: 15, lineHeight: 1, padding: 0 } }, "\u00D7"))),
@@ -388,15 +393,15 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                                     React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                                         isChild ? (React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontWeight: 800, fontSize: 24, color: C.muted, padding: "6px 0" } },
                                             effLoad || "—",
-                                            React.createElement("span", { style: { fontSize: 12, fontWeight: 500 } }, " kg"))) : (React.createElement(PressStep, { value: r.load, onStep: (v) => updateRow(i, { load: formatLoad(v) }), onCommit: (v) => saveRow(i, true, { load: formatLoad(v) }), onTypeCommit: (v) => { updateRow(i, { load: v }); saveRow(i, true, { load: v }); }, step: 1, color: C.text, suffix: " kg", size: 22 })),
-                                        React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 8.5, letterSpacing: "0.08em", color: C.muted, marginTop: 2 } }, "CARGA")),
+                                            React.createElement("span", { style: { fontSize: 13, fontWeight: 500 } }, " kg"))) : (React.createElement(PressStep, { value: r.load, onStep: (v) => updateRow(i, { load: formatLoad(v) }), onCommit: (v) => saveRow(i, true, { load: formatLoad(v) }), onTypeCommit: (v) => { updateRow(i, { load: v }); saveRow(i, true, { load: v }); }, step: 1, color: C.text, suffix: " kg", size: 22 })),
+                                        React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 11, letterSpacing: "0.08em", color: C.muted, marginTop: 2 } }, "CARGA")),
                                     React.createElement("div", { style: { width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.08)", margin: "2px 6px", flexShrink: 0 } }),
                                     React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                                         React.createElement(PressStep, { value: r.reps, onStep: (v) => { if (repsIsComposite)
                                                 return; updateRow(i, { reps: String(Math.round(v)) }); }, onCommit: (v) => { if (repsIsComposite)
-                                                return; saveRow(i, false, isChild ? { reps: String(Math.round(v)), load: effLoad } : { reps: String(Math.round(v)) }); }, onTypeCommit: (v) => { updateRow(i, { reps: v }); saveRow(i, false, isChild ? { reps: v, load: effLoad } : { reps: v }); }, step: 1, color: C.text, suffix: "", size: 22, disabled: repsIsComposite }),
-                                        React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 8.5, letterSpacing: "0.08em", color: C.muted, marginTop: 2 } }, isChild ? "EXTRAS" : "REPS"))),
-                                !isChild && last && typeof last.load === "number" && !r.load && !r.reps && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginTop: 6 } },
+                                                return; saveRow(i, false, isChild ? { reps: String(Math.round(v)), load: effLoad } : { reps: String(Math.round(v)) }); }, onTypeCommit: (v) => { updateRow(i, { reps: v }); saveRow(i, false, isChild ? { reps: v, load: effLoad } : { reps: v }); }, step: 1, color: C.text, suffix: "", size: 22, disabled: repsIsComposite, placeholder: isChild ? undefined : r.targetReps }),
+                                        React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 11, letterSpacing: "0.08em", color: C.muted, marginTop: 2 } }, isChild ? "EXTRAS" : (r.targetReps ? "REPS · ALVO " + r.targetReps : "REPS")))),
+                                !isChild && last && typeof last.load === "number" && !r.load && !r.reps && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 6 } },
                                     "última vez: ",
                                     React.createElement("span", { style: { color: C.silver } }, `${last.load} kg`),
                                     (typeof last.reps === "number" || (typeof last.reps === "string" && last.reps)) ? ` × ${last.reps}` : ""),
@@ -407,15 +412,15 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                                     const base = typedLoad || (typeof last?.load === "number" ? last.load : 0);
                                     if (!base) return null;
                                     const opts = [{ l: formatLoad(base) + " kg", v: base }, { l: "+2,5", v: base + 2.5 }, { l: "+5", v: base + 5 }];
-                                    return React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 9 } }, opts.map((o, k) => React.createElement("button", { key: k, className: "cc-tap", onClick: () => { haptic("confirm"); updateRow(i, { load: formatLoad(o.v) }); saveRow(i, true, { load: formatLoad(o.v) }); }, style: { flex: 1, minWidth: 0, fontFamily: F.display, fontWeight: 700, fontSize: 13.5, color: k === 0 ? "#05060A" : C.silver, background: k === 0 ? "linear-gradient(150deg,#EEF3FB,#B9C6D9)" : "rgba(255,255,255,0.06)", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", transition: "transform .18s " + EASE.spring } }, o.l)));
+                                    return React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 9 } }, opts.map((o, k) => React.createElement("button", { key: k, className: "cc-tap", onClick: () => { haptic("confirm"); updateRow(i, { load: formatLoad(o.v) }); saveRow(i, true, { load: formatLoad(o.v) }); }, style: { flex: 1, minWidth: 0, fontFamily: F.display, fontWeight: 700, fontSize: 13, color: k === 0 ? "#05060A" : C.silver, background: k === 0 ? C.text : C.panel2, border: "none", borderRadius: 10, padding: "12px 0", cursor: "pointer", transition: "transform .18s " + EASE.spring } }, o.l)));
                                 })()));
                         })),
-                        React.createElement("div", { style: { marginTop: 10, fontFamily: F.mono, fontSize: 10, color: C.muted, textAlign: "center" } }, "cada s\u00E9rie \u00E9 salva sozinha assim que voc\u00EA registra carga e reps"),
+                        React.createElement("div", { style: { marginTop: 10, fontFamily: F.mono, fontSize: 11, color: C.muted, textAlign: "center" } }, "cada s\u00E9rie \u00E9 salva sozinha assim que voc\u00EA registra carga e reps"),
                         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, justifyContent: "center" } },
-                            React.createElement("button", { onClick: () => addSetRow("warmup"), style: { fontFamily: F.mono, fontSize: 11.5, color: C.silver, background: "transparent", border: `1px dashed ${C.line}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer" } }, "+ Aquec"),
-                            React.createElement("button", { onClick: () => addSetRow("working"), style: { fontFamily: F.mono, fontSize: 11.5, color: C.silver, background: "transparent", border: `1px dashed ${C.line}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer" } }, "+ S\u00E9rie")))),
+                            React.createElement("button", { onClick: () => addSetRow("warmup"), style: { fontFamily: F.mono, fontSize: 11, color: C.silver, background: "transparent", border: `1px dashed ${C.line}`, borderRadius: 10, padding: "6px 12px", cursor: "pointer" } }, "+ Aquec"),
+                            React.createElement("button", { onClick: () => addSetRow("working"), style: { fontFamily: F.mono, fontSize: 11, color: C.silver, background: "transparent", border: `1px dashed ${C.line}`, borderRadius: 10, padding: "6px 12px", cursor: "pointer" } }, "+ S\u00E9rie")))),
                     role === "prof" && (React.createElement(React.Fragment, null,
-                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, margin: "4px 0 8px" } }, "Editar exerc\u00EDcio"),
+                        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, margin: "4px 0 8px" } }, "Editar exerc\u00EDcio"),
                         React.createElement(Field, { label: "Nome", type: "text", value: f.name, onChange: (e) => setF({ ...f, name: e.target.value }), onBlur: () => f.name.trim() && commit({ name: f.name.trim() }) }),
                         React.createElement("div", { style: { marginTop: 10 } },
                             React.createElement(CatalogPicker, { label: "Conta no volume como", exerciseName: ex.name, value: ex.catalogId, onChange: (v) => commit({ catalogId: v || undefined }) })),
@@ -424,36 +429,38 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                         React.createElement(TextArea, { label: "Observa\u00E7\u00E3o para o aluno", rows: 2, placeholder: "Ex.: des\u00E7a controlado, 3s na fase exc\u00EAntrica.", value: f.note, onChange: (e) => setF({ ...f, note: e.target.value }), onBlur: () => commit({ note: f.note.trim() || undefined }) }),
                         React.createElement("div", { style: { marginTop: 12 } },
                             React.createElement(Field, { label: "Link do v\u00EDdeo (YouTube, gif...)", type: "text", placeholder: "cole o link", value: f.url, onChange: (e) => setF({ ...f, url: e.target.value }), onBlur: () => commit({ url: f.url.trim() || undefined }) })),
-                        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, margin: "16px 0 8px" } }, "S\u00E9ries"),
+                        React.createElement("div", { style: { marginTop: 12 } },
+                            React.createElement(Field, { label: "Alternativas aprovadas (separe por v\u00EDrgula)", type: "text", placeholder: "Ex.: Supino com halteres, Supino na m\u00E1quina", value: f.alts, onChange: (e) => setF({ ...f, alts: e.target.value }), onBlur: () => commit({ alts: f.alts.split(",").map((x) => x.trim()).filter(Boolean) }) })),
+                        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, margin: "16px 0 8px" } }, "S\u00E9ries"),
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, plan.map((s, i) => (React.createElement("div", { key: s.id, style: { display: "flex", alignItems: "center", gap: 8 } },
-                            React.createElement("button", { onClick: () => setRowKind(i, KIND_CYCLE[(KIND_CYCLE.indexOf(s.kind) + 1) % KIND_CYCLE.length]), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.02em", color: s.kind === "warmup" ? C.ink : s.kind === "recon" ? C.ink : s.kind === "working" ? C.silver : C.warn, background: s.kind === "warmup" ? C.silver : s.kind === "recon" ? C.amber : C.panel2, border: "none", borderRadius: 8, padding: "8px 6px", cursor: "pointer", width: 92, flexShrink: 0, textAlign: "center" } }, KIND_LABELS[s.kind] || s.kind),
-                            React.createElement("input", { value: planReps[i] ?? s.reps, onChange: (e) => setPlanReps((pr) => pr.map((v, k) => (k === i ? e.target.value : v))), onBlur: () => commitRowReps(i), placeholder: "reps", style: { flex: 1, fontFamily: F.mono, fontSize: 14, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 8, padding: "9px 11px", outline: "none" } }),
-                            React.createElement("button", { onClick: () => removeSetRow(i), style: { color: C.muted, background: "none", border: "none", cursor: "pointer", fontFamily: F.mono, fontSize: 16, flexShrink: 0 } }, "\u00D7"))))),
+                            React.createElement("button", { onClick: () => setRowKind(i, KIND_CYCLE[(KIND_CYCLE.indexOf(s.kind) + 1) % KIND_CYCLE.length]), style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.02em", color: s.kind === "warmup" ? C.ink : s.kind === "recon" ? C.ink : s.kind === "working" ? C.silver : C.warn, background: s.kind === "warmup" ? C.silver : s.kind === "recon" ? C.amber : C.panel2, border: "none", borderRadius: 10, padding: "8px 6px", cursor: "pointer", width: 92, flexShrink: 0, textAlign: "center" } }, KIND_LABELS[s.kind] || s.kind),
+                            React.createElement("input", { value: planReps[i] ?? s.reps, onChange: (e) => setPlanReps((pr) => pr.map((v, k) => (k === i ? e.target.value : v))), onBlur: () => commitRowReps(i), placeholder: "reps", style: { flex: 1, fontFamily: F.mono, fontSize: 15, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: "9px 11px", outline: "none" } }),
+                            React.createElement("button", { onClick: () => removeSetRow(i), style: { color: C.muted, background: "none", border: "none", cursor: "pointer", fontFamily: F.mono, fontSize: 15, flexShrink: 0 } }, "\u00D7"))))),
                         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
-                            React.createElement("button", { onClick: () => addSetRow("warmup"), style: { fontFamily: F.mono, fontSize: 12, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "+ Aquecimento"),
-                            React.createElement("button", { onClick: () => addSetRow("recon"), style: { fontFamily: F.mono, fontSize: 12, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "+ Reconhecimento"),
-                            React.createElement("button", { onClick: () => addSetRow("working"), style: { fontFamily: F.mono, fontSize: 12, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "+ S\u00E9rie")),
+                            React.createElement("button", { onClick: () => addSetRow("warmup"), style: { fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "+ Aquecimento"),
+                            React.createElement("button", { onClick: () => addSetRow("recon"), style: { fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "+ Reconhecimento"),
+                            React.createElement("button", { onClick: () => addSetRow("working"), style: { fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "+ S\u00E9rie")),
                         hist.length > 0 && (React.createElement("div", { style: { marginTop: 16 } },
-                            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, marginBottom: 8 } }, "Registros"),
+                            React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 8 } }, "Registros"),
                             React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, maxHeight: 170, overflowY: "auto" } }, hist.map((h, i) => {
                                 let wc = 0;
                                 const line = Array.isArray(h.entries)
                                     ? h.entries.map((e) => `${e.kind === "warmup" ? "Aquec." : e.kind === "recon" ? "Reconhec." : `S${++wc}`} ${e.load}kg${e.reps != null && e.reps !== "" ? `×${e.reps}` : ""}`).join(" · ")
                                     : `${h.load} kg${h.reps != null && h.reps !== "" ? ` · ${h.reps} reps` : ""}`;
-                                return (React.createElement("div", { key: i, style: { display: "flex", flexDirection: "column", gap: 3, fontFamily: F.mono, fontSize: 12, color: C.text, background: C.ink, borderRadius: 8, padding: "7px 10px" } },
+                                return (React.createElement("div", { key: i, style: { display: "flex", flexDirection: "column", gap: 3, fontFamily: F.mono, fontSize: 13, color: C.text, background: C.ink, borderRadius: 10, padding: "7px 10px" } },
                                     React.createElement("div", { style: { display: "flex", alignItems: "flex-start", gap: 8 } },
                                         React.createElement("span", { style: { color: C.muted, minWidth: 40, flexShrink: 0, paddingTop: 1 } }, fmtDate(h.date)),
                                         React.createElement("span", { style: { flex: 1, lineHeight: 1.5 } }, line),
                                         React.createElement("button", { onClick: () => onDeleteRecord(ex.id, h), title: "Apagar", style: { color: C.muted, background: "none", border: "none", cursor: "pointer", fontFamily: F.mono, fontSize: 15, flexShrink: 0 } }, "\u00D7")),
-                                    role === "prof" && h.studentNote && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12.5, color: C.amber, fontStyle: "italic", paddingLeft: 48 } },
+                                    role === "prof" && h.studentNote && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.amber, fontStyle: "italic", paddingLeft: 48 } },
                                         "\u201C",
                                         h.studentNote,
                                         "\u201D")));
                             })))),
                         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" } },
-                            React.createElement("button", { onClick: () => onMove(ex.id, -1), disabled: isFirst, style: { fontFamily: F.mono, fontSize: 12, color: isFirst ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isFirst ? "default" : "pointer" } }, "\u2191 Subir"),
-                            React.createElement("button", { onClick: () => onMove(ex.id, 1), disabled: isLast, style: { fontFamily: F.mono, fontSize: 12, color: isLast ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isLast ? "default" : "pointer" } }, "\u2193 Descer"),
-                            React.createElement("button", { onClick: () => onRemove(ex.id), style: { marginLeft: "auto", fontFamily: F.mono, fontSize: 12, color: C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Remover")))))))));
+                            React.createElement("button", { onClick: () => onMove(ex.id, -1), disabled: isFirst, style: { fontFamily: F.mono, fontSize: 13, color: isFirst ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isFirst ? "default" : "pointer" } }, "\u2191 Subir"),
+                            React.createElement("button", { onClick: () => onMove(ex.id, 1), disabled: isLast, style: { fontFamily: F.mono, fontSize: 13, color: isLast ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isLast ? "default" : "pointer" } }, "\u2193 Descer"),
+                            React.createElement("button", { onClick: () => onRemove(ex.id), style: { marginLeft: "auto", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Remover")))))))));
 }
 ExerciseCard = React.memo(ExerciseCard);
 export { ExerciseCard };

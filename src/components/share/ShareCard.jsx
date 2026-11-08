@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Pill } from "../shared/Pill";
+import { ShareStudio } from "./ShareStudio";
 import { C, F, NON_COUNTING_KINDS, SEAL_MARK_URL, SHARE_PHRASES, glassPanel } from "../../styles/tokens";
 import { fmtDate, todayISO } from "../../utils/date";
 import { drawCentered } from "../../utils/misc";
@@ -9,7 +10,13 @@ import { daySummary, sortedHistory } from "../../utils/workout";
 // Dois temas só: "Selo" (o cartão aprovado — bola sangrando no canto, manchete em degradê) e
 // "Placar" (pôster centralizado, bola no eixo, duração gigante). Os temas antigos (Tech,
 // Editorial, Brutal) foram removidos junto com todo o código morto deles.
+// Rodada 13: o treino do dia usa o ShareStudio (card Pastilhas + figurinhas transparentes).
+// Este componente legado fica só pro dia de descanso e pro resumo semanal/progressão.
 function ShareCard({ data, onClose }) {
+    if (!data.progressOnly) return React.createElement(ShareStudio, { data, onClose });
+    return React.createElement(LegacyShareCard, { data, onClose });
+}
+function LegacyShareCard({ data, onClose }) {
     const canvasRef = React.useRef(null);
     const sealImgRef = React.useRef(null);
     const [toast, setToast] = useState(null);

@@ -5,7 +5,8 @@ import { C, F } from "../../styles/tokens";
 // continuamente até soltar. Toque longo sobre o próprio número abre um campo de texto —
 // escape hatch pra valores exatos ou notação composta ("12+4+3") que os botões não cobrem.
 // Cada toque interrompe a propagação pra nunca disparar a troca de dia por engano.
-function PressStep({ value, onStep, onCommit, onTypeCommit, step, color, suffix, size, disabled }) {
+function PressStep({ value, onStep, onCommit, onTypeCommit, step, color, suffix, size, disabled, placeholder }) {
+    const empty = value === "" || value == null;
     const holdTimer = React.useRef(null);
     const holdInterval = React.useRef(null);
     const runningRef = React.useRef(0);
@@ -24,7 +25,9 @@ function PressStep({ value, onStep, onCommit, onTypeCommit, step, color, suffix,
     const startHold = (dir) => {
         if (disabled)
             return;
-        const base = parseFloat(String(value).replace(",", "."));
+        // campo vazio com alvo (ex.: reps "10"): o primeiro toque parte do alvo, não do zero
+        const ph = parseFloat(String(placeholder ?? "").replace(",", "."));
+        const base = empty && !isNaN(ph) ? ph - dir * step : parseFloat(String(value).replace(",", "."));
         runningRef.current = isNaN(base) ? 0 : base;
         const tick = () => { runningRef.current = Math.max(0, runningRef.current + dir * step); onStep(runningRef.current); };
         tick(); // primeiro passo imediato, sem esperar o hold
@@ -53,8 +56,8 @@ function PressStep({ value, onStep, onCommit, onTypeCommit, step, color, suffix,
         React.createElement("button", { disabled: disabled, onTouchStart: (e) => { e.preventDefault(); e.stopPropagation(); startHold(-1); }, onTouchEnd: (e) => { e.preventDefault(); e.stopPropagation(); endHold(); }, onTouchCancel: (e) => { e.preventDefault(); e.stopPropagation(); endHold(); }, onMouseDown: (e) => { e.stopPropagation(); startHold(-1); }, onMouseUp: (e) => { e.stopPropagation(); endHold(); }, onMouseLeave: () => { if (holdInterval.current || holdTimer.current)
                 endHold(); }, style: { flexShrink: 0, minWidth: 28, minHeight: 34, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "none", color: C.silver, fontFamily: F.mono, fontSize: 15, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.3 : 1, padding: 0, touchAction: "none" } }, "\u2212"),
         React.createElement("div", { onClick: (e) => { e.stopPropagation(); openTyping(); }, onTouchStart: (e) => e.stopPropagation(), style: { minWidth: 44, userSelect: "none", textAlign: "center", fontFamily: F.mono, fontWeight: 800, fontSize: size || 28, letterSpacing: "-0.02em", color, padding: "6px 0", cursor: "pointer", borderBottom: `1px dashed ${color}55` } },
-            value === "" || value == null ? "—" : value,
-            suffix),
+            empty ? React.createElement("span", { style: { color: C.muted } }, placeholder || "\u2014") : value,
+            empty && placeholder ? null : suffix),
         React.createElement("button", { disabled: disabled, onTouchStart: (e) => { e.preventDefault(); e.stopPropagation(); startHold(1); }, onTouchEnd: (e) => { e.preventDefault(); e.stopPropagation(); endHold(); }, onTouchCancel: (e) => { e.preventDefault(); e.stopPropagation(); endHold(); }, onMouseDown: (e) => { e.stopPropagation(); startHold(1); }, onMouseUp: (e) => { e.stopPropagation(); endHold(); }, onMouseLeave: () => { if (holdInterval.current || holdTimer.current)
                 endHold(); }, style: { flexShrink: 0, minWidth: 28, minHeight: 34, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "none", color: C.silver, fontFamily: F.mono, fontSize: 15, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.3 : 1, padding: 0, touchAction: "none" } }, "+")));
 }

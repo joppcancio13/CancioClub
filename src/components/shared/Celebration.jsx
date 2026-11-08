@@ -1,30 +1,33 @@
 import React, { useEffect } from "react";
-import { DiscoBall } from "./DiscoBall";
-import { C, F, SEAL_MARK_URL } from "../../styles/tokens";
+import { C, F, BALL_URL, PILL_ON } from "../../styles/tokens";
 
-/* ------------------------- comemoração ------------------------ */
-function Celebration({ title, subtitle, value, volumeLabel, accent, tint, sound, seal, onDone }) {
-    const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    useEffect(() => { if (typeof sound === "function")
-        sound(); const t = setTimeout(onDone, 2900); return () => clearTimeout(t); }, []);
-    const cols = [tint, accent, "#FFFFFF"];
-    const parts = reduce ? [] : Array.from({ length: 36 }).map((_, i) => { const ang = Math.random() * Math.PI * 2, dist = 90 + Math.random() * 230; return { dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist, c: cols[i % 3], delay: Math.random() * 0.25, size: 6 + Math.random() * 7 }; });
-    return (React.createElement("div", { onClick: onDone, role: "status", "aria-live": "polite", style: { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", overflow: "hidden", background: "rgba(5,6,9,.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", animation: "cc-fade .3s ease" } },
-        !reduce && React.createElement("div", { style: { position: "absolute", width: 560, height: 560, borderRadius: "50%", background: `repeating-conic-gradient(from 0deg, transparent 0 10deg, ${accent}12 10deg 12deg)`, animation: "cc-rays 9s linear infinite" } }),
-        // varredura de brilho metálico, esquerda -> direita, uma vez só — o "flare" do momento catártico
-        !reduce && React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" } },
-            React.createElement("div", { style: { position: "absolute", top: "-20%", bottom: "-20%", width: "55%", background: "linear-gradient(100deg, transparent 0%, rgba(255,255,255,.45) 45%, rgba(255,255,255,.9) 50%, rgba(255,255,255,.45) 55%, transparent 100%)", mixBlendMode: "overlay", animation: "cc-flare 1.6s cubic-bezier(.2,.7,.2,1) .35s both" } })),
-        React.createElement("div", { style: { position: "relative", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: 20 } },
-            React.createElement("div", { style: { marginBottom: 18, animation: reduce ? "none" : "cc-reveal .7s cubic-bezier(.2,.8,.2,1) both" } },
-                seal
-                    ? React.createElement("img", { src: SEAL_MARK_URL, alt: "", width: 118, height: 118, style: { width: 118, height: 118, display: "block", filter: `drop-shadow(0 0 30px ${accent}70)` } })
-                    : React.createElement(DiscoBall, { size: 118, cols: 13, rows: 13, seedN: 99, tint: tint })),
-            parts.map((p, i) => React.createElement("span", { key: i, style: { position: "absolute", top: "34%", left: "50%", width: p.size, height: p.size, background: p.c, transform: "rotate(45deg)", "--dx": `${p.dx}px`, "--dy": `${p.dy}px`, animation: `cc-particle 1.7s ${p.delay}s ease-out forwards` } })),
-            React.createElement("div", { style: { animation: reduce ? "none" : "cc-pop .5s ease .1s both" } },
-                React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontSize: 27, letterSpacing: "0.14em", color: "#FFFFFF", textShadow: `0 0 18px ${C.amber}99, 0 0 44px ${C.amber}44` } }, title),
-                React.createElement("div", { style: { fontFamily: F.body, fontSize: 16, color: C.text, marginTop: 8 } }, subtitle),
-                value && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 28, color: C.silver, marginTop: 4 } }, value),
-                volumeLabel && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 13, color: accent, marginTop: 10, letterSpacing: "0.04em" } }, volumeLabel),
-                React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 16, letterSpacing: "0.1em" } }, "toque para fechar")))));
+// 14b — fim de treino calmo: disco parado, três números, uma pastilha por série, semana e próximo treino.
+// Não fecha sozinho: Compartilhar (then) ou Fechar.
+function Celebration({ title, subtitle, stats, sets, weekDone, weekTarget, nextLabel, sound, onDone, onClose }) {
+    useEffect(() => { if (typeof sound === "function") sound(); }, []);
+    const label = { fontFamily: F.body, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.muted };
+    const tile = (on, s) => React.createElement("span", { style: { width: s, height: s, borderRadius: 2, ...(on ? { background: PILL_ON } : { boxShadow: "inset 0 0 0 1px #2A2E37" }) } });
+    return React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 50, background: C.ink, display: "flex", flexDirection: "column", animation: "cc-fade .3s ease" } },
+        React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "radial-gradient(60% 40% at 50% 22%, rgba(198,210,228,.12), transparent 70%)", pointerEvents: "none" } }),
+        React.createElement("div", { style: { position: "relative", flex: 1, overflowY: "auto", width: "100%", maxWidth: 540, margin: "0 auto", boxSizing: "border-box", padding: "calc(env(safe-area-inset-top) + 56px) 20px 20px", display: "flex", flexDirection: "column", gap: 22 } },
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 14, textAlign: "center" } },
+                React.createElement("img", { src: BALL_URL, alt: "", width: 110, height: 110, style: { display: "block", animation: "cc-reveal .7s cubic-bezier(.2,.8,.2,1) both" } }),
+                React.createElement("span", { style: { ...label, color: C.silver } }, subtitle || "TREINO CONCLUÍDO"),
+                React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 32, lineHeight: 1, color: C.text } }, title)),
+            stats && stats.length > 0 && React.createElement("div", { style: { display: "grid", gridTemplateColumns: `repeat(${stats.length}, minmax(0,1fr))`, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` } },
+                stats.map(([v, l], i) => React.createElement("div", { key: i, style: { padding: "14px 0", display: "flex", flexDirection: "column", gap: 2, ...(i ? { paddingLeft: 14, borderLeft: `1px solid ${C.line}` } : {}) } },
+                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 30, color: C.text } }, v),
+                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: C.muted } }, l)))),
+            sets > 0 && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
+                React.createElement("span", { style: label }, "SÉRIES DE HOJE"),
+                React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 3 } }, Array.from({ length: sets }).map((_, i) => React.createElement(React.Fragment, { key: i }, tile(true, 14))))),
+            weekTarget > 0 && React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 16, boxShadow: `inset 0 0 0 1px ${C.line}` } },
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 2 } },
+                    React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text } }, `${weekDone} de ${weekTarget} nesta semana`),
+                    nextLabel && React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, "próximo: " + nextLabel)),
+                React.createElement("div", { style: { display: "flex", gap: 3 } }, Array.from({ length: weekTarget }).map((_, i) => React.createElement(React.Fragment, { key: i }, tile(i < weekDone, 12)))))),
+        React.createElement("div", { style: { position: "relative", width: "100%", maxWidth: 540, margin: "0 auto", boxSizing: "border-box", padding: "12px 20px calc(env(safe-area-inset-bottom) + 20px)", display: "flex", flexDirection: "column", gap: 6 } },
+            React.createElement("button", { className: "cc-tap", onClick: onDone, style: { height: 54, borderRadius: 16, border: "none", background: C.text, color: C.ink, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer" } }, "Compartilhar"),
+            React.createElement("button", { className: "cc-tap", onClick: onClose || onDone, style: { height: 44, border: "none", background: "transparent", color: C.muted, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "Fechar")));
 }
 export { Celebration };

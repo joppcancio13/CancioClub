@@ -110,7 +110,7 @@ function RestTimer({ seconds, autoStart, overrideSeconds, timerKey, hidden }) {
     if (hidden) return null;
     const accent = done ? C.warn : running ? C.amber : C.silver;
     const ringR = 14, ringC = 2 * Math.PI * ringR;
-    return (React.createElement("div", { style: { background: "rgba(255,255,255,0.03)", border: `1px solid ${done ? C.warn : "rgba(255,255,255,0.08)"}`, borderRadius: 14, padding: 9, marginBottom: 10, transition: "border-color .3s" } },
+    return (React.createElement("div", { style: { background: "rgba(255,255,255,0.03)", border: `1px solid ${done ? C.warn : "rgba(255,255,255,0.08)"}`, borderRadius: 16, padding: 9, marginBottom: 10, transition: "border-color .3s" } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
             React.createElement("div", { style: { position: "relative", width: 34, height: 34, flexShrink: 0 } },
                 React.createElement("svg", { width: 34, height: 34, viewBox: "0 0 34 34" },
@@ -118,15 +118,15 @@ function RestTimer({ seconds, autoStart, overrideSeconds, timerKey, hidden }) {
                     React.createElement("circle", { cx: 17, cy: 17, r: ringR, fill: "none", stroke: accent, strokeWidth: 3, strokeLinecap: "round", strokeDasharray: ringC, strokeDashoffset: ringC * (1 - pct), transform: "rotate(-90 17 17)", style: { transition: "stroke-dashoffset .3s linear" } }))),
             React.createElement("div", { style: { flex: 1 } },
                 React.createElement("div", { style: { fontFamily: F.mono, fontSize: 18, fontWeight: 700, color: accent, letterSpacing: "-0.01em", lineHeight: 1.1 } }, mmss(Math.max(0, remaining))),
-                React.createElement("div", { style: { fontFamily: F.mono, fontSize: 8, color: C.muted, marginTop: 1, letterSpacing: "0.08em" } }, done ? "DESCANSO CONCLUÍDO" : "DESCANSO")),
+                React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 1, letterSpacing: "0.08em" } }, done ? "DESCANSO CONCLUÍDO" : "DESCANSO")),
             React.createElement("button", { onClick: running ? pause : start, style: { fontFamily: F.mono, fontSize: 11, color: C.ink, background: accent, border: "none", borderRadius: 10, padding: "7px 11px", cursor: "pointer", minWidth: 64 } }, running ? "Pausar" : done ? "Repetir" : "Iniciar"),
             React.createElement("button", { onClick: reset, title: "Reiniciar", style: { fontFamily: F.mono, fontSize: 13, color: C.muted, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: "6px 8px", cursor: "pointer" } }, "\u21BA")),
         React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" } },
-            React.createElement("button", { onClick: () => setPreset(15), title: "Micro-pausa (rest-pause/cluster)", style: { fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: total === 15 ? C.ink : C.warn, background: total === 15 ? C.warn : C.amberDim, border: `1px solid ${C.warn}`, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } }, "15s"),
-            [45, 60, 90, 120].map((s) => React.createElement("button", { key: s, onClick: () => setPreset(s), style: { fontFamily: F.mono, fontSize: 10, color: total === s ? C.ink : C.muted, background: total === s ? C.silver : "transparent", border: `1px solid ${total === s ? C.silver : C.line}`, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } },
+            React.createElement("button", { onClick: () => setPreset(15), title: "Micro-pausa (rest-pause/cluster)", style: { fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: total === 15 ? C.ink : C.warn, background: total === 15 ? C.warn : C.amberDim, border: `1px solid ${C.warn}`, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } }, "15s"),
+            [45, 60, 90, 120].map((s) => React.createElement("button", { key: s, onClick: () => setPreset(s), style: { fontFamily: F.mono, fontSize: 11, color: total === s ? C.ink : C.muted, background: total === s ? C.silver : "transparent", border: `1px solid ${total === s ? C.silver : C.line}`, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } },
                 s,
                 "s")),
-            React.createElement("button", { onClick: () => add(15), style: { fontFamily: F.mono, fontSize: 10, color: C.muted, background: C.panel2, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } }, "+15s"))));
+            React.createElement("button", { onClick: () => add(15), style: { fontFamily: F.mono, fontSize: 11, color: C.muted, background: C.panel2, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } }, "+15s"))));
 }
 // mini-player fixo: varre o sessionStorage a cada segundo procurando qualquer descanso em
 // andamento (chave "cancio:rt:*") — assim o aluno continua vendo a contagem mesmo depois

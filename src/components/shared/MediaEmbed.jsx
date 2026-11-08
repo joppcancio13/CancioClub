@@ -11,6 +11,6 @@ function MediaEmbed({ url }) {
         return React.createElement("img", { src: url, alt: "demonstra\u00E7\u00E3o", style: { width: "100%", borderRadius: 10, marginTop: 10 } });
     if (/\.(mp4|webm|ogg)(\?|$)/i.test(url))
         return React.createElement("video", { src: url, controls: true, playsInline: true, style: { width: "100%", borderRadius: 10, marginTop: 10 } });
-    return React.createElement("a", { href: url, target: "_blank", rel: "noreferrer", style: { display: "inline-block", marginTop: 10, fontFamily: F.mono, fontSize: 12.5, color: C.amber } }, "Abrir v\u00EDdeo \u2197");
+    return React.createElement("a", { href: url, target: "_blank", rel: "noreferrer", style: { display: "inline-block", marginTop: 10, fontFamily: F.mono, fontSize: 13, color: C.amber } }, "Abrir v\u00EDdeo \u2197");
 }
 export { MediaEmbed };
