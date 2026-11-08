@@ -58,7 +58,7 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
             const rowH = Math.min(185, (limit - top) / Math.max(1, list.length));
             const k = Math.max(0.6, rowH / 185);
             const fmtK = (v) => String(v).replace(".", ",");
-            const wrapLines = (text, maxW, px, max) => { bodyFont(400, px); const words = String(text).split(/\s+/); const lines = []; let cur = ""; words.forEach((w) => { const test = cur ? cur + " " + w : w; if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; } else cur = test; }); if (cur) lines.push(cur); if (lines.length > max) { lines.length = max; const last = lines[max - 1]; while (ctx.measureText(last + "\u2026").width > maxW && last.length > 4) lines[max - 1] = last.slice(0, -2); lines[max - 1] = lines[max - 1].trim() + "\u2026"; } return lines; };
+            const wrapLines = (text, maxW, px, max) => { bodyFont(400, px); const words = String(text).split(/\s+/); const lines = []; let cur = ""; words.forEach((w) => { const test = cur ? cur + " " + w : w; if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; } else cur = test; }); if (cur) lines.push(cur); if (lines.length > max) { lines.length = max; let last = lines[max - 1]; while (ctx.measureText(last + "\u2026").width > maxW && last.length > 4) last = last.slice(0, -2); lines[max - 1] = last.trim() + "\u2026"; } return lines; };
             list.forEach((ex, i) => {
                 const y = top + i * rowH;
                 const plan = Array.isArray(ex.setPlan) && ex.setPlan.length ? ex.setPlan : null;
