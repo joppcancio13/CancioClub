@@ -11,6 +11,8 @@ function downloadBlobNow(blob, filename) {
     setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 async function shareOrDownloadBlob(blob, filename, title) {
+    if (!blob)
+        return; // canvas.toBlob pode entregar null (ex. canvas sem conteúdo útil) — nada a salvar
     try {
         const file = new File([blob], filename, { type: blob.type || "image/png" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
