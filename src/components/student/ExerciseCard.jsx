@@ -278,7 +278,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                 React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                     React.createElement("div", { style: { fontFamily: F.display, fontSize: 17, color: C.text, fontWeight: 700, letterSpacing: "-0.015em" } }, ex.name),
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 12, color: C.muted, marginTop: 3 } },
-                        isResting && activeRest ? ("pr\u00F3xima: " + (nextSetLabel || "\u2014") + (cur ? " \u00B7 " + cur + " kg" : "")) : React.createElement(React.Fragment, null,
+                        isResting && activeRest ? (React.createElement("span", null, React.createElement("span", { style: { color: C.silver, fontWeight: 700 } }, "DESCANSO"), " \u00B7 pr\u00F3xima: " + (nextSetLabel || "\u2014") + (cur ? " \u00B7 " + cur + " kg" : ""))) : React.createElement(React.Fragment, null,
                             planSummary(ex),
                             ex.rest ? ` · desc ${ex.rest}s` : "",
                             ex.url ? React.createElement("span", { style: { color: C.silver } }, " \u00B7 v\u00EDdeo") : "",
@@ -291,9 +291,8 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                         React.createElement("svg", { width: 76, height: 76, viewBox: "0 0 76 76" },
                             React.createElement("circle", { cx: 38, cy: 38, r: ringR, fill: "none", stroke: C.line2, strokeWidth: 4 }),
                             React.createElement("circle", { cx: 38, cy: 38, r: ringR, fill: "none", stroke: C.silver, strokeWidth: 4, strokeLinecap: "round", strokeDasharray: ringC, strokeDashoffset: ringC * (1 - p / 100), transform: "rotate(-90 38 38)", style: { transition: "stroke-dashoffset .3s linear" } })),
-                        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" } },
-                            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 18, color: C.text, fontVariantNumeric: "tabular-nums" } }, mmss(remaining)),
-                            React.createElement("span", { style: { fontFamily: F.mono, fontSize: 7, letterSpacing: "0.1em", color: C.muted, marginTop: 1 } }, "DESCANSO")));
+                        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" } },
+                            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 19, color: C.text, fontVariantNumeric: "tabular-nums" } }, mmss(remaining))));
                 })() : React.createElement("div", { style: { textAlign: "right" } },
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 22 } },
                         ceilingHit && React.createElement("span", { title: "Teto de reps atingido \u2014 hora de subir a carga", style: { color: C.amber, marginRight: 5 } }, "\u2191"),

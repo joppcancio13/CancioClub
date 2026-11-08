@@ -1,14 +1,20 @@
 import React, { useState } from "react";
-import { C, F } from "../../styles/tokens";
+import { ASSESSMENT_TEMPO_SESSAO_LABELS, C, F } from "../../styles/tokens";
 
-// contexto complementar da anamnese que não tem campo próprio na ficha hoje (idade, peso, altura,
-// tempo de treino, sono/estresse) — o resto (objetivo, restrições, grupos de ênfase) já foi
-// escrito direto nos campos reais da ficha por mapAnamneseToFicha, então não repete aqui.
+// Anamnese completa que o aluno respondeu — mostrada por inteiro aqui, mesmo as respostas que
+// mapAnamneseToFicha também copiou pros campos reais da ficha (objetivo, frequência, restrições,
+// grupos de ênfase). Antes só os 5 campos sem destino na ficha apareciam aqui e os outros ficavam
+// só com um texto genérico dizendo "já foi aplicado abaixo" — o professor não tinha como conferir
+// a resposta de verdade do aluno sem caçar nos campos de texto da ficha (restrições, por exemplo,
+// vem misturada ali dentro de "Restrições / alertas clínicos" com qualquer nota do professor).
 function AssessmentSummary({ assessment, assessmentAt, onRequestNew }) {
     const [confirming, setConfirming] = useState(false);
     const stat = (label, value) => value && React.createElement("div", { style: { flex: "1 1 84px" } },
         React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.muted } }, label),
         React.createElement("div", { style: { fontFamily: F.body, fontSize: 14.5, color: C.text, marginTop: 3 } }, value));
+    const line = (label, value) => value && React.createElement("div", { style: { marginTop: 10 } },
+        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.muted } }, label),
+        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.text, marginTop: 3, lineHeight: 1.45, whiteSpace: "pre-wrap" } }, value));
     return React.createElement("div", { style: { border: "1px solid #2a2a2a", borderRadius: 16, padding: "14px 16px", marginBottom: 16 } },
         React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 12 } },
             React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: C.amber } }, "Anamnese Inicial"),
@@ -19,7 +25,12 @@ function AssessmentSummary({ assessment, assessmentAt, onRequestNew }) {
             stat("Altura", assessment.altura && assessment.altura + " cm"),
             stat("Treina há", assessment.tempoTreino),
             stat("Sono/estresse", assessment.estresseSono)),
-        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 12, lineHeight: 1.5 } }, "Objetivo, frequência, restrições e grupos de ênfase já foram aplicados nos campos abaixo — editáveis a qualquer momento."),
+        line("Objetivo", assessment.objetivo),
+        line("Frequência desejada", assessment.diasSemana && `${assessment.diasSemana}x na semana` + (assessment.tempoSessao ? ` · ${ASSESSMENT_TEMPO_SESSAO_LABELS[assessment.tempoSessao] || assessment.tempoSessao} por sessão` : "")),
+        line("Lesões / restrições relatadas", assessment.lesoes),
+        line("Medicamento contínuo", assessment.medicamentos),
+        line("Grupos com ênfase pedidos pelo aluno", assessment.gruposEnfase),
+        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 12, lineHeight: 1.5 } }, "Essas respostas também foram copiadas pros campos da ficha abaixo (objetivo, frequência, restrições, observações) — editáveis a qualquer momento, sem afetar o que o aluno respondeu aqui."),
         onRequestNew && React.createElement("div", { style: { marginTop: 12, paddingTop: 12, borderTop: "1px solid #2a2a2a" } },
             !confirming
                 ? React.createElement("button", { onClick: () => setConfirming(true), style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.04em", color: C.muted, background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline" } }, "Solicitar nova anamnese")

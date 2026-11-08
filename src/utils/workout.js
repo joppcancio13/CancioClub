@@ -81,7 +81,11 @@ function buildDiary(data, studentId) {
     const dayNames = (data && data.dayNames && data.dayNames[studentId]) || {};
     return [...sessions].sort((a, b) => (a.date < b.date ? 1 : -1)).map((s) => {
         const dayInfo = DAYS.find((d) => d.key === s.day);
-        const dayLabel = (dayNames && dayNames[s.day]) || (dayInfo ? dayInfo.full : s.day);
+        // sem nome próprio pro dia, o rótulo cai no nome do dia da semana ("Segunda") — mas isso é
+        // só o SLOT/ficha, não quando o treino de fato aconteceu (dá pra treinar a ficha de
+        // Segunda numa Quarta, trocando o dia). "Ficha de Segunda" deixa isso claro ao lado da
+        // data real (fmtDate(s.date)) em vez de parecer uma afirmação de que foi feito na segunda.
+        const dayLabel = (dayNames && dayNames[s.day]) || (dayInfo ? `Ficha de ${dayInfo.full}` : s.day);
         const exercises = (workouts[s.day] || []).map((ex) => {
             const h = (ex.history || []).find((hh) => hh.date === s.date);
             if (!h)

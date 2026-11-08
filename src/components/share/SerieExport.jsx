@@ -86,8 +86,27 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
     }, [dayKey, showLoad, showTips]);
     const toBlob = () => new Promise((res) => canvasRef.current.toBlob(res, "image/png"));
     const fname = () => "serie-" + String(student.name || "aluno").split(" ")[0].toLowerCase() + "-" + dayKey + ".png";
-    const download = async () => { setBusy(true); try { const b = await toBlob(); const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); } catch (e) { } setBusy(false); };
-    const share = async () => { setBusy(true); try { const b = await toBlob(); const file = new File([b], fname(), { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: "S\u00E9rie Cancio Club" }); else await download(); } catch (e) { } setBusy(false); };
+    // `<a download>` sozinho n\u00E3o \u00E9 confi\u00E1vel no Safari/iOS (principalmente dentro do PWA em modo
+    // standalone, sem aba nova pra "cair" o download) \u2014 \u00E9 por isso que "Salvar imagem" parecia n\u00E3o
+    // fazer nada no celular. navigator.share com arquivo abre a folha nativa, que tem "Salvar
+    // Imagem" como op\u00E7\u00E3o de verdade; s\u00F3 cai pro <a download> em navegadores sem suporte a isso
+    // (desktop, por exemplo), onde o <a download> funciona normalmente.
+    const downloadNow = (blob) => { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); };
+    const download = async () => {
+        setBusy(true);
+        let blob;
+        try {
+            blob = await toBlob();
+            const file = new File([blob], fname(), { type: "image/png" });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: "S\u00E9rie Cancio Club" });
+            else downloadNow(blob);
+        } catch (e) {
+            if (e && e.name === "AbortError") { /* usu\u00E1rio cancelou a folha de compartilhar \u2014 n\u00E3o faz nada */ }
+            else if (blob) downloadNow(blob);
+        }
+        setBusy(false);
+    };
+    const share = download;
     const toggle = (label, on, set) => React.createElement("button", { key: label, onClick: () => { haptic("tick"); set(!on); }, style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", border: "none", borderTop: "1px solid #1E222A", background: "none", cursor: "pointer", color: C.text } },
         React.createElement("span", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 14 } }, label),
         React.createElement("span", { style: { width: 44, height: 26, borderRadius: 13, background: on ? C.silver : "#2A2E37", position: "relative", flexShrink: 0 } }, React.createElement("span", { style: { position: "absolute", top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: on ? C.ink : C.muted, transition: "left .2s ease" } })));
