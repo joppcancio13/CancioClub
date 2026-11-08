@@ -1390,7 +1390,6 @@ function CancioClub() {
                     const parts = String(dayName || dayFull || "Treino").split("\u00B7").map((s) => s.trim()).filter(Boolean);
                     const title = (parts[0] || "Treino").toUpperCase();
                     const sub = list.length ? [parts.slice(1).join(" \u00B7 "), prog.done + " de " + prog.total + " s\u00E9ries"].filter(Boolean).join(" \u00B7 ") : "Dia de recupera\u00E7\u00E3o";
-                    const tiny = { fontFamily: F.body, fontSize: 12, fontWeight: 500, color: "#5A6273", background: "none", border: "none", padding: 4, cursor: "pointer" };
                     const sairPill = { flexShrink: 0, height: 44, padding: "0 18px", fontFamily: F.body, fontSize: 13, fontWeight: 600, color: C.text, background: "none", boxShadow: `inset 0 0 0 1px ${C.line2}`, borderRadius: 999, border: "none", cursor: "pointer" };
                     return React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 18, marginBottom: 20 } },
                         React.createElement(MirrorGlobe, { size: 108, tile: 9, mask: `linear-gradient(0deg,#000 ${prog.pct}%,transparent ${prog.pct}%)` }),
@@ -1400,14 +1399,18 @@ function CancioClub() {
                                 React.createElement("button", { className: "cc-tap", onClick: logout, style: sairPill }, "Sair")),
                             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 28, lineHeight: 0.95, marginTop: 6, color: "#FFFFFF" } }, title),
                             React.createElement("div", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.silver, marginTop: 5 } }, sub),
-                            weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`),
-                            alunoTab === "treino" && React.createElement("button", { onClick: () => setDayEntryOpen(true), style: { ...tiny, padding: "6px 0 0", color: C.silver, fontWeight: 700 } }, "Trocar treino \u203A"),
-                            React.createElement("button", { onClick: () => setLogoCard(true), style: { ...tiny, padding: "6px 0 0" } }, "Selo Cancio Club \u203A")));
+                            weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 12, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`)));
                 })(),
                 alunoStudent.obs && obsChip(alunoStudent.obs),
-                React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 14 } },
+                React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 10 } },
                     React.createElement(Pill, { active: alunoTab === "treino", onClick: () => setAlunoTab("treino") }, "Treino"),
                     React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio")),
+                // antes eram links cinza 12px escondidos embaixo do t\u00EDtulo \u2014 f\u00E1ceis de nunca notar.
+                // Bot\u00F5es com contorno (mesmo estilo do "Baixar s\u00E9rie"/"Baixar anamnese" do professor)
+                // ficam claramente clic\u00E1veis sem competir visualmente com as abas Treino/Di\u00E1rio acima.
+                React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" } },
+                    alunoTab === "treino" && React.createElement("button", { className: "cc-tap", onClick: () => setDayEntryOpen(true), style: { fontFamily: F.body, fontWeight: 600, fontSize: 12.5, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Trocar treino \u203A"),
+                    React.createElement("button", { className: "cc-tap", onClick: () => setLogoCard(true), style: { fontFamily: F.body, fontWeight: 600, fontSize: 12.5, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Selo Cancio Club \u203A")),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
