@@ -9,6 +9,7 @@ import { TemplateBuilder } from "./components/professor/TemplateBuilder";
 import { TemplateCard } from "./components/professor/TemplateCard";
 import { BulkLinkSheet } from "./components/professor/BulkLinkSheet";
 import { VolumeDashboard } from "./components/professor/VolumeDashboard";
+import { AssessmentExport } from "./components/share/AssessmentExport";
 import { LogoCard } from "./components/share/LogoCard";
 import { SerieExport } from "./components/share/SerieExport";
 import { AddButton } from "./components/shared/AddButton";
@@ -61,6 +62,7 @@ function CancioClub() {
     const [rendEx, setRendEx] = useState(null);
     const [noteDraft, setNoteDraft] = useState("");
     const [serieOpen, setSerieOpen] = useState(false);
+    const [assessOpen, setAssessOpen] = useState(false);
     const [profUnlocked, setProfUnlocked] = useState(false);
     const [profKeyInput, setProfKeyInput] = useState("");
     const [profKeyErr, setProfKeyErr] = useState("");
@@ -1026,6 +1028,7 @@ function CancioClub() {
         shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 12, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         serieOpen && profStudent && React.createElement(SerieExport, { student: profStudent, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, initialDay: day, onClose: () => setSerieOpen(false) }),
+        assessOpen && profStudent && React.createElement(AssessmentExport, { student: profStudent, onClose: () => setAssessOpen(false) }),
         role === "aluno" && alunoStudent && !alunoStudent.ackAt && React.createElement(Disclaimer, { onAccept: () => updateStudent(alunoId, { ackAt: new Date().toISOString() }) }),
         role === "aluno" && alunoStudent && alunoStudent.ackAt && (!alunoStudent.assessmentAt || assessmentJustDone) && (React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 95, overflowY: "auto", background: C.ink, padding: "32px 16px 64px", boxSizing: "border-box" } },
             React.createElement("div", { style: { maxWidth: 540, margin: "0 auto" } },
@@ -1259,7 +1262,8 @@ function CancioClub() {
                         profStudent && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } },
                             React.createElement("button", { onClick: () => setProfViewMode("edit"), style: { flex: 1, fontFamily: F.mono, fontSize: 12, letterSpacing: "0.04em", color: profViewMode === "edit" ? C.ink : C.muted, background: profViewMode === "edit" ? C.silver : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo Edi\u00E7\u00E3o"),
                             React.createElement("button", { onClick: () => setProfViewMode("aula"), style: { flex: 1, fontFamily: F.mono, fontSize: 12, letterSpacing: "0.04em", color: profViewMode === "aula" ? C.ink : C.muted, background: profViewMode === "aula" ? C.amber : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo Aula (Personal)"),
-                            React.createElement("button", { className: "cc-tap", onClick: () => setSerieOpen(true), style: { flex: "none", fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Baixar s\u00E9rie"))),
+                            React.createElement("button", { className: "cc-tap", onClick: () => setSerieOpen(true), style: { flex: "none", fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Baixar s\u00E9rie"),
+                            profStudent.assessment && React.createElement("button", { className: "cc-tap", onClick: () => setAssessOpen(true), style: { flex: "none", fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Baixar anamnese"))),
                         profStudent && profViewMode === "aula" && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 14, lineHeight: 1.5 } },
                             "Registrando presencialmente em nome de ",
                             profStudent.name,

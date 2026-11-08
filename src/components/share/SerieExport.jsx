@@ -24,6 +24,7 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
             if (cancelled || !canvasRef.current || !dayKey) return;
             const ctx = canvasRef.current.getContext("2d");
             const setFont = (w, px, st) => { ctx.font = w + " " + px + "px " + F.display; try { ctx.fontStretch = st || "normal"; } catch (e) { } };
+            const bodyFont = (w, px) => { ctx.font = w + " " + px + "px " + F.body; try { ctx.fontStretch = "normal"; } catch (e) { } };
             const lx = 24 * S, rx = W - 24 * S;
             ctx.fillStyle = "#05060A"; ctx.fillRect(0, 0, W, H);
             const hh = 150 * S, cell = 15 * S, joint = 2 * S;
@@ -44,13 +45,20 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
             let tp = 90; setFont(900, tp, "expanded"); while (ctx.measureText(title).width > rx - lx && tp > 48) { tp -= 4; setFont(900, tp, "expanded"); }
             ctx.fillText(title, lx, hh - 6 * S - 8);
             setFont(500, 39); ctx.fillStyle = "#C6D2E4"; ctx.fillText(sub, lx, hh + 52);
-            const sameDays = DAYS.filter((d) => (dayNames && dayNames[d.key] && dName && dayNames[d.key] === dName) || d.key === dayKey).map((d) => d.short.toLowerCase());
-            ctx.textAlign = "right"; setFont(500, 33); ctx.fillStyle = "#7D8698"; ctx.fillText(sameDays.join(" e "), rx, hh + 52);
+            // s\u00F3 mostra "tamb\u00E9m em: X, Y" quando a mesma ficha nomeada vale pra mais de um dia \u2014
+            // repetir a abrevia\u00E7\u00E3o do pr\u00F3prio dia (ex. "seg") na TREINO DE SEGUNDA \u00E9 s\u00F3 ru\u00EDdo.
+            const sameDays = DAYS.filter((d) => dayNames && dayNames[d.key] && dName && dayNames[d.key] === dName).map((d) => d.short.toLowerCase());
+            if (sameDays.length > 1) { ctx.textAlign = "right"; setFont(500, 33); ctx.fillStyle = "#7D8698"; ctx.fillText("tamb\u00E9m " + sameDays.join(" e "), rx, hh + 52); }
+            // legenda \u00FAnica explicando a marca\u00E7\u00E3o em pastilha \u2014 aparece antes do 1\u00BA exerc\u00EDcio,
+            // que \u00E9 quando o aluno v\u00EA o s\u00EDmbolo pela 1\u00AA vez (sem isso virava "o que s\u00E3o essas caixinhas?").
+            ctx.textAlign = "left"; ctx.font = "italic 400 30px " + F.body; ctx.fillStyle = "#5A6273";
+            ctx.fillText("Marque \u25A2 conforme for completando cada s\u00E9rie", lx, hh + 108);
             const list = week[dayKey] || [];
-            const top = hh + 120, limit = 1580;
-            const rowH = Math.min(150, (limit - top) / Math.max(1, list.length));
-            const k = Math.max(0.62, rowH / 150);
+            const top = hh + 160, limit = 1620;
+            const rowH = Math.min(185, (limit - top) / Math.max(1, list.length));
+            const k = Math.max(0.6, rowH / 185);
             const fmtK = (v) => String(v).replace(".", ",");
+            const wrapLines = (text, maxW, px, max) => { bodyFont(400, px); const words = String(text).split(/\s+/); const lines = []; let cur = ""; words.forEach((w) => { const test = cur ? cur + " " + w : w; if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; } else cur = test; }); if (cur) lines.push(cur); if (lines.length > max) { lines.length = max; const last = lines[max - 1]; while (ctx.measureText(last + "\u2026").width > maxW && last.length > 4) lines[max - 1] = last.slice(0, -2); lines[max - 1] = lines[max - 1].trim() + "\u2026"; } return lines; };
             list.forEach((ex, i) => {
                 const y = top + i * rowH;
                 const plan = Array.isArray(ex.setPlan) && ex.setPlan.length ? ex.setPlan : null;
@@ -58,20 +66,28 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
                 const warm = plan ? plan.filter((p) => p.kind === "warmup").length : 0, recon = plan ? plan.filter((p) => p.kind === "recon").length : 0;
                 const repsSet = Array.from(new Set(work.map((w) => String(w.reps || ex.reps || ""))));
                 const planTxt = work.length + "\u00D7" + (repsSet.length === 1 ? repsSet[0] : repsSet.join("/"));
+                let ly = y;
                 ctx.textAlign = "left"; setFont(600, Math.round(36 * k)); ctx.fillStyle = "#F2F5FA";
                 let nm = ex.name; const maxW = rx - lx - 240; while (ctx.measureText(nm).width > maxW && nm.length > 4) nm = nm.slice(0, -2); if (nm !== ex.name) nm = nm.trim() + "\u2026";
-                ctx.fillText(nm, lx, y + 36 * k);
-                ctx.textAlign = "right"; setFont(800, Math.round(42 * k), "condensed"); ctx.fillText(planTxt, rx, y + 36 * k);
-                const ty = y + 36 * k + 18 * k, tw = 48 * k, th = 21 * k;
+                ctx.fillText(nm, lx, ly + 36 * k);
+                ctx.textAlign = "right"; setFont(800, Math.round(42 * k), "condensed"); ctx.fillText(planTxt, rx, ly + 36 * k);
+                ly += 36 * k + 14 * k;
+                const pre = [warm ? "+" + warm + " aquec." : "", recon ? "+" + recon + " reconhec." : ""].filter(Boolean).join(" \u00B7 ");
+                if (pre) { ctx.textAlign = "left"; setFont(700, Math.round(24 * k)); ctx.fillStyle = "#8D97A9"; if ("letterSpacing" in ctx) ctx.letterSpacing = "1px"; ctx.fillText((pre + " antes").toUpperCase(), lx, ly + 20 * k); if ("letterSpacing" in ctx) ctx.letterSpacing = "0px"; ly += 34 * k; }
+                const tw = 48 * k, th = 21 * k;
                 ctx.strokeStyle = "#6E7889"; ctx.lineWidth = 3;
-                work.forEach((_, j) => ctx.strokeRect(lx + j * (tw + 9) + 1.5, ty + 1.5, tw - 3, th - 3));
-                const afterTiles = lx + work.length * (tw + 9) + 12;
-                if (showTips && ex.note) { ctx.textAlign = "left"; setFont(400, Math.round(30 * k)); ctx.fillStyle = "#7D8698"; let n = ex.note; const mw = rx - afterTiles - 260; while (ctx.measureText(n).width > mw && n.length > 4) n = n.slice(0, -2); if (n !== ex.note) n = n.trim() + "\u2026"; ctx.fillText(n, afterTiles, ty + th - 2); }
+                work.forEach((_, j) => ctx.strokeRect(lx + j * (tw + 9) + 1.5, ly + 1.5, tw - 3, th - 3));
                 const lastL = currentLoad(ex);
-                const meta = [ex.rest ? ex.rest + "s" : "", showLoad && lastL ? fmtK(lastL) + " kg" : ""].filter(Boolean).join(" \u00B7 ");
-                ctx.textAlign = "right"; setFont(500, Math.round(30 * k)); ctx.fillStyle = "#7D8698"; ctx.fillText(meta, rx, ty + th - 2);
-                const pre = [warm ? "+" + warm + " AQUEC." : "", recon ? "+" + recon + " RECONHEC." : ""].filter(Boolean).join(" \u00B7 ");
-                if (pre) { ctx.textAlign = "left"; setFont(600, Math.round(27 * k)); ctx.fillStyle = "#C6D2E4"; if ("letterSpacing" in ctx) ctx.letterSpacing = "2px"; ctx.fillText(pre + " ANTES", lx, ty + th + 34 * k); if ("letterSpacing" in ctx) ctx.letterSpacing = "0px"; }
+                const meta = [ex.rest ? ex.rest + "s descanso" : "", showLoad && lastL ? fmtK(lastL) + " kg" : ""].filter(Boolean).join(" \u00B7 ");
+                ctx.textAlign = "right"; setFont(500, Math.round(28 * k)); ctx.fillStyle = "#7D8698"; ctx.fillText(meta, rx, ly + th - 2);
+                ly += th + 14 * k;
+                if (showTips && ex.note) {
+                    ctx.textAlign = "left"; ctx.fillStyle = "#8D97A9";
+                    const lines = wrapLines(ex.note, rx - lx, Math.round(27 * k), 2);
+                    bodyFont(400, Math.round(27 * k));
+                    lines.forEach((line) => { ctx.fillText(line, lx, ly + 24 * k); ly += 32 * k; });
+                }
+                if (i < list.length - 1) { ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(lx, y + rowH - 14 * k); ctx.lineTo(rx, y + rowH - 14 * k); ctx.stroke(); }
             });
             const fy = 1640;
             setFont(800, 30, "expanded"); ctx.fillStyle = "#C6D2E4"; ctx.textAlign = "left";
