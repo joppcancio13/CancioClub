@@ -25,6 +25,7 @@ import { Pill } from "./components/shared/Pill";
 import { PremiumEmptyState } from "./components/shared/PremiumEmptyState";
 import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
+import { AlunoProfile } from "./components/student/AlunoProfile";
 import { BottomActionBar } from "./components/student/BottomActionBar";
 import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
@@ -1488,7 +1489,8 @@ function CancioClub() {
                         React.createElement("span", { style: { fontFamily: F.body, fontWeight: 800, fontSize: 13, flexShrink: 0 } }, "Ver \u203A")); })(),
                 React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 14 } },
                     React.createElement(Pill, { active: alunoTab === "treino", onClick: () => setAlunoTab("treino") }, "Treino"),
-                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio")),
+                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio"),
+                    React.createElement(Pill, { active: alunoTab === "perfil", onClick: () => setAlunoTab("perfil") }, "Perfil")),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
@@ -1525,7 +1527,8 @@ function CancioClub() {
                     React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 12 } }, "Conversa com o professor"),
                     notifButton,
                     React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })))),
-                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }))),
+                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }),
+                alunoTab === "perfil" && React.createElement(AlunoProfile, { student: alunoStudent, streak: streak, freqWeek: freqWeek, freqTotal: freqTotal, bestStreak: bestStreak, records: records, week: week, dayNames: (data?.dayNames && data.dayNames[focusId]) || {} }))),
             null)));
 }
 export { CancioClub };
