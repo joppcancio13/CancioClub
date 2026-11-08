@@ -24,6 +24,7 @@ import { Pill } from "./components/shared/Pill";
 import { PremiumEmptyState } from "./components/shared/PremiumEmptyState";
 import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
+import { AlunoProfile } from "./components/student/AlunoProfile";
 import { BottomActionBar } from "./components/student/BottomActionBar";
 import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
@@ -1404,7 +1405,8 @@ function CancioClub() {
                 alunoStudent.obs && obsChip(alunoStudent.obs),
                 React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 10 } },
                     React.createElement(Pill, { active: alunoTab === "treino", onClick: () => setAlunoTab("treino") }, "Treino"),
-                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio")),
+                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio"),
+                    React.createElement(Pill, { active: alunoTab === "perfil", onClick: () => setAlunoTab("perfil") }, "Perfil")),
                 // antes eram links cinza 12px escondidos embaixo do t\u00EDtulo \u2014 f\u00E1ceis de nunca notar.
                 // Bot\u00F5es com contorno (mesmo estilo do "Baixar s\u00E9rie"/"Baixar anamnese" do professor)
                 // ficam claramente clic\u00E1veis sem competir visualmente com as abas Treino/Di\u00E1rio acima.
@@ -1444,7 +1446,8 @@ function CancioClub() {
                     React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.amber, flexShrink: 0, animation: "cc-glow 1.6s ease-in-out infinite" } }),
                     "n\u00e3o esque\u00e7a de finalizar o treino pra guardar seu resumo e a sequ\u00eancia"),
                 React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: sendMessage }))),
-                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }))),
+                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }),
+                alunoTab === "perfil" && React.createElement(AlunoProfile, { student: alunoStudent, streak: streak, freqWeek: freqWeek, freqTotal: freqTotal, bestStreak: bestStreak, records: records, week: week, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, assessmentAt: alunoStudent.assessmentAt, onRequestNewAssessment: () => updateStudent(alunoId, { assessmentAt: undefined }) }))),
             role === "prof" && React.createElement("footer", { style: { marginTop: 40, textAlign: "center", fontFamily: F.mono, fontSize: 10, letterSpacing: "0.22em", color: "rgba(255,255,255,0.18)" } }, "CANCIO CLUB"))));
 }
 export { CancioClub };
