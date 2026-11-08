@@ -4,6 +4,7 @@ import { Field, TextArea } from "../shared/FormFields";
 import { MediaEmbed } from "../shared/MediaEmbed";
 import { PressStep } from "../shared/PressStep";
 import { Stat } from "../shared/Stat";
+import { EvolutionSummary } from "./EvolutionSummary";
 import { RestTimer, useActiveRest } from "./RestTimer";
 import { activeSet, setActiveSet } from "../../hooks/useActiveSet";
 import { pendingFlushes } from "../../hooks/useLocalData";
@@ -20,7 +21,7 @@ import { currentLoad, daySummary, defaultSetPlan, lastReps, parseReps, planSumma
 const ProgressChart = React.lazy(() => import("./ProgressChart").then((m) => ({ default: m.ProgressChart })));
 const chartFallback = React.createElement("div", { style: { height: 170, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 11, color: C.muted } }, "carregando gráfico…");
 
-function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpdate, onDeleteRecord, onMove, isFirst, isLast, sessionDone, onToggleDone, tint, onNote, isNextUp, dayDate, idx }) {
+function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpdate, onDeleteRecord, onMove, isFirst, isLast, sessionDone, onToggleDone, tint, onNote, isNextUp, dayDate, idx, restriction }) {
     const [date, setDate] = useState(dayDate || todayISO());
     // se a aba do dia mudar enquanto o card já está montado, realinha a data-alvo do auto-save —
     // sem isso, um toque na aba de Segunda numa Terça gravaria o treino como se fosse de terça
@@ -282,7 +283,8 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                             planSummary(ex),
                             ex.rest ? ` · desc ${ex.rest}s` : "",
                             ex.url ? React.createElement("span", { style: { color: C.silver } }, " \u00B7 v\u00EDdeo") : "",
-                            ex.note ? React.createElement("span", { style: { color: C.amber } }, " \u00B7 obs") : ""))),
+                            ex.note ? React.createElement("span", { style: { color: C.amber } }, " \u00B7 obs") : "",
+                            restriction ? React.createElement("span", { title: restriction.text, style: { color: C.warn } }, " \u00B7 \u26A0 " + restriction.region) : ""))),
                 isResting && activeRest ? (() => {
                     const remaining = Math.max(0, Math.ceil((activeRest.endTime - Date.now()) / 1000));
                     const p = activeRest.total > 0 ? Math.min(100, Math.max(0, (1 - remaining / activeRest.total) * 100)) : 0;
@@ -324,6 +326,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                         React.createElement("button", { onClick: () => setShowVideo((v) => !v), style: { fontFamily: F.mono, fontSize: 12, letterSpacing: "0.03em", color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 14px", cursor: "pointer" } }, showVideo ? "Ocultar demonstração" : "Ver demonstração"),
                         showVideo && React.createElement(MediaEmbed, { url: ex.url }))),
                     role === "aluno" && React.createElement(RestTimer, { seconds: ex.rest, autoStart: restTrigger, overrideSeconds: lastSavedKind === "warmup" ? 60 : undefined, timerKey: ex.id, hidden: true }),
+                    React.createElement(EvolutionSummary, { ex: ex, role: role }),
                     role === "prof" ? (React.createElement(React.Fragment, null,
                         React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 14 } },
                             React.createElement(Stat, { value: `${cur}`, label: "carga (kg)", accent: C.silver }),

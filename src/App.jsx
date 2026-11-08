@@ -3,6 +3,8 @@ import { AssessmentInicial } from "./components/assessment/AssessmentInicial";
 import { CardioSection } from "./components/professor/CardioSection";
 import { FichaEditor } from "./components/professor/FichaEditor";
 import { LibraryManager } from "./components/professor/LibraryManager";
+import { PlanVsDone } from "./components/professor/PlanVsDone";
+import { ProfInbox } from "./components/professor/ProfInbox";
 import { PSEModal } from "./components/professor/PSEModal";
 import { RecoverySection } from "./components/professor/RecoverySection";
 import { TemplateBuilder } from "./components/professor/TemplateBuilder";
@@ -28,6 +30,7 @@ import { AlunoProfile } from "./components/student/AlunoProfile";
 import { BottomActionBar } from "./components/student/BottomActionBar";
 import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
+import { ReassessmentHistory } from "./components/student/Reassessment";
 import { DiaryCalendar } from "./components/student/DiaryCalendar";
 import { ExerciseCard } from "./components/student/ExerciseCard";
 import { StudentMessages } from "./components/student/StudentMessages";
@@ -41,6 +44,8 @@ import { playDisco, playFinishChime } from "./utils/audio";
 import { fmtDate, fmtDateTime, fmtDur, fmtVolume, isWithin7, isoOf, parseWeeklyTarget, todayISO } from "./utils/date";
 import { mergeCloudRows, mergeWorkoutsForStudent, splitGlobalForCloud, splitStudentForCloud } from "./utils/merge";
 import { genCode, greeting, haptic, noop, pickDailyPhrase, uid, uidShort } from "./utils/misc";
+import { askNotify, canNotify, notify, setBadge } from "./utils/notify";
+import { restrictionFor } from "./utils/restrictions";
 import { seed } from "./utils/seedData";
 import { computeStreak, lastCheckinLabel, streakTier, trainingWds } from "./utils/streak";
 import { buildDiary, computeRecords, daySummary, defaultSetPlan, emptyWeek, sortedHistory, workingProgress } from "./utils/workout";
@@ -360,6 +365,22 @@ function CancioClub() {
         return { id: s.id, name: s.name, workoutName: dn, done, effort: lastEffortFor(s.id), clinicalAlert: s.clinicalAlert };
     }).filter(Boolean);
     const unread = messages.filter((m) => !m.read).length;
+    // recados que chegam pra quem está logado: badge no ícone + aviso do sistema se o app estiver
+    // em 2º plano (só local — falta o servidor mandar pra funcionar com o app fechado, ver
+    // utils/notify.js). Pula a 1ª passada (seenMsgRef null) pra não notificar o histórico inteiro.
+    const seenMsgRef = React.useRef(null);
+    React.useEffect(() => {
+        const incoming = messages.filter((m) => (role === "aluno" ? m.studentId === alunoId && m.fromProf : !m.fromProf));
+        setBadge(incoming.filter((m) => !m.read).length);
+        const ids = new Set(incoming.map((m) => m.id));
+        if (seenMsgRef.current) {
+            const fresh = incoming.filter((m) => !seenMsgRef.current.has(m.id) && !m.read);
+            if (fresh.length) { const m = fresh[fresh.length - 1]; const st = students.find((x) => x.id === m.studentId); notify(role === "aluno" ? "Recado do professor" : "Recado de " + (st ? st.name.split(" ")[0] : "aluno"), m.text); }
+        }
+        seenMsgRef.current = ids;
+    }, [messages, role, alunoId]);
+    const [notifPerm, setNotifPerm] = useState(() => (canNotify() ? Notification.permission : "unsupported"));
+    const notifButton = notifPerm === "default" && React.createElement("button", { onClick: async () => setNotifPerm(await askNotify()), style: { minHeight: 44, width: "100%", marginBottom: 12, borderRadius: 10, border: "none", background: C.panel2, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Ativar avisos de recado no celular");
     const archives = (data?.archives && data.archives[profId]) || [];
     // mesma lógica do dayDone: casa por (date, day) pra achar a sessão DESSE slot hoje, não a
     // última sessão de qualquer slot hoje
@@ -606,7 +627,7 @@ function CancioClub() {
         }
     };
     const submitFeedback = (sid, text) => setData((p) => { const sess = { ...(p.sessions || {}) }; sess[focusId] = (sess[focusId] || []).map((s) => (s.id === sid ? { ...s, feedback: text } : s)); const next = { ...p, sessions: sess }; syncStudentToCloud(next, focusId); return next; });
-    const sendMessage = (text, sid) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid || focusId, text, date: new Date().toISOString(), read: false }] }; syncStudentToCloud(next, sid || focusId); return next; });
+    const sendMessage = (text, sid, fromProf) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid || focusId, text, date: new Date().toISOString(), read: !!fromProf, fromProf: !!fromProf }] }; syncStudentToCloud(next, sid || focusId); return next; });
     const markRead = (id) => setData((p) => { const msg = (p.messages || []).find((m) => m.id === id); const next = { ...p, messages: (p.messages || []).map((m) => (m.id === id ? { ...m, read: true } : m)) }; if (msg)
         syncStudentToCloud(next, msg.studentId); return next; });
     const exportData = () => { try {
@@ -1148,7 +1169,7 @@ function CancioClub() {
                                     React.createElement("div", { style: { ...tiny, fontSize: 8.5 } }, "C\u00D3DIGO"),
                                     React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 20, letterSpacing: "0.16em", color: C.text } }, ps.code))));
                         const statB = (v, l) => React.createElement("span", null, React.createElement("b", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 16, color: C.text } }, v), " " + l);
-                        const chips = [ps.clinicalAlert && "Alerta \u00B7 " + ps.clinicalAlert, lastEffortFor(profId) === "destruidor" && "Fadiga \u00B7 \u00FAltimo treino Destruidor", !ps.ackAt && "Termo pendente"].filter(Boolean);
+                        const chips = [ps.clinicalAlert && "Alerta \u00B7 " + ps.clinicalAlert, lastEffortFor(profId) === "destruidor" && "Fadiga \u00B7 \u00FAltimo treino Destruidor", !ps.ackAt && "Termo pendente", ps.deletionRequestedAt && "LGPD \u00B7 Pediu exclus\u00E3o dos dados"].filter(Boolean);
                         const tabs = React.createElement("div", { style: { display: "flex", gap: 4, marginTop: 14, padding: 4, borderRadius: 12, background: C.panel } }, [["treino", "Treino"], ["rend", "Rendimento"], ["volume", "Volume"], ["ficha", "Ficha"]].map(([k, l]) => React.createElement("button", { key: k, onClick: () => { setFichaTab(k); setRendEx(null); }, style: { flex: 1, padding: 9, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, fontWeight: fichaTab === k ? 700 : 500, background: fichaTab === k ? "#1E222A" : "transparent", color: fichaTab === k ? C.text : C.muted } }, l)));
                         let body = null;
                         const wkP = (data.workouts && data.workouts[profId]) || emptyWeek();
@@ -1172,6 +1193,7 @@ function CancioClub() {
                                         [10, 80, 150].map((y) => React.createElement("line", { key: y, x1: 0, x2: 300, y1: y, y2: y, stroke: "#1E222A", strokeDasharray: "3 4" })),
                                         React.createElement("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: C.silver, strokeWidth: 2, strokeLinejoin: "round" }),
                                         pts.map((p, i) => React.createElement("circle", { key: i, cx: p[0], cy: p[1], r: i === pts.length - 1 ? 6 : 3, fill: i === pts.length - 1 ? C.text : C.ink, stroke: C.silver, strokeWidth: 1.5 }))) : React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 18 } }, "Ainda sem hist\u00F3rico suficiente pra um gr\u00E1fico."),
+                                    React.createElement("div", { style: { marginTop: 20 } }, React.createElement(PlanVsDone, { ex: ex, plan: ex.setPlan || defaultSetPlan(ex.sets, ex.reps) })),
                                     React.createElement("div", { style: { ...tiny, marginTop: 20 } }, "\u00DALTIMAS SESS\u00D5ES \u00B7 S\u00C9RIES DE TRABALHO"),
                                     [...hs].reverse().slice(0, 5).map((x) => React.createElement("div", { key: x.date, style: { display: "flex", gap: 10, alignItems: "baseline", padding: "11px 0", borderBottom: "1px solid #15181F" } },
                                         React.createElement("span", { style: { width: 52, fontFamily: F.body, fontSize: 12.5, color: C.muted } }, fmtDate(x.date)),
@@ -1239,6 +1261,7 @@ function CancioClub() {
                         else if (fichaTab === "ficha") {
                             body = React.createElement("div", { className: "cc-view", style: { marginTop: 6 } },
                                 React.createElement(FichaEditor, { student: ps, onSave: (patch) => updateStudent(profId, patch) }),
+                                React.createElement(ReassessmentHistory, { student: ps, onSave: (patch) => updateStudent(profId, patch) }),
                                 React.createElement("div", { style: { ...tiny, marginTop: 24 } }, "FASES ARQUIVADAS"),
                                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
                                     React.createElement("input", { value: archLabel, onChange: (e) => setArchLabel(e.target.value), placeholder: "R\u00F3tulo (ex.: Fase 1 \u00B7 Adapta\u00E7\u00E3o)", style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 13.5, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "11px 12px", outline: "none" } }),
@@ -1278,8 +1301,8 @@ function CancioClub() {
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 } },
                             list.length === 0 && !adding && React.createElement(PremiumEmptyState, { icon: "dumbbell", title: `Nenhum treino em ${dayFull} \u2014 a ficha t\u00E1 em branco.`, sub: "Monte um exerc\u00EDcio do zero ou aplique um modelo salvo." }),
                             list.map((ex, i) => profViewMode === "aula"
-                                ? React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })
-                                : React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "prof", idx: i + 1, expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExercise, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint, dayDate: dayDate }))),
+                                ? React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })
+                                : React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "prof", idx: i + 1, expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExercise, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint, dayDate: dayDate }))),
                         profViewMode === "edit" && (React.createElement(React.Fragment, null,
                             React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 } },
                                 templates.length > 0 && React.createElement("button", { onClick: () => { setPickTpl((v) => !v); setSavingTpl(false); }, style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Aplicar modelo"),
@@ -1328,28 +1351,14 @@ function CancioClub() {
                                 else
                                     setPseModal(true); }, disabled: !hasLoggedSomething || dayDone, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: hasLoggedSomething && !dayDone ? C.amber : C.muted, background: hasLoggedSomething && !dayDone ? "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)" : C.panel2, boxShadow: hasLoggedSomething && !dayDone ? "inset 0 0 0 1px rgba(255,255,255,0.06)" : "none", border: "none", borderRadius: 18, padding: "17px", cursor: hasLoggedSomething && !dayDone ? "pointer" : "default", marginBottom: 6, transition: `transform .18s ${EASE.spring}` } }, dayDone ? (isRestDay ? "✓ Recuperação registrada" : "✓ Treino finalizado") : (isRestDay ? "✓ Salvar Recuperação" : "Finalizar Treino")),
                             !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.mono, fontSize: 10.5, color: C.muted, marginBottom: 14 } }, "registre ao menos 1 s\u00E9rie ou o cardio pra finalizar"),
-                            React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), onSend: (text) => sendMessage(text, profId) }))))))),
+                            React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), side: "prof", onSend: (text) => sendMessage(text, profId, true) }))))))),
                 profTab === "modelos" && (React.createElement(React.Fragment, null,
                     React.createElement("p", { style: { fontFamily: F.mono, fontSize: 12, color: C.muted, lineHeight: 1.7, marginTop: 0, marginBottom: 18 } }, "Dias de treino prontos. Crie aqui ou salve um dia montado, e aplique em qualquer aluno com um toque."),
                     React.createElement(TemplateBuilder, { onSave: addTemplate, library: library }),
                     React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
                         templates.length === 0 && React.createElement(PremiumEmptyState, { icon: "grid", title: "Nenhum modelo salvo ainda.", sub: "Crie o primeiro acima e reaproveite em qualquer aluno." }),
                         templates.map((t) => React.createElement(TemplateCard, { key: t.id, tpl: t, targetLabel: `${profStudent ? profStudent.name : "—"} · ${dayFull}`, onApply: () => applyTemplate(t, day), onRemove: () => deleteTemplate(t.id) }))))),
-                profTab === "recados" && (React.createElement(React.Fragment, null,
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, marginBottom: 12 } },
-                        "Recados",
-                        unread > 0 ? ` · ${unread} novo${unread > 1 ? "s" : ""}` : ""),
-                    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 26 } },
-                        messages.length === 0 && React.createElement(PremiumEmptyState, { icon: "message", title: "Nenhum recado por aqui.", sub: "Os alunos mandam recado direto da \u00E1rea deles \u2014 vai aparecer aqui." }),
-                        [...messages].sort((a, b) => (a.date < b.date ? 1 : -1)).map((m) => {
-                            const st = students.find((x) => x.id === m.studentId);
-                            return (React.createElement("div", { key: m.id, style: { background: C.panel, border: `1px solid ${m.read ? C.line : C.amber}`, borderRadius: 12, padding: "12px 14px" } },
-                                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
-                                    React.createElement("div", { style: { flex: 1, fontFamily: F.body, fontWeight: 600, fontSize: 13.5, color: C.text } }, st ? st.name : "Aluno removido"),
-                                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted } }, fmtDateTime(m.date))),
-                                React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.text, lineHeight: 1.5, marginTop: 6 } }, m.text),
-                                !m.read && React.createElement("button", { onClick: () => markRead(m.id), style: { marginTop: 10, fontFamily: F.mono, fontSize: 11, color: C.ink, backgroundImage: `linear-gradient(150deg, #EEF3FB, #B9C6D9)`, background: C.amber, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" } }, "Marcar como lido")));
-                        })))),
+                profTab === "recados" && React.createElement(React.Fragment, null, notifButton, React.createElement(ProfInbox, { messages: messages, students: students, onReply: (text, sid) => sendMessage(text, sid, true), onOpen: (sid) => messages.filter((m) => m.studentId === sid && !m.read && !m.fromProf).forEach((m) => markRead(m.id)) })),
                 profTab === "painel" && (React.createElement(React.Fragment, null,
                     React.createElement("button", { onClick: () => setProfTab("biblioteca"), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", marginBottom: 22, background: "none", border: "none", borderBottom: `1px solid ${C.line}`, cursor: "pointer", color: C.text, textAlign: "left" } }, React.createElement("span", null, React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 500, fontSize: 15 } }, "Biblioteca de exerc\u00EDcios"), React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 12, color: "#5A6273", marginTop: 2 } }, library.length + " exerc\u00EDcios com v\u00EDdeo e tag")), React.createElement("span", { style: { color: "#3A404C", fontSize: 18 } }, "\u203A")),
                     React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, marginBottom: 12 } }, "Backup"),
@@ -1417,7 +1426,7 @@ function CancioClub() {
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
                         list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema \u2014 registre seu cardio abaixo, se fez." }),
-                        list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })))),
+                        list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, alunoStudent, "aluno"), role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })))),
                 todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 14.5, letterSpacing: "0.04em", color: C.amber, background: "radial-gradient(circle at 50% 0%, #2A2A2D, #0A0A0C)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 14, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar Resumo da Semana")),
                 React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                 list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
@@ -1445,9 +1454,10 @@ function CancioClub() {
                 hasLoggedSomething && !dayDone && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontFamily: F.body, fontSize: 12, color: C.amber, marginBottom: 100, opacity: 0.9 } },
                     React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.amber, flexShrink: 0, animation: "cc-glow 1.6s ease-in-out infinite" } }),
                     "n\u00e3o esque\u00e7a de finalizar o treino pra guardar seu resumo e a sequ\u00eancia"),
+                notifButton,
                 React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: sendMessage }))),
                 alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }),
-                alunoTab === "perfil" && React.createElement(AlunoProfile, { student: alunoStudent, streak: streak, freqWeek: freqWeek, freqTotal: freqTotal, bestStreak: bestStreak, records: records, week: week, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, assessmentAt: alunoStudent.assessmentAt, onRequestNewAssessment: () => updateStudent(alunoId, { assessmentAt: undefined }) }))),
+                alunoTab === "perfil" && React.createElement(AlunoProfile, { student: alunoStudent, streak: streak, freqWeek: freqWeek, freqTotal: freqTotal, bestStreak: bestStreak, records: records, week: week, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, assessmentAt: alunoStudent.assessmentAt, onRequestNewAssessment: () => updateStudent(alunoId, { assessmentAt: undefined }), onRequestDelete: () => { updateStudent(alunoId, { deletionRequestedAt: new Date().toISOString() }); sendMessage("Pedido de exclusão dos meus dados (LGPD)."); }, onSubmitReassessment: (entry) => updateStudent(alunoId, { reassessments: [...(alunoStudent.reassessments || []), entry] }) }))),
             role === "prof" && React.createElement("footer", { style: { marginTop: 40, textAlign: "center", fontFamily: F.mono, fontSize: 10, letterSpacing: "0.22em", color: "rgba(255,255,255,0.18)" } }, "CANCIO CLUB"))));
 }
 export { CancioClub };

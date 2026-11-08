@@ -1,20 +1,27 @@
 import React, { useState } from "react";
-import { C, F, flatPanel } from "../../styles/tokens";
-import { fmtDateTime } from "../../utils/date";
+import { C, F } from "../../styles/tokens";
 
-function StudentMessages({ messages, onSend }) {
+const QUICK = ["Senti dor", "Carga leve demais", "Carga pesada demais", "Faltei"];
+const dayLabel = (iso) => { const d = new Date(iso); const t = new Date(); const same = d.toDateString() === t.toDateString(); return same ? "HOJE" : d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "").toUpperCase(); };
+const time = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+// 15d — recados como conversa, separados por dia, com atalhos prontos
+function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyText }) {
     const [text, setText] = useState("");
-    const send = () => { if (!text.trim())
-        return; onSend(text.trim()); setText(""); };
-    return (React.createElement("div", { style: { ...flatPanel, borderRadius: 22, padding: 16, marginTop: 18 } },
-        React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, marginBottom: 12 } }, "Recado para o professor"),
-        React.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), rows: 2, placeholder: "Ex.: senti dor no ombro no supino hoje.", style: { width: "100%", boxSizing: "border-box", fontFamily: F.body, fontSize: 14, color: C.text, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", outline: "none", resize: "vertical", lineHeight: 1.5 } }),
-        React.createElement("button", { onClick: send, disabled: !text.trim(), style: { marginTop: 10, width: "100%", fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: C.ink, background: text.trim() ? C.silver : C.line, border: "none", borderRadius: 10, padding: "11px", cursor: text.trim() ? "pointer" : "default" } }, "Enviar recado"),
-        messages.length > 0 && React.createElement("div", { style: { marginTop: 14, display: "flex", flexDirection: "column", gap: 8 } }, [...messages].sort((a, b) => (a.date < b.date ? 1 : -1)).map((m) => React.createElement("div", { key: m.id, style: { background: C.ink, borderRadius: 10, padding: "10px 12px" } },
-            React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.text, lineHeight: 1.5 } }, m.text),
-            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10, color: C.muted, marginTop: 6 } },
-                fmtDateTime(m.date),
-                " \u00B7 ",
-                m.read ? "lido" : "enviado"))))));
+    const send = (t) => { const v = (t ?? text).trim(); if (!v) return; onSend(v); setText(""); };
+    const sorted = [...messages].sort((a, b) => (a.date < b.date ? -1 : 1));
+    let lastDay = null;
+    return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } },
+        sorted.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, textAlign: "center", padding: "18px 0" } }, emptyText ?? "Conte ao professor como foi: dor, carga, falta."),
+        sorted.map((m) => { const dl = dayLabel(m.date); const head = dl !== lastDay; lastDay = dl; const mine = side === "prof" ? !!m.fromProf : !m.fromProf;
+            return React.createElement(React.Fragment, { key: m.id },
+                head && React.createElement("div", { style: { textAlign: "center", fontFamily: F.body, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.muted } }, dl),
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", gap: 4 } },
+                    React.createElement("span", { style: { maxWidth: "80%", padding: "11px 14px", borderRadius: mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", fontFamily: F.body, fontSize: 15, lineHeight: 1.4, whiteSpace: "pre-wrap", ...(mine ? { background: C.text, color: C.ink } : { background: C.panel, color: C.text, boxShadow: `inset 0 0 0 1px ${C.line}` }) } }, m.text),
+                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: "#5A6273" } }, time(m.date) + (mine && side === "aluno" ? (m.read ? " · lido" : " · enviado") : "")))); }),
+        side === "aluno" && React.createElement("div", { style: { display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", paddingTop: 4 } }, QUICK.map((q) => React.createElement("button", { key: q, className: "cc-tap", onClick: () => setText((t) => (t ? t + " " : "") + q + ". "), style: { flexShrink: 0, minHeight: 36, padding: "0 12px", borderRadius: 999, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #2A2E37", color: "#C9D0DC", fontFamily: F.body, fontSize: 13, cursor: "pointer" } }, q))),
+        React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "flex-end" } },
+            React.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), onKeyDown: (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }, rows: 1, placeholder: placeholder ?? "Escreva um recado", style: { flex: 1, boxSizing: "border-box", minHeight: 48, padding: 13, borderRadius: 10, border: "none", outline: "none", resize: "none", background: C.panel, boxShadow: "inset 0 0 0 1px #2A2E37", color: C.text, fontFamily: F.body, fontSize: 15, lineHeight: 1.4 } }),
+            React.createElement("button", { className: "cc-tap", onClick: () => send(), disabled: !text.trim(), "aria-label": "Enviar", style: { width: 48, height: 48, flexShrink: 0, borderRadius: 10, border: "none", background: text.trim() ? C.text : "#1E222A", color: text.trim() ? C.ink : "#5A6273", fontFamily: F.body, fontWeight: 900, fontSize: 18, cursor: text.trim() ? "pointer" : "default" } }, "\u2191")));
 }
 export { StudentMessages };
