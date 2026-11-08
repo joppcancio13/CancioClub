@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Pill } from "../shared/Pill";
 import { BALL_URL, C, DAYS, F, NON_COUNTING_KINDS } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
+import { shareOrDownloadBlob } from "../../utils/share";
 import { currentLoad } from "../../utils/workout";
 
 // "Baixar série": story 1080x1920 com a ficha do dia pra quem não usa o app (layout 5a).
@@ -102,24 +103,9 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
     }, [dayKey, showLoad, showTips]);
     const toBlob = () => new Promise((res) => canvasRef.current.toBlob(res, "image/png"));
     const fname = () => "serie-" + String(student.name || "aluno").split(" ")[0].toLowerCase() + "-" + dayKey + ".png";
-    // `<a download>` sozinho n\u00E3o \u00E9 confi\u00E1vel no Safari/iOS (principalmente dentro do PWA em modo
-    // standalone, sem aba nova pra "cair" o download) \u2014 \u00E9 por isso que "Salvar imagem" parecia n\u00E3o
-    // fazer nada no celular. navigator.share com arquivo abre a folha nativa, que tem "Salvar
-    // Imagem" como op\u00E7\u00E3o de verdade; s\u00F3 cai pro <a download> em navegadores sem suporte a isso
-    // (desktop, por exemplo), onde o <a download> funciona normalmente.
-    const downloadNow = (blob) => { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); };
     const download = async () => {
         setBusy(true);
-        let blob;
-        try {
-            blob = await toBlob();
-            const file = new File([blob], fname(), { type: "image/png" });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: "S\u00E9rie Cancio Club" });
-            else downloadNow(blob);
-        } catch (e) {
-            if (e && e.name === "AbortError") { /* usu\u00E1rio cancelou a folha de compartilhar \u2014 n\u00E3o faz nada */ }
-            else if (blob) downloadNow(blob);
-        }
+        await shareOrDownloadBlob(await toBlob(), fname(), "S\u00E9rie Cancio Club");
         setBusy(false);
     };
     const share = download;

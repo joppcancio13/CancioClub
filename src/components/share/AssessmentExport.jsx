@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ASSESSMENT_TEMPO_SESSAO_LABELS, BALL_URL, C, F } from "../../styles/tokens";
+import { shareOrDownloadBlob } from "../../utils/share";
 
 // "Baixar anamnese": story 1080x1920 só com a transcrição das respostas do aluno na anamnese
 // inicial — documento próprio, separado da ficha/série (SerieExport), porque é outro tipo de
@@ -80,19 +81,9 @@ function AssessmentExport({ student, onClose }) {
     }, [student]);
     const toBlob = () => new Promise((res) => canvasRef.current.toBlob(res, "image/png"));
     const fname = () => "anamnese-" + String(student.name || "aluno").split(" ")[0].toLowerCase() + ".png";
-    const downloadNow = (blob) => { const url = URL.createObjectURL(blob); const el = document.createElement("a"); el.href = url; el.download = fname(); document.body.appendChild(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); };
     const download = async () => {
         setBusy(true);
-        let blob;
-        try {
-            blob = await toBlob();
-            const file = new File([blob], fname(), { type: "image/png" });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: "Anamnese Cancio Club" });
-            else downloadNow(blob);
-        } catch (e) {
-            if (e && e.name === "AbortError") { /* usuário cancelou a folha de compartilhar — não faz nada */ }
-            else if (blob) downloadNow(blob);
-        }
+        await shareOrDownloadBlob(await toBlob(), fname(), "Anamnese Cancio Club");
         setBusy(false);
     };
     return React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,.6)" }, onClick: onClose },
