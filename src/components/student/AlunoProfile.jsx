@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { AssessmentSummary } from "../assessment/AssessmentSummary";
+import { StudentCard } from "../share/StudentCard";
 import { C, DAYS, F } from "../../styles/tokens";
 import { fmtDate } from "../../utils/date";
 import { planSummary } from "../../utils/workout";
@@ -9,6 +10,7 @@ import { planSummary } from "../../utils/workout";
 // precisar que o professor mostre. Tudo somente leitura, exceto "solicitar nova anamnese"
 // (já existia pro professor em AssessmentSummary — reaproveitado aqui tal e qual).
 function AlunoProfile({ student, streak, freqWeek, freqTotal, bestStreak, records, week, dayNames, assessmentAt, onRequestNewAssessment }) {
+    const [cardOpen, setCardOpen] = useState(false);
     const statB = (v, l) => React.createElement("div", { style: { flex: 1, textAlign: "center" } },
         React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 22, color: C.text } }, v),
         React.createElement("div", { style: { fontFamily: F.body, fontSize: 10.5, color: C.muted, marginTop: 2 } }, l));
@@ -28,7 +30,8 @@ function AlunoProfile({ student, streak, freqWeek, freqTotal, bestStreak, record
             fieldLine("Objetivo", student.goal),
             fieldLine("Frequência", [student.freqWeekly, student.targetDuration].filter(Boolean).join(" · ")),
             fieldLine("Treinando desde", student.startDate && fmtDate(student.startDate)),
-            fieldLine("Observações do professor", student.obs))),
+            fieldLine("Observações do professor", student.obs),
+            React.createElement("button", { className: "cc-tap", onClick: () => setCardOpen(true), style: { marginTop: 4, fontFamily: F.body, fontWeight: 600, fontSize: 12.5, color: C.silver, background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, "Ver carteirinha ›"))),
         records.length > 0 && section("Recordes", React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
             records.map((r) => React.createElement("div", { key: r.name, style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", border: "1px solid #2a2a2a", borderRadius: 12, padding: "10px 14px" } },
                 React.createElement("span", { style: { fontFamily: F.body, fontSize: 13.5, color: C.text } }, r.name),
@@ -43,6 +46,7 @@ function AlunoProfile({ student, streak, freqWeek, freqTotal, bestStreak, record
                     React.createElement("span", null, ex.name),
                     React.createElement("span", null, planSummary(ex))))); }))),
         student.assessment && React.createElement("div", { style: { marginTop: 22 } },
-            React.createElement(AssessmentSummary, { assessment: student.assessment, assessmentAt: assessmentAt, onRequestNew: onRequestNewAssessment, forStudent: true })));
+            React.createElement(AssessmentSummary, { assessment: student.assessment, assessmentAt: assessmentAt, onRequestNew: onRequestNewAssessment, forStudent: true })),
+        cardOpen && React.createElement(StudentCard, { student: student, memberSince: student.startDate, onClose: () => setCardOpen(false) }));
 }
 export { AlunoProfile };
