@@ -48,7 +48,7 @@ const DAYS = [
 const JS2KEY = { 0: "dom", 1: "seg", 2: "ter", 3: "qua", 4: "qui", 5: "sex", 6: "sab" };
 const MILESTONES = [5, 10, 20, 30, 50, 100];
 const KIND_CYCLE = ["warmup", "recon", "working", "rest-pause", "cluster", "back-off"];
-const KIND_LABELS = { warmup: "Aquec.", recon: "Reconhec.", working: "Trabalho", "rest-pause": "Rest Pause", cluster: "Cluster", "back-off": "Back-off" };
+const KIND_LABELS = { warmup: "Aquec.", recon: "Reconhec.", working: "Trabalho", "rest-pause": "Rest-pause", cluster: "Cluster", "back-off": "Back-off" };
 // séries de aquecimento e de reconhecimento não entram na tonelagem, no teto de progressão nem na
 // referência de recorde — são calibração (testar o corpo/a carga do dia), não o trabalho prescrito.
 const NON_COUNTING_KINDS = new Set(["warmup", "recon"]);
@@ -73,7 +73,7 @@ const SHARE_PHRASES = [
     "O clube é fechado, mas o resultado é público.",
     "Bons treinos merecem holofotes. Inspire alguém.",
     "A pista é nossa. Mostre quem dita o ritmo.",
-    "A constância é a sua assinatura. Partilhe.",
+    "A constância é a sua assinatura. Compartilhe.",
     "O trabalho feito no silêncio faz o barulho mais alto.",
     "Selo Cancio Club de qualidade. Exiba seu progresso.",
     "VIP na pista. Mostre como se faz.",
@@ -87,7 +87,7 @@ const GREET_NOITE = ["Boa noite. Sessão noturna,", "Boa noite. O Club é seu,",
 const SESS_KEY = "cancio:sess";
 const FEEDBACK_QUESTIONS = [
     "Como foi o treino de hoje?", "E aí, como você se sentiu hoje?", "Curtiu o treino?",
-    "Como foi o pique hoje?", "Valeu o esforço? Conta pra gente.", "Missão cumprida! Como foi?",
+    "Como foi o pique hoje?", "Valeu o esforço? Conta pra gente.", "Missão cumprida. Como foi?",
     "Como está se sentindo depois do treino?", "Deixa aqui como foi o seu treino.",
 ];
 const BALL_URL = "selo-bola-transparente.png?v=15";
@@ -116,7 +116,7 @@ const SELO_FALLBACK_URL = "selo-cancio-club.png?v=15";
 // dentro dos cards de compartilhamento (a marca com texto completo fica só no LogoCard)
 const SEAL_MARK_URL = BALL_URL;
 // vitrine de recordes — motivo pra voltar e conferir, não só ser surpreendido na hora da comemoração
-const DIARY_EFFORT_LABELS = { facil: "Fácil", medida: "Na Medida", destruidor: "Destruidor", descanso: "Descanso" };
+const DIARY_EFFORT_LABELS = { facil: "Fácil", medida: "Na medida", destruidor: "Destruidor", descanso: "Descanso" };
 const CALENDAR_WEEKDAY_SHORT = ["S", "T", "Q", "Q", "S", "S", "D"];
 // ícones minimalistas em linha (1px, sem preenchimento) pros empty states — nada de emoji nem
 // ilustração pesada, só um traço fino que combina com o resto da UI mono/silver
@@ -154,12 +154,12 @@ const ASSESSMENT_TEMPO_SESSAO_OPTIONS = [{ value: "45min", label: "45 min" }, { 
 const ASSESSMENT_ESTRESSE_OPTIONS = ["Ruim", "Razoável", "Boa", "Excelente"].map((v) => ({ value: v, label: v }));
 const assessmentLabelStyle = { fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.muted };
 const ASSESSMENT_CSS = `
-.cc-assess-choice:hover:not(.cc-assess-choice--active) { border-color:#3a3a3a; background:rgba(255,255,255,0.06); }
+.cc-assess-choice:hover:not(.cc-assess-choice--active) { border-color:#3A404C; background:rgba(255,255,255,0.06); }
 .cc-assess-choice:active { transform:scale(.94); }
 @media (prefers-reduced-motion: reduce) { .cc-assess-choice:active { transform:none; } }
 .cc-assess-submit:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 14px 30px rgba(184,180,255,0.32); }
 .cc-assess-submit:active:not(:disabled) { transform:translateY(0); }
-.cc-assess-input:hover { border-color:#3a3a3a; }
+.cc-assess-input:hover { border-color:#3A404C; }
 .cc-assess-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(10,10,12,0.35); border-top-color:#0A0A0C; animation: cc-boot-spin .7s linear infinite; flex-shrink:0; }
 `;
 const ASSESSMENT_TEMPO_SESSAO_LABELS = { "45min": "45 min", "60min": "60 min", "90min": "+1 hora" };

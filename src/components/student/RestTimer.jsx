@@ -108,7 +108,7 @@ function RestTimer({ seconds, autoStart, overrideSeconds, timerKey, hidden }) {
     // montado (ticking + persistência em sessionStorage + autoStart) porque é o dono do estado;
     // só quem mostra o descanso agora é o anel no cabeçalho do ExerciseCard e o rodapé (BottomActionBar).
     if (hidden) return null;
-    const accent = done ? C.warn : running ? C.amber : C.silver;
+    const accent = done ? C.warn : running ? C.silver : C.silver;
     const ringR = 14, ringC = 2 * Math.PI * ringR;
     return (React.createElement("div", { style: { background: "rgba(255,255,255,0.03)", border: `1px solid ${done ? C.warn : "rgba(255,255,255,0.08)"}`, borderRadius: 16, padding: 9, marginBottom: 10, transition: "border-color .3s" } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
@@ -122,7 +122,7 @@ function RestTimer({ seconds, autoStart, overrideSeconds, timerKey, hidden }) {
             React.createElement("button", { onClick: running ? pause : start, style: { fontFamily: F.mono, fontSize: 11, color: C.ink, background: accent, border: "none", borderRadius: 10, padding: "7px 11px", cursor: "pointer", minWidth: 64 } }, running ? "Pausar" : done ? "Repetir" : "Iniciar"),
             React.createElement("button", { onClick: reset, title: "Reiniciar", style: { fontFamily: F.mono, fontSize: 13, color: C.muted, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: "6px 8px", cursor: "pointer" } }, "\u21BA")),
         React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" } },
-            React.createElement("button", { onClick: () => setPreset(15), title: "Micro-pausa (rest-pause/cluster)", style: { fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: total === 15 ? C.ink : C.warn, background: total === 15 ? C.warn : C.amberDim, border: `1px solid ${C.warn}`, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } }, "15s"),
+            React.createElement("button", { onClick: () => setPreset(15), title: "Micro-pausa (rest-pause/cluster)", style: { fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: total === 15 ? C.ink : C.warn, background: total === 15 ? C.warn : C.silverDim, border: `1px solid ${C.warn}`, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } }, "15s"),
             [45, 60, 90, 120].map((s) => React.createElement("button", { key: s, onClick: () => setPreset(s), style: { fontFamily: F.mono, fontSize: 11, color: total === s ? C.ink : C.muted, background: total === s ? C.silver : "transparent", border: `1px solid ${total === s ? C.silver : C.line}`, borderRadius: 999, padding: "3px 8px", cursor: "pointer" } },
                 s,
                 "s")),

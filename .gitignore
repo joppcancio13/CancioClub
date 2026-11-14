@@ -1,2 +1,6 @@
 node_modules/
 dist/
+# material de apoio local (site v51 compilado, zips) e o deploy antigo de setembro, fora do Git
+referencia/
+deploy/
+.claude/

@@ -1,7 +1,7 @@
 import React from "react";
 import { BALL_URL, SIL_URL, SIL_SMALL_URL } from "../../styles/tokens";
 
-function DiscoBall({ size = 44, cols, rows, seedN, glow = true, tint = "#B8B8C0", variant = "sil" }) {
+function DiscoBall({ size = 44, cols, rows, seedN, glow = true, tint = "#AEB7C6", variant = "sil" }) {
     // dentro do app: silhueta chapada (17d). O 3D (17b) fica pra ícone, splash e compartilhar → variant="3d".
     if (variant !== "3d") return React.createElement("img", { src: size < 32 ? SIL_SMALL_URL : SIL_URL, alt: "", "aria-hidden": "true", width: size, height: size, style: { width: size, height: size, display: "block" } });
     // Arte nova: a bola deixou de ser desenhada em SVG dentro do app e passou a ser o PNG

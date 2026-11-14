@@ -26,7 +26,7 @@ function TemplateBuilder({ onSave, library }) {
                     e.rest ? ` · ${e.rest}s` : "",
                     e.note ? " · obs" : "",
                     e.url ? " · vídeo" : "")),
-            React.createElement("button", { onClick: () => setExs(exs.filter((_, k) => k !== i)), style: { minHeight: 44, color: C.muted, background: "none", border: "none", cursor: "pointer", fontFamily: F.mono, fontSize: 15 } }, "\u00D7")))),
+            React.createElement("button", { "aria-label": "Fechar", onClick: () => setExs(exs.filter((_, k) => k !== i)), style: { minHeight: 44, color: C.muted, background: "none", border: "none", cursor: "pointer", fontFamily: F.mono, fontSize: 15 } }, "\u00D7")))),
         library && library.length > 0 && (React.createElement("div", { style: { marginTop: 12 } },
             React.createElement("button", { onClick: () => setPickLib((v) => !v), style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, pickLib ? "Fechar biblioteca" : "Escolher da biblioteca"),
             pickLib && (React.createElement("div", { style: { marginTop: 10, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)", borderRadius: 10, padding: 10 } },

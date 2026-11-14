@@ -18,7 +18,7 @@ function Disclaimer({ onAccept }) {
                 React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.silver } }, "ANTES DE COMEÇAR"),
                 React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, color: C.text } }, "TRÊS COMBINADOS")),
             React.createElement("div", null, POINTS.map(([t, s], i) => React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "30px 1fr", gap: 12, padding: "16px 0", borderTop: `1px solid ${C.line}` } },
-                React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 24, color: C.silver } }, String(i + 1).padStart(2, "0")),
+                React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24, color: C.silver } }, String(i + 1).padStart(2, "0")),
                 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } },
                     React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text } }, t),
                     React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.5, color: "#AEB7C6" } }, s)))))),

@@ -213,7 +213,7 @@ function LegacyShareCard({ data, onClose }) {
         ctx.fillRect(0, 0, W, H);
         const hh = 195 * S, cell = 15 * S, joint = 2 * S;
         const lg = ctx.createLinearGradient(0, 0, W, hh * 1.1);
-        [[0, "#1E222B"], [0.24, "#8D97A9"], [0.34, "#E9EEF6"], [0.48, "#5B6373"], [0.62, "#2B3039"], [0.78, "#B8C3D4"], [1, "#3A404C"]].forEach(([o, c]) => lg.addColorStop(o, c));
+        [[0, "#1E222A"], [0.24, "#8D97A9"], [0.34, "#E9EEF6"], [0.48, "#5B6373"], [0.62, "#2E333D"], [0.78, "#B8C3D4"], [1, "#3A404C"]].forEach(([o, c]) => lg.addColorStop(o, c));
         ctx.fillStyle = lg;
         ctx.fillRect(0, 0, W, hh);
         ctx.fillStyle = "#05060A";
@@ -613,9 +613,9 @@ function LegacyShareCard({ data, onClose }) {
             }
         }
         catch (e) {
-            if (e && e.name === "AbortError") { /* usuário cancelou o menu de partilha de propósito — não faz nada */ }
+            if (e && e.name === "AbortError") { /* usuário cancelou o menu de compartilhar de propósito — não faz nada */ }
             else if (blob) {
-                setToast("Imagem guardada na galeria — partilhe direto de lá!");
+                setToast("Imagem salva na galeria. Compartilhe direto de lá.");
                 downloadNow(blob);
             }
         }
@@ -637,11 +637,11 @@ function LegacyShareCard({ data, onClose }) {
     }
     catch (e) { } setBusy(false); };
     return (React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 100, display: "grid", placeItems: "center", background: "rgba(8,9,12,.9)", padding: 18 }, onClick: onClose },
-        React.createElement("div", { style: { ...glassPanel, borderRadius: 26, maxWidth: 360, width: "100%", padding: 22, maxHeight: "94vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation() },
-            toast && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, background: "rgba(184,180,255,0.14)", border: `1px solid ${C.amber}55`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontFamily: F.body, fontSize: 12, color: C.text }, onClick: (e) => e.stopPropagation() },
+        React.createElement("div", { style: { ...glassPanel, borderRadius: 24, maxWidth: 360, width: "100%", padding: 22, maxHeight: "94vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation() },
+            toast && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, background: "rgba(184,180,255,0.14)", border: `1px solid ${C.amber}55`, borderRadius: 10, padding: "9px 12px", marginBottom: 12, fontFamily: F.body, fontSize: 13, color: C.text }, onClick: (e) => e.stopPropagation() },
                 React.createElement("span", { style: { flex: 1, lineHeight: 1.4 } }, toast),
-                React.createElement("button", { onClick: () => setToast(null), style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: 0 } }, "\u2715")),
-            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, marginBottom: 12, textAlign: "center", lineHeight: 1.5 } }, sharePhrase),
+                React.createElement("button", { "aria-label": "Fechar", onClick: () => setToast(null), style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, flexShrink: 0, padding: 0 } }, "\u2715")),
+            React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, marginBottom: 12, textAlign: "center", lineHeight: 1.5 } }, sharePhrase),
             exercisesWithData.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 10 } },
                 React.createElement(Pill, { active: kind === "tempo", onClick: () => setKind("tempo") }, "Tempo"),
                 React.createElement(Pill, { active: kind === "progressao", onClick: () => setKind("progressao") }, "Progress\u00E3o"))),
@@ -650,10 +650,10 @@ function LegacyShareCard({ data, onClose }) {
                 !data.isRestDay && React.createElement(Pill, { active: theme === "pastilhas", onClick: () => setTheme("pastilhas") }, "Pastilhas"),
                 React.createElement(Pill, { active: theme === "selo", onClick: () => setTheme("selo") }, "Selo"),
                 React.createElement(Pill, { active: theme === "placar", onClick: () => setTheme("placar") }, "Placar"))),
-            React.createElement("canvas", { ref: canvasRef, width: W, height: H, style: { width: "100%", height: "auto", borderRadius: 12, display: "block", background: C.ink } }),
+            React.createElement("canvas", { ref: canvasRef, width: W, height: H, style: { width: "100%", height: "auto", borderRadius: 10, display: "block", background: C.ink } }),
             React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14 } },
                 React.createElement("button", { onClick: onClose, style: { fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "12px 16px", cursor: "pointer" } }, "Fechar"),
-                React.createElement("button", { onClick: download, disabled: busy, style: { fontFamily: F.mono, fontSize: 12.5, color: C.silver, background: C.panel2, borderRadius: 10, padding: "12px 14px", cursor: "pointer" } }, "Baixar"),
-                React.createElement("button", { onClick: share, disabled: busy, style: { flex: 1, fontFamily: F.mono, fontSize: 13.5, letterSpacing: "0.04em", color: C.ink, backgroundImage: `linear-gradient(150deg, #EEF3FB, #B9C6D9)`, background: C.amber, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Compartilhar")))));
+                React.createElement("button", { onClick: download, disabled: busy, style: { fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "12px 14px", cursor: "pointer" } }, "Baixar"),
+                React.createElement("button", { onClick: share, disabled: busy, style: { flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: C.ink, backgroundImage: `linear-gradient(150deg, #EEF3FB, #B9C6D9)`, background: C.amber, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Compartilhar")))));
 }
 export { ShareCard };

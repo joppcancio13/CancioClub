@@ -16,7 +16,7 @@ function Celebration({ title, subtitle, stats, sets, weekDone, weekTarget, nextL
                 React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 32, lineHeight: 1, color: C.text } }, title)),
             stats && stats.length > 0 && React.createElement("div", { style: { display: "grid", gridTemplateColumns: `repeat(${stats.length}, minmax(0,1fr))`, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` } },
                 stats.map(([v, l], i) => React.createElement("div", { key: i, style: { padding: "14px 0", display: "flex", flexDirection: "column", gap: 2, ...(i ? { paddingLeft: 14, borderLeft: `1px solid ${C.line}` } : {}) } },
-                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 30, color: C.text } }, v),
+                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 30, color: C.text } }, v),
                     React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: C.muted } }, l)))),
             sets > 0 && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
                 React.createElement("span", { style: label }, "SÉRIES DE HOJE"),

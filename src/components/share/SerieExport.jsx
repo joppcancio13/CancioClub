@@ -28,7 +28,7 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
             ctx.fillStyle = "#05060A"; ctx.fillRect(0, 0, W, H);
             const hh = 150 * S, cell = 15 * S, joint = 2 * S;
             const lg = ctx.createLinearGradient(0, 0, W, hh * 1.2);
-            [[0, "#1E222B"], [0.24, "#8D97A9"], [0.34, "#E9EEF6"], [0.48, "#5B6373"], [0.62, "#2B3039"], [0.78, "#B8C3D4"], [1, "#3A404C"]].forEach(([o, c]) => lg.addColorStop(o, c));
+            [[0, "#1E222A"], [0.24, "#8D97A9"], [0.34, "#E9EEF6"], [0.48, "#5B6373"], [0.62, "#2E333D"], [0.78, "#B8C3D4"], [1, "#3A404C"]].forEach(([o, c]) => lg.addColorStop(o, c));
             ctx.fillStyle = lg; ctx.fillRect(0, 0, W, hh);
             ctx.fillStyle = "#05060A";
             for (let x = 0; x < W; x += cell) ctx.fillRect(x, 0, joint, hh);
@@ -89,15 +89,15 @@ function SerieExport({ student, week, dayNames, initialDay, onClose }) {
     const download = async () => { setBusy(true); try { const b = await toBlob(); const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); } catch (e) { } setBusy(false); };
     const share = async () => { setBusy(true); try { const b = await toBlob(); const file = new File([b], fname(), { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: "S\u00E9rie Cancio Club" }); else await download(); } catch (e) { } setBusy(false); };
     const toggle = (label, on, set) => React.createElement("button", { key: label, onClick: () => { haptic("tick"); set(!on); }, style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", border: "none", borderTop: "1px solid #1E222A", background: "none", cursor: "pointer", color: C.text } },
-        React.createElement("span", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 14 } }, label),
-        React.createElement("span", { style: { width: 44, height: 26, borderRadius: 13, background: on ? C.silver : "#2A2E37", position: "relative", flexShrink: 0 } }, React.createElement("span", { style: { position: "absolute", top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: on ? C.ink : C.muted, transition: "left .2s ease" } })));
+        React.createElement("span", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 15 } }, label),
+        React.createElement("span", { style: { width: 44, height: 26, borderRadius: 10, background: on ? C.silver : "#2A2E37", position: "relative", flexShrink: 0 } }, React.createElement("span", { style: { position: "absolute", top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: on ? C.ink : C.muted, transition: "left .2s ease" } })));
     return React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,.6)" }, onClick: onClose },
         React.createElement("div", { className: "cc-sheet-in", onClick: (e) => e.stopPropagation(), style: { position: "absolute", left: 0, right: 0, bottom: 0, top: "calc(24px + env(safe-area-inset-top))", maxWidth: 560, margin: "0 auto", background: C.panel, borderRadius: "28px 28px 0 0", padding: "12px 20px calc(18px + env(safe-area-inset-bottom))", boxSizing: "border-box", display: "flex", flexDirection: "column", overflowY: "auto" } },
             React.createElement("div", { style: { width: 36, height: 4, borderRadius: 2, background: "#2E333D", margin: "0 auto 16px", flexShrink: 0 } }),
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
                 React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 18 } }, "BAIXAR S\u00C9RIE"),
                 React.createElement("button", { onClick: onClose, style: { fontFamily: F.body, fontSize: 13, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } }, "Fechar")),
-            days.length === 0 ? React.createElement("div", { style: { fontFamily: F.body, fontSize: 13.5, color: C.muted, marginTop: 24 } }, "Monte pelo menos um dia de treino pra gerar a imagem.") : React.createElement(React.Fragment, null,
+            days.length === 0 ? React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 24 } }, "Monte pelo menos um dia de treino pra gerar a imagem.") : React.createElement(React.Fragment, null,
                 React.createElement("canvas", { ref: canvasRef, width: W, height: H, style: { width: 190, height: "auto", aspectRatio: "9 / 16", margin: "18px auto 0", display: "block", borderRadius: 10, boxShadow: "0 0 0 1px #2A2E37, 0 16px 40px rgba(0,0,0,.6)", background: C.ink, flexShrink: 0 } }),
                 React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 18, justifyContent: "center", flexWrap: "wrap" } }, days.map((d) => React.createElement(Pill, { key: d.key, active: d.key === dayKey, onClick: () => setDayKey(d.key) }, (dayNames && dayNames[d.key] ? dayNames[d.key].split("\u00B7")[0].trim() : d.short)))),
                 React.createElement("div", { style: { marginTop: 14 } }, toggle("Carga sugerida", showLoad, setShowLoad), toggle("Dicas de execu\u00E7\u00E3o", showTips, setShowTips)),

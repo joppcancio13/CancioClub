@@ -46,11 +46,11 @@ function streakTier(s) {
     if (s >= 120)
         return { name: "Lendário", tint: "#FFFFFF", accent: "#FFFFFF" };
     if (s >= 60)
-        return { name: "Diamante", tint: "#F2F2F5", accent: "#F2F2F5" };
+        return { name: "Diamante", tint: "#F2F5FA", accent: "#F2F5FA" };
     if (s >= 30)
-        return { name: "Ouro", tint: "#DDDDE2", accent: "#DDDDE2" };
+        return { name: "Ouro", tint: "#C6D2E4", accent: "#C6D2E4" };
     if (s >= 10)
-        return { name: "Platina", tint: "#CACACF", accent: "#CACACF" };
-    return { name: "Prata", tint: "#B8B8C0", accent: "#B8B8C0" };
+        return { name: "Platina", tint: "#AEB7C6", accent: "#AEB7C6" };
+    return { name: "Prata", tint: "#AEB7C6", accent: "#AEB7C6" };
 }
 export { trainingWds, computeStreak, lastCheckinLabel, seedCheckins, streakTier };

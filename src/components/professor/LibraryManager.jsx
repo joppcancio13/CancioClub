@@ -17,7 +17,7 @@ function LibraryManager({ library, onAdd, onUpdate, onRemove }) {
     const items = library.filter((e) => e.name.toLowerCase().includes(filter.trim().toLowerCase())).filter((e) => tagFilter === "Todos" || e.tag === tagFilter);
     const q = filter.trim();
     const createFromSearch = () => { if (!q) return; onAdd(q, "", tagFilter !== "Todos" ? tagFilter : ""); setFilter(""); };
-    const chip = (t) => React.createElement("button", { key: t, className: "cc-tap", onClick: () => setTagFilter(t), style: { minHeight: 36, padding: "0 12px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(tagFilter === t ? { background: C.text, color: C.ink, fontWeight: 700 } : { background: "transparent", color: "#AEB7C6", boxShadow: "inset 0 0 0 1px #2A2E37" }) } }, t);
+    const chip = (t) => React.createElement("button", { key: t, className: "cc-tap", onClick: () => setTagFilter(t), style: { minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(tagFilter === t ? { background: C.text, color: C.ink, fontWeight: 700 } : { background: "transparent", color: "#AEB7C6", boxShadow: "inset 0 0 0 1px #2A2E37" }) } }, t);
     return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } },
         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
             React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, color: C.text } }, "BIBLIOTECA"),

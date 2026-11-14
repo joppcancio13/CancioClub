@@ -16,7 +16,7 @@ function Reassessment({ onSubmit, onClose }) {
     const [busy, setBusy] = useState(false);
     const ok = !!String(f.peso || "").trim();
     const input = { width: "100%", boxSizing: "border-box", minHeight: 48, padding: "12px 14px", borderRadius: 10, border: "none", outline: "none", background: C.panel, boxShadow: "inset 0 0 0 1px #2A2E37", color: C.text, fontFamily: F.body, fontSize: 15 };
-    return React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 96, background: C.ink, overflowY: "auto" } },
+    return React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 98, background: C.ink, overflowY: "auto" } },
         React.createElement("div", { style: { maxWidth: 540, margin: "0 auto", padding: "calc(env(safe-area-inset-top) + 28px) 22px calc(env(safe-area-inset-bottom) + 24px)", display: "flex", flexDirection: "column", gap: 18 } },
             React.createElement("button", { onClick: onClose, style: { alignSelf: "flex-start", minHeight: 44, background: "none", border: "none", color: C.muted, fontFamily: F.body, fontSize: 13, cursor: "pointer", padding: 0 } }, "\u2190 Agora n\u00E3o"),
             React.createElement("div", null,

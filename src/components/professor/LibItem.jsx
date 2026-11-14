@@ -12,7 +12,7 @@ function LibItem({ item, onUpdate, onRemove }) {
     useEffect(() => { setName(item.name || ""); setUrl(item.url || ""); setTag(item.tag || ""); setShow(false); }, [item.id]);
     const inp = { width: "100%", boxSizing: "border-box", padding: 12, borderRadius: 10, border: "none", outline: "none", background: C.ink, boxShadow: "inset 0 0 0 1px #2A2E37", color: C.text, fontFamily: F.body, fontSize: 15 };
     const lbl = { fontFamily: F.body, fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: C.muted };
-    return React.createElement("div", { style: { borderBottom: "1px solid #15181F" } },
+    return React.createElement("div", { style: { borderBottom: "1px solid #171B22" } },
         React.createElement("button", { className: "cc-tap", onClick: () => setOpen(!open), style: { minHeight: 44, width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: "3px 10px", padding: "12px 0", border: "none", background: "transparent", textAlign: "left", cursor: "pointer" } },
             React.createElement("span", { style: { fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text } }, item.name),
             React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: item.url ? C.silver : "#3A404C" } }, item.url ? "\u25B6 vídeo" : "sem vídeo"),

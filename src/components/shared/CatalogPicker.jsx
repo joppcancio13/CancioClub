@@ -25,7 +25,7 @@ function CatalogPicker({ value, onChange, label, exerciseName }) {
     const useSuggestion = () => { haptic("confirm"); onChange(suggestion.id); };
 
     const groupRows = React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-        catalogByGroup.map((g) => React.createElement("button", { key: g.grupo, className: "cc-tap", onClick: () => pickGroup(g.grupo), style: { minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 15px", borderRadius: 16, border: "none", textAlign: "left", cursor: "pointer", background: "#15181F", color: C.text } },
+        catalogByGroup.map((g) => React.createElement("button", { key: g.grupo, className: "cc-tap", onClick: () => pickGroup(g.grupo), style: { minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 15px", borderRadius: 16, border: "none", textAlign: "left", cursor: "pointer", background: "#171B22", color: C.text } },
             React.createElement("span", { style: { fontFamily: F.body, fontSize: 15, fontWeight: 600 } }, g.grupo),
             React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 8 } },
                 React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted } }, g.entries.length + " exercícios"),
@@ -33,7 +33,7 @@ function CatalogPicker({ value, onChange, label, exerciseName }) {
 
     const activeEntries = activeGroup ? (catalogByGroup.find((g) => g.grupo === activeGroup) || { entries: [] }).entries : [];
     const exerciseRows = React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-        activeEntries.map((entry) => React.createElement("button", { key: entry.id, className: "cc-tap", onClick: () => pickExercise(entry.id), style: { minHeight: 44, display: "flex", flexDirection: "column", gap: 2, padding: "12px 15px", borderRadius: 16, border: "none", textAlign: "left", cursor: "pointer", background: value === entry.id ? C.text : "#15181F", color: value === entry.id ? C.ink : C.text } },
+        activeEntries.map((entry) => React.createElement("button", { key: entry.id, className: "cc-tap", onClick: () => pickExercise(entry.id), style: { minHeight: 44, display: "flex", flexDirection: "column", gap: 2, padding: "12px 15px", borderRadius: 16, border: "none", textAlign: "left", cursor: "pointer", background: value === entry.id ? C.text : "#171B22", color: value === entry.id ? C.ink : C.text } },
             React.createElement("span", { style: { fontFamily: F.body, fontSize: 15, fontWeight: 600 } }, entry.nome),
             React.createElement("span", { style: { fontFamily: F.mono, fontSize: 11, color: value === entry.id ? "#5A6273" : C.muted } }, entry.categoria))));
 

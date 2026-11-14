@@ -24,7 +24,7 @@ function DayEntryScreen({ week, todayKey, dayNames, cardio, onBegin, onPickOther
         React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "calc(28px + env(safe-area-inset-top)) 20px 180px", maxWidth: 560, margin: "0 auto", width: "100%", boxSizing: "border-box" } },
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
                 React.createElement("span", { style: kicker }, todayFull.toUpperCase() + " · HOJE É DIA DE"),
-                onClose && React.createElement("button", { onClick: onClose, style: { minHeight: 44, background: "none", border: "none", padding: 4, cursor: "pointer", fontFamily: F.body, fontSize: 13, color: C.muted } }, "fechar")),
+                onClose && React.createElement("button", { onClick: onClose, style: { minHeight: 44, background: "none", border: "none", padding: "0 0 0 12px", cursor: "pointer", fontFamily: F.body, fontSize: 15, color: C.muted } }, "Fechar")),
             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 38, lineHeight: 1.02, marginTop: 10, color: C.text } }, title.toUpperCase()),
             list.length > 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.silver, marginTop: 10 } },
                 list.length + " exercício" + (list.length > 1 ? "s" : "") + " · " + workingSets + " série" + (workingSets > 1 ? "s" : "") + (estMin ? " · ~" + estMin + " min" : "")),
@@ -32,7 +32,7 @@ function DayEntryScreen({ week, todayKey, dayNames, cardio, onBegin, onPickOther
                 const load = currentLoad(ex);
                 return React.createElement("div", { key: ex.id, style: row },
                     React.createElement("span", { style: { color: C.text } }, ex.name),
-                    React.createElement("span", { style: { color: C.muted, fontFamily: F.mono, fontSize: 13, flexShrink: 0, marginLeft: 12 } }, planSummary(ex) + (load ? " · " + load + " kg" : "")));
+                    React.createElement("span", { style: { color: C.muted, fontFamily: F.mono, fontSize: 13, flexShrink: 0, marginLeft: 12 } }, planSummary(ex) + (load ? " · " + String(load).replace(".", ",") + " kg" : "")));
             })),
             list.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 20, lineHeight: 1.5 } }, isCardioDay ? "Dia de cardio — registre na aba Treino." : "Nenhum treino montado pra hoje. Dia de recuperação ou cardio?"),
             React.createElement("div", { style: { marginTop: 34 } },
@@ -45,6 +45,6 @@ function DayEntryScreen({ week, todayKey, dayNames, cardio, onBegin, onPickOther
                 })),
                 React.createElement("button", { className: "cc-tap", onClick: () => { haptic("tick"); onClose && onClose(); }, style: { minHeight: 44, marginTop: 14, fontFamily: F.body, fontSize: 13, fontWeight: 500, color: C.muted, background: "none", border: "none", padding: 0, cursor: "pointer" } }, "Descanso hoje"))),
         React.createElement("div", { style: { position: "fixed", left: 12, right: 12, bottom: "calc(16px + env(safe-area-inset-bottom))", maxWidth: 536, margin: "0 auto" } },
-            React.createElement("button", { className: "cc-tap", onClick: () => { haptic("confirm"); onBegin(); }, style: { minHeight: 44, width: "100%", fontFamily: F.display, fontWeight: 800, fontSize: 15, color: C.ink, backgroundImage: PILL_ON, border: "none", borderRadius: 16, padding: "17px 0", cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,.4)" } }, list.length ? "Começar " + title : "Entendido")));
+            React.createElement("button", { className: "cc-tap", onClick: () => { haptic("confirm"); onBegin(); }, style: { minHeight: 44, width: "100%", fontFamily: F.display, fontWeight: 800, fontSize: 15, color: C.ink, background: C.text, border: "none", borderRadius: 16, minHeight: 52, padding: 0, cursor: "pointer" } }, list.length ? "Começar treino" : "Entendido")));
 }
 export { DayEntryScreen };

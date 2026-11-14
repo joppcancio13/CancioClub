@@ -79,7 +79,7 @@ const T = {
 };
 
 function Photo({ src, size }) {
-    return React.createElement("div", { style: { width: size, height: size, borderRadius: "50%", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", ...(src ? {} : { background: "repeating-linear-gradient(135deg,#15181F 0 6px,#0E1015 6px 12px)", boxShadow: `inset 0 0 0 1.5px ${C.line2}` }) } },
+    return React.createElement("div", { style: { width: size, height: size, borderRadius: "50%", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", ...(src ? {} : { background: "repeating-linear-gradient(135deg,#171B22 0 6px,#0E1015 6px 12px)", boxShadow: `inset 0 0 0 1.5px ${C.line2}` }) } },
         src ? React.createElement("img", { src, alt: "", style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: Math.max(9, size / 8), letterSpacing: "0.1em", color: C.muted } }, "FOTO"));
 }
 
@@ -92,8 +92,8 @@ function MemberCard({ f, mini }) {
         React.createElement("div", { style: { position: "relative", display: "flex", flexDirection: "column", gap: 4, minWidth: 0 } },
             React.createElement("span", { style: { ...T.label, color: C.silver } }, "MEMBRO CANCIO CLUB"),
             React.createElement("span", { style: { fontFamily: F.body, fontWeight: 800, fontSize: mini ? 16 : 18, color: f.nome ? C.text : "#3A404C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, f.nome || "Seu nome"),
-            React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: line1 ? C.muted : "#3A404C" } }, line1 || "idade · peso · altura"),
-            React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: f.objetivo ? C.muted : "#3A404C" } }, f.objetivo || "objetivo · a preencher")));
+            React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: line1 ? C.muted : "#3A404C" } }, line1 || "Idade · peso · altura"),
+            React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: f.objetivo ? C.muted : "#3A404C" } }, f.objetivo || "Objetivo · a preencher")));
 }
 
 async function downloadCardPNG(f) {
@@ -102,7 +102,7 @@ async function downloadCardPNG(f) {
     x.beginPath(); x.roundRect(0, 0, W, H, 56); x.fill(); x.save(); x.clip();
     const load = (src) => new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
     const ball = await load(BALL_URL); if (ball) { x.globalAlpha = 0.35; x.drawImage(ball, W - 330, -110, 440, 440); x.globalAlpha = 1; }
-    const ph = f.foto ? await load(f.foto) : null; x.save(); x.beginPath(); x.arc(200, H / 2, 120, 0, Math.PI * 2); x.clip(); if (ph) x.drawImage(ph, 80, H / 2 - 120, 240, 240); else { x.fillStyle = "#15181F"; x.fillRect(80, H / 2 - 120, 240, 240); } x.restore();
+    const ph = f.foto ? await load(f.foto) : null; x.save(); x.beginPath(); x.arc(200, H / 2, 120, 0, Math.PI * 2); x.clip(); if (ph) x.drawImage(ph, 80, H / 2 - 120, 240, 240); else { x.fillStyle = "#171B22"; x.fillRect(80, H / 2 - 120, 240, 240); } x.restore();
     x.fillStyle = C.silver; x.font = "700 28px Archivo, sans-serif"; x.letterSpacing = "5px"; x.fillText("MEMBRO CANCIO CLUB", 380, 250); x.letterSpacing = "0px";
     x.fillStyle = C.text; x.font = "800 60px Archivo, sans-serif"; x.fillText(f.nome || "", 380, 330);
     x.fillStyle = C.muted; x.font = "400 34px Archivo, sans-serif";
@@ -176,14 +176,14 @@ function AssessmentInicial({ onSubmit, onEnter, defaultName }) {
             React.createElement(MemberCard, { key: "c", f }),
             React.createElement("div", { key: "l", style: { display: "flex", flexDirection: "column" } }, SECTIONS.map((s, i) => {
                 const ok = sectionDone(s, f) && i < 5; const now = i === firstOpen;
-                return React.createElement("button", { key: s.key, className: "cc-tap", onClick: () => open(i), style: { display: "grid", gridTemplateColumns: "30px 1fr auto", gap: 12, alignItems: "center", padding: "13px 0", minHeight: 56, border: "none", borderBottom: "1px solid #15181F", background: "transparent", textAlign: "left", cursor: "pointer" } },
-                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontSize: 18, color: ok ? C.text : "#3A404C" } }, String(i + 1).padStart(2, "0")),
+                return React.createElement("button", { key: s.key, className: "cc-tap", onClick: () => open(i), style: { display: "grid", gridTemplateColumns: "30px 1fr auto", gap: 12, alignItems: "center", padding: "13px 0", minHeight: 56, border: "none", borderBottom: "1px solid #171B22", background: "transparent", textAlign: "left", cursor: "pointer" } },
+                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 18, color: ok ? C.text : "#3A404C" } }, String(i + 1).padStart(2, "0")),
                     React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2 } },
                         React.createElement("span", { style: { fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text } }, s.title),
                         React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, s.sub)),
                     React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, ...(now ? { color: C.ink, background: C.text, padding: "6px 10px", borderRadius: 999, fontWeight: 700 } : { color: ok ? C.silver : "#3A404C" }) } }, now ? (completed ? "Continuar" : "Começar") : ok ? "\u2713 editar" : "\u203A"));
             })),
-            React.createElement("span", { key: "s", style: { fontFamily: F.body, fontSize: 13, color: "#5A6273" } }, "Pode sair e voltar depois: fica tudo salvo."),
+            React.createElement("span", { key: "s", style: { fontFamily: F.body, fontSize: 13, color: "#7D8698" } }, "Pode sair e voltar depois: fica tudo salvo."),
         ]);
     }
 
@@ -225,7 +225,7 @@ function AssessmentInicial({ onSubmit, onEnter, defaultName }) {
         const rows = [["Nome", f.nome], ["Idade", ageFrom(f.nascimento) && `${ageFrom(f.nascimento)} anos`], ["Peso · altura", f.peso && `${f.peso} kg · ${f.altura} cm`], ["Treina há", f.tempoTreino], ["Dias · tempo", f.diasSemana && `${f.diasSemana}× · ${(ASSESSMENT_TEMPO_SESSAO_OPTIONS.find((o) => o.value === f.tempoSessao) || {}).label || ""}`], ["Objetivo", f.objetivo]];
         const alerts = SECTIONS[1].steps.filter((st) => st.type === "yn" && f[st.key] === "sim").map((st) => st.alert);
         body = [React.createElement("h2", { key: "q", style: T.q }, "Confere e envia"), React.createElement(MemberCard, { key: "c", f, mini: true }),
-            React.createElement("div", { key: "r", style: { display: "flex", flexDirection: "column" } }, rows.map(([k, v]) => React.createElement("div", { key: k, style: { display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: "1px solid #15181F", fontFamily: F.body, fontSize: 15 } }, React.createElement("span", { style: { color: C.muted } }, k), React.createElement("span", { style: { color: v ? C.text : C.warn, textAlign: "right" } }, v || "faltando")))),
+            React.createElement("div", { key: "r", style: { display: "flex", flexDirection: "column" } }, rows.map(([k, v]) => React.createElement("div", { key: k, style: { display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: "1px solid #171B22", fontFamily: F.body, fontSize: 15 } }, React.createElement("span", { style: { color: C.muted } }, k), React.createElement("span", { style: { color: v ? C.text : C.warn, textAlign: "right" } }, v || "faltando")))),
             alerts.length > 0 && React.createElement("div", { key: "a", style: { padding: "10px 12px", borderRadius: 10, boxShadow: "inset 0 0 0 1px rgba(232,121,75,.4)", fontFamily: F.body, fontSize: 13, color: "#C9D0DC", lineHeight: 1.45 } }, React.createElement("span", { style: { ...T.label, color: C.warn, marginRight: 8 } }, "SAÚDE"), alerts.join(" · ")),
             React.createElement("label", { key: "t", className: "cc-tap", style: { display: "flex", gap: 12, alignItems: "flex-start", cursor: "pointer", padding: "6px 0" } },
                 React.createElement("span", { style: { width: 24, height: 24, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", ...(f.termo ? { background: C.text, color: C.ink } : { boxShadow: "inset 0 0 0 1.5px #2E333D" }) } }, f.termo ? "\u2713" : ""),

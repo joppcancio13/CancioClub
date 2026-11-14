@@ -48,7 +48,7 @@ function mergeCloudRows(rows) {
             const sid = rd.id;
             if (!sid)
                 return;
-            out.students.push({ id: rd.id, name: rd.name, code: rd.code, goal: rd.goal, obs: rd.obs, ackAt: rd.ackAt, freqWeekly: rd.freqWeekly, targetDuration: rd.targetDuration, startDate: rd.startDate, clinicalAlert: rd.clinicalAlert, assessment: rd.assessment, assessmentAt: rd.assessmentAt, photo: rd.photo, reassessments: rd.reassessments, reassessEvery: rd.reassessEvery, consentAt: rd.consentAt, deletionRequestedAt: rd.deletionRequestedAt });
+            out.students.push({ id: rd.id, name: rd.name, code: rd.code, goal: rd.goal, obs: rd.obs, ackAt: rd.ackAt, freqWeekly: rd.freqWeekly, targetDuration: rd.targetDuration, startDate: rd.startDate, clinicalAlert: rd.clinicalAlert, assessment: rd.assessment, assessmentAt: rd.assessmentAt, photo: rd.photo, reassessments: rd.reassessments, reassessEvery: rd.reassessEvery, consentAt: rd.consentAt, deletionRequestedAt: rd.deletionRequestedAt, memberNo: rd.memberNo, memberSince: rd.memberSince, goals: rd.goals, contactPhone: rd.contactPhone, contactEmail: rd.contactEmail });
             out.checkins[sid] = rd.checkins || [];
             out.bestStreak[sid] = rd.bestStreak || 0;
             out.archives[sid] = rd.archives || [];

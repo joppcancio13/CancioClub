@@ -43,6 +43,7 @@ function tileOff(ctx, x, y, w, h, r) { ctx.fillStyle = "#1A1D24"; ctx.beginPath(
 function tilesRow(ctx, r, x, y, w, h, gap, rad) { for (let k = 0; k < r.planned; k++) (k < r.sets ? tile : tileOff)(ctx, x + k * (w + gap), y, w, h, rad); }
 
 // reduz em etapas (metade por vez) — evita o serrilhado de desenhar o PNG grande direto pequeno
+function safeDraw(ctx, img, ...a) { if (img) { try { ctx.drawImage(img, ...a); } catch (e) { } } }
 function hq(img, size) {
     if (!img) return null;
     let src = img, w = img.naturalWidth || img.width;
@@ -58,8 +59,8 @@ function tile(ctx, x, y, w, h, r) { const g = ctx.createLinearGradient(x, y, x +
 function drawCard(ctx, s, ball, phrase) {
     ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
     const L = 72, R = W - 72;
-    ctx.globalAlpha = 0.09; ctx.drawImage(hq(ball.big, 1100), W - 640, -520, 1100, 1100); ctx.globalAlpha = 1;
-    ctx.drawImage(hq(ball.small, 64), L, SAFE_T - 40, 64, 64);
+    ctx.globalAlpha = 0.09; safeDraw(ctx, hq(ball.big, 1100), W - 640, -520, 1100, 1100); ctx.globalAlpha = 1;
+    safeDraw(ctx, hq(ball.small, 64), L, SAFE_T - 40, 64, 64);
     ctx.fillStyle = TEXT; font(ctx, 900, 30, "expanded"); spaced(ctx, "CANCIO CLUB", L + 84, SAFE_T + 4, 5);
     ctx.fillStyle = MUTED; font(ctx, 500, 26); spaced(ctx, s.date, R, SAFE_T + 4, 2, "right");
     ctx.fillStyle = "#C6D2E4"; font(ctx, 700, 24); spaced(ctx, "TREINO CONCLUÍDO", L, 540, 6);
@@ -94,8 +95,8 @@ function drawCard(ctx, s, ball, phrase) {
 function drawRest(ctx, data, ball) {
     ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
     const L = 72, R = W - 72;
-    ctx.globalAlpha = 0.09; ctx.drawImage(hq(ball.big, 1100), W - 640, -520, 1100, 1100); ctx.globalAlpha = 1;
-    ctx.drawImage(hq(ball.small, 64), L, 110, 64, 64);
+    ctx.globalAlpha = 0.09; safeDraw(ctx, hq(ball.big, 1100), W - 640, -520, 1100, 1100); ctx.globalAlpha = 1;
+    safeDraw(ctx, hq(ball.small, 64), L, 110, 64, 64);
     ctx.fillStyle = TEXT; font(ctx, 900, 30, "expanded"); spaced(ctx, "CANCIO CLUB", L + 84, 154, 5);
     ctx.fillStyle = MUTED; font(ctx, 500, 26); spaced(ctx, dateTag(data.targetDate), R, 154, 2, "right");
     ctx.fillStyle = "#C6D2E4"; font(ctx, 700, 24); spaced(ctx, "DIA DE RECUPERAÇÃO", L, 620, 6);
@@ -112,7 +113,7 @@ function drawRest(ctx, data, ball) {
 function drawWeekly(ctx, data, ball) {
     ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
     const L = 72, R = W - 72;
-    ctx.drawImage(hq(ball.small, 64), L, 110, 64, 64);
+    safeDraw(ctx, hq(ball.small, 64), L, 110, 64, 64);
     ctx.fillStyle = TEXT; font(ctx, 900, 30, "expanded"); spaced(ctx, "CANCIO CLUB", L + 84, 154, 5);
     ctx.fillStyle = MUTED; font(ctx, 500, 26); spaced(ctx, "ÚLTIMOS 7 DIAS", R, 154, 2, "right");
     const done = Number(data.freqWeek) || 0, tgt = Number(data.weeklyTarget) || 0;
@@ -142,7 +143,7 @@ function drawNumbers(ctx, s, ball) {
     const items = [s.duration && [s.duration, "TEMPO"], [String(s.sets), pl(s.sets, "SÉRIE", "SÉRIES")], s.volume > 0 && [`${thousands(s.volume)} kg`, "LEVANTADOS"], s.records > 0 && [`${s.records} ★`, pl(s.records, "RECORDE", "RECORDES")]].filter(Boolean);
     const blockH = 170 + 80 + 40 + items.length * 170 + 60;
     let y = SAFE_T + Math.max(0, (SAFE_B - SAFE_T - blockH) / 2);
-    shadowOn(ctx); ctx.drawImage(hq(ball.big, 170), cx - 85, y, 170, 170); y += 250;
+    shadowOn(ctx); safeDraw(ctx, hq(ball.big, 170), cx - 85, y, 170, 170); y += 250;
     ctx.fillStyle = "#FFFFFF"; fitSize(ctx, s.title, 900, s.title.length > 14 ? 60 : 72, W - 140, 40, "expanded"); ctx.textAlign = "center"; ctx.fillText(s.title, cx, y); y += 110;
     items.forEach(([v, l]) => { font(ctx, 700, 24); spaced(ctx, l, cx, y, 6, "center"); font(ctx, 900, 92, "condensed"); ctx.textAlign = "center"; ctx.fillText(v, cx, y + 92); y += 170; });
     font(ctx, 900, 26, "expanded"); spaced(ctx, "CANCIO CLUB", cx, y + 20, 8, "center");
@@ -157,7 +158,7 @@ function drawTiles(ctx, s, ball) {
     shadowOn(ctx); ctx.fillStyle = "#FFFFFF";
     font(ctx, 700, 26); spaced(ctx, s.date, L, dateY, 6);
     fitSize(ctx, s.title, 900, 64, R - L - 150, 36, "expanded"); ctx.textAlign = "left"; ctx.fillText(fitText(ctx, s.title, R - L - 150), L, titleY);
-    ctx.drawImage(hq(ball.big, 120), R - 120, dateY - 30, 120, 120);
+    safeDraw(ctx, hq(ball.big, 120), R - 120, dateY - 30, 120, 120);
     rows.forEach((r, i) => { const y = listTop + i * RH; tilesRow(ctx, r, L, y, TW, TH, TG, 5); ctx.fillStyle = "#FFFFFF"; font(ctx, 600, 26); ctx.textAlign = "left"; const nx = L + r.planned * (TW + TG) + 6; ctx.fillText(fitText(ctx, r.name + (r.pr ? " ★" : ""), R - nx), nx, y + TH * 0.82); });
     ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.fillRect(L, divY, R - L, 2);
     const items = [s.duration && [s.duration, "tempo"], [String(s.sets), pl(s.sets, "série", "séries")], s.records > 0 && [`${s.records} ★`, pl(s.records, "recorde", "recordes")]].filter(Boolean);
@@ -169,7 +170,7 @@ function drawTiles(ctx, s, ball) {
 
 function drawPhoto(ctx, img) {
     const k = Math.max(W / img.width, H / img.height); const w = img.width * k, h = img.height * k;
-    ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+    safeDraw(ctx, img, (W - w) / 2, (H - h) / 2, w, h);
     const g = ctx.createLinearGradient(0, H * 0.45, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.35)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 }
 
@@ -184,7 +185,7 @@ function ShareStudio({ data, onClose }) {
     const [toast, setToast] = useState(null);
     const [phrase] = useState(() => SHARE_PHRASES[Math.floor(Math.random() * SHARE_PHRASES.length)]);
     const s = React.useMemo(() => summarize(data), [data]);
-    useEffect(() => { let off = false; (async () => { try { if (document.fonts) { await document.fonts.load("900 40px Archivo"); await document.fonts.ready; } } catch (e) { } const [big, small] = await Promise.all([loadImg(SIL_URL), loadImg(SIL_SMALL_URL)]); ballRef.current = { big, small: small || big }; if (!off) setReady(true); })(); return () => { off = true; }; }, []);
+    useEffect(() => { let off = false; (async () => { try { if (document.fonts) { await document.fonts.load("900 40px Archivo"); await document.fonts.ready; } } catch (e) { } const [big, small] = await Promise.all([loadImg(SIL_URL), loadImg(SIL_SMALL_URL)]); ballRef.current = { big: big || small || null, small: small || big || null }; if (!off) setReady(true); })(); return () => { off = true; }; }, []);
     useEffect(() => {
         if (!ready || !canvasRef.current) return;
         const ctx = canvasRef.current.getContext("2d"); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
@@ -198,29 +199,29 @@ function ShareStudio({ data, onClose }) {
     const fname = () => `cancio-${mode}${photo && mode !== "card" ? "-foto" : ""}.png`;
     const flash = (t) => { setToast(t); setTimeout(() => setToast(null), 2200); };
     const download = async () => { setBusy(true); try { const b = await blob(); const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); flash("PNG salvo"); } finally { setBusy(false); } };
-    const share = async () => { setBusy(true); try { const b = await blob(); const file = new File([b], fname(), { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); } catch (e) { if (e && e.name !== "AbortError") throw e; } } else { await download(); } } catch (e) { flash("Não deu pra compartilhar. Tente Baixar."); } finally { setBusy(false); } };
+    const share = async () => { setBusy(true); try { const b = await blob(); const file = new File([b], fname(), { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); } catch (e) { if (e && e.name !== "AbortError") throw e; } } else { await download(); } } catch (e) { flash("Não deu pra compartilhar. Tente baixar."); } finally { setBusy(false); } };
     const pickPhoto = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const url = URL.createObjectURL(f); loadImg(url).then((img) => { setPhoto(img); if (mode === "card") setMode("numeros"); }); e.target.value = ""; };
     const transparent = mode !== "card" && !photo;
     const checker = "repeating-conic-gradient(#2A2E37 0 25%, #1A1D24 0 50%) 0 0 / 16px 16px";
     const thumbBox = (on) => ({ width: 60, height: 106, borderRadius: 8, overflow: "hidden", boxShadow: on ? `0 0 0 2px ${INK}, 0 0 0 3.5px ${TEXT}` : "inset 0 0 0 1px #2A2E37", display: "flex", alignItems: "center", justifyContent: "center" });
     return React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 100, background: INK, display: "flex", flexDirection: "column", animation: "cc-fade .25s ease" } },
         React.createElement("div", { style: { padding: "calc(env(safe-area-inset-top) + 20px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" } },
-            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 20, color: TEXT } }, "COMPARTILHAR"),
-            React.createElement("button", { className: "cc-tap", onClick: onClose, style: { minHeight: 44, padding: "0 4px 0 12px", border: "none", background: "transparent", color: MUTED, fontFamily: F.body, fontSize: 14, cursor: "pointer" } }, "Fechar")),
+            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 18, color: TEXT } }, "COMPARTILHAR"),
+            React.createElement("button", { className: "cc-tap", onClick: onClose, style: { minHeight: 44, padding: "0 4px 0 12px", border: "none", background: "transparent", color: MUTED, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "Fechar")),
         React.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "14px 20px" } },
-            React.createElement("canvas", { ref: canvasRef, width: W, height: H, style: { height: "100%", maxHeight: "100%", maxWidth: "100%", aspectRatio: "9 / 16", borderRadius: 14, background: transparent ? checker : INK, boxShadow: `inset 0 0 0 1px ${LINE}` } })),
+            React.createElement("canvas", { ref: canvasRef, width: W, height: H, style: { height: "100%", maxHeight: "100%", maxWidth: "100%", aspectRatio: "9 / 16", borderRadius: 16, background: transparent ? checker : INK, boxShadow: `inset 0 0 0 1px ${LINE}` } })),
         React.createElement("div", { style: { padding: "14px 20px calc(env(safe-area-inset-bottom) + 18px)", borderTop: `1px solid ${LINE}`, display: "flex", flexDirection: "column", gap: 14 } },
             !data.isRestDay && !data.isWeeklySummary && React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
                 MODES.map(([k, l]) => React.createElement("button", { key: k, className: "cc-tap", onClick: () => setMode(k), style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, border: "none", background: "transparent", cursor: "pointer", padding: 0 } },
-                    React.createElement("span", { style: { ...thumbBox(mode === k), background: k === "card" ? INK : photo ? "#3B3530" : checker } }, React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontSize: 9, letterSpacing: "0.1em", color: TEXT } }, k === "card" ? "▮▮▮" : k === "numeros" ? "123" : "▪▪▪")),
+                    React.createElement("span", { style: { ...thumbBox(mode === k), background: k === "card" ? INK : photo ? "#3B3530" : checker } }, React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontSize: 11, letterSpacing: "0.1em", color: TEXT } }, k === "card" ? "▮▮▮" : k === "numeros" ? "123" : "▪▪▪")),
                     React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: mode === k ? TEXT : MUTED, fontWeight: mode === k ? 700 : 400 } }, l))),
                 React.createElement("label", { className: "cc-tap", style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" } },
-                    React.createElement("span", { style: { ...thumbBox(!!photo), color: MUTED, fontSize: 20, background: "transparent" } }, photo ? "✓" : "＋"),
+                    React.createElement("span", { style: { ...thumbBox(!!photo), color: MUTED, fontSize: 18, background: "transparent" } }, photo ? "✓" : "＋"),
                     React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: photo ? TEXT : MUTED } }, photo ? "Trocar foto" : "Sua foto"),
                     React.createElement("input", { type: "file", accept: "image/*", onChange: pickPhoto, style: { display: "none" } }))),
             React.createElement("div", { style: { display: "flex", gap: 8 } },
-                React.createElement("button", { className: "cc-tap", disabled: busy || !ready, onClick: download, style: { flex: 1, height: 52, borderRadius: 16, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", color: "#C6D2E4", fontFamily: F.body, fontWeight: 600, fontSize: 14, cursor: "pointer" } }, "Baixar PNG"),
+                React.createElement("button", { className: "cc-tap", disabled: busy || !ready, onClick: download, style: { flex: 1, height: 52, borderRadius: 16, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", color: "#C6D2E4", fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "Baixar PNG"),
                 React.createElement("button", { className: "cc-tap", disabled: busy || !ready, onClick: share, style: { flex: 2, height: 52, borderRadius: 16, border: "none", background: TEXT, color: INK, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: busy ? 0.7 : 1 } }, busy ? "Gerando…" : "Compartilhar")),
-            React.createElement("span", { style: { fontFamily: F.body, fontSize: 11.5, color: "#5A6273", textAlign: "center" } }, toast || (mode === "card" ? "Card em fundo preto, pronto pro story." : photo ? "Figurinha aplicada sobre a sua foto." : "PNG transparente: cole como figurinha sobre a sua foto no Instagram."))));
+            React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: "#7D8698", textAlign: "center" } }, toast || (mode === "card" ? "Card em fundo preto, pronto pro story." : photo ? "Figurinha aplicada sobre a sua foto." : "PNG transparente: cole como figurinha sobre a sua foto no Instagram."))));
 }
 export { ShareStudio };

@@ -35,7 +35,7 @@ function EvolutionSummary({ ex, role }) {
         recent.length > 1 && React.createElement("div", { style: { display: "flex", alignItems: "flex-end", gap: 4, height: 56, marginTop: 14 } }, recent.map((s, i) => {
             const h = max === min ? 40 : 12 + ((s.load - min) / (max - min)) * 44;
             const top = s.load === max;
-            return React.createElement("div", { key: i, title: fmtDate(s.date) + " \u00B7 " + kg(s.load) + " kg", style: { flex: 1, height: h, borderRadius: 3, ...(top ? { backgroundImage: PILL_ON } : { background: "#2A2F39" }) } });
+            return React.createElement("div", { key: i, title: fmtDate(s.date) + " \u00B7 " + kg(s.load) + " kg", style: { flex: 1, height: h, borderRadius: 3, ...(top ? { backgroundImage: PILL_ON } : { background: "#2E333D" }) } });
         })),
         recent.length > 1 && React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 6 } },
             React.createElement("span", null, fmtDate(recent[0].date)),
