@@ -1,9 +1,13 @@
 # Cancio Club — alterações (nov 2026)
 
-Duas pastas:
-- **cancio-club-site/** → pronto pra subir. Arraste a pasta inteira no Netlify. Não precisa rodar nada.
-- **cancio-club-projeto/** → código-fonte. `npm install` + `npm run build` gera a mesma coisa em `dist/`.
-(`cancio-club-deploy/` é a versão antiga, não use.)
+Desde a v51 (14/nov) existe **um lugar só**: este repositório, branch `main`.
+- **Código-fonte:** `src/` (React com `React.createElement`, sem JSX de verdade, apesar da extensão `.jsx`).
+- **Gerar o site:** `npm install` e depois `npm run build` → a pasta `dist/` é o que vai pro Netlify.
+- **Edge Function do aluno:** `supabase/functions/student/` (como publicar: `supabase/LEIA-ME.txt`).
+- Pastas antigas fora do Git (`cancio-club-site/`, `cancio-club-deploy/`, zips): só referência, não edite nem suba.
+
+As seções até a v45 abaixo foram escritas quando o site era editado já pronto: os nomes `.jsx` nelas
+correspondem a `src/`, e as instruções "arraste a pasta" valem hoje para o `dist/`.
 
 ## Marca
 - Login com a assinatura horizontal: silhueta + CANCIO / CLUB. "Digite o código" virou rótulo colado nas caixas; erro em laranja.
@@ -45,7 +49,7 @@ Duas pastas:
 2. No celular, feche o app e abra de novo.
 3. Conferir: compartilhar card (iPhone e Android), carteirinha, perfil, abrir o app depois de já ter treinado.
 
-Supabase: nada mudou. No site pronto, React/Supabase/gráficos carregam do esm.sh na 1ª abertura e ficam em cache.
+Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gráficos do esm.sh; o `dist/` do build já traz tudo junto.)
 
 ## Correções (v42)
 - Tela preta ao abrir depois da atualização: agora, se uma tela quebrar, aparece a mensagem de erro e um botão "Recarregar".
