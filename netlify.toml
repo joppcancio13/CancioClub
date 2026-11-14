@@ -1,0 +1,7 @@
+# Build no Netlify: gera o site com o Vite e publica a pasta dist/ (que já leva o _headers de public/)
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
