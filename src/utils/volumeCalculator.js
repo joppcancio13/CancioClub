@@ -1,4 +1,5 @@
 import { exerciseCatalog } from "../data/exerciseCatalog";
+import { isoOf } from "./date";
 
 // Casa de cada músculo fino (como aparece em `ativacao`) com sua porção muscular ampla — é aqui,
 // não por categoria de exercício, que o volume se agrupa: gluteo_maximo sempre entra em "Glúteos"
@@ -39,7 +40,7 @@ function getWeekRange(weekOffset = 0, today = new Date()) {
     monday.setDate(d.getDate() + mondayDelta + weekOffset * 7);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-    const iso = (x) => x.toISOString().slice(0, 10);
+    const iso = isoOf; // data no fuso do aparelho (toISOString é UTC e pode trocar o dia)
     return { startISO: iso(monday), endISO: iso(sunday) };
 }
 

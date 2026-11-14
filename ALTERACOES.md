@@ -113,3 +113,10 @@ Supabase: nada mudou. No site pronto, React/Supabase/gráficos carregam do esm.s
 - Plano de séries carimbado com `planAt` sempre que muda (aluno ou professor), pra Edge Function saber qual é o mais novo. (`components/student/ExerciseCard.js`)
 - **Edge Function `student` nova** (pasta `supabase/functions/student/`, publicar à parte no Supabase): o `sync` mescla em vez de gravar por cima, e o `login` não manda mais o alerta clínico pro aluno.
 - Cache v51.
+
+## v52 — bugs 5 a 8
+- **Restaurar fase arquivada** pede confirmação e guarda a ficha atual como fase "Antes de restaurar…", pra dar pra desfazer. **Apagar fase** (o "×") também pede confirmação. (`App.jsx`)
+- **Correção de carga não é mais desfeita:** cada série grava a hora (`at`) e, nas mesclas, vale a edição mais nova. Antes valia sempre a maior carga. Dia antigo (formato achatado) não fica mais com a série duplicada, e a nota do aluno no exercício não some mais na mescla. (`App.jsx`, `utils/merge.js`, Edge Function `merge.js`)
+- **Mês e semana no fuso do aparelho:** Salva-Vidas, frequência do mês no perfil, evolução de 8 semanas e semana do volume usavam UTC e viravam o mês às 21h do último dia. (`App.jsx`, `StudentProfile.jsx`, `EvolutionSummary.jsx`, `utils/volumeCalculator.js`)
+- **Restaurar backup** apaga da nuvem os alunos que não estão no backup (a confirmação mostra quantos). Antes eles voltavam no próximo login do professor. (`App.jsx`)
+- Cache v52.

@@ -82,10 +82,12 @@ function mergeEntriesBySetId(localEntries, cloudEntries) {
             bySetId.set(e.setId, e); // série nova (registrada só de um lado) -> mantém
             return;
         }
-        // mesmo setId nos dois lados -> fica com a maior carga, nunca com "o mais recente"
-        const eLoad = typeof e.load === "number" ? e.load : -Infinity;
-        const cLoad = typeof c.load === "number" ? c.load : -Infinity;
-        bySetId.set(e.setId, eLoad >= cLoad ? e : c);
+        // mesmo setId nos dois lados -> fica a edição mais NOVA (campo `at`, gravado pelo addLoad).
+        // Antes ficava a maior carga, então corrigir um erro de digitação pra baixo (100 -> 10 kg)
+        // podia ser desfeito na próxima mescla. Série antiga sem `at` dos dois lados: fica a da nuvem.
+        const eAt = typeof e.at === "number" ? e.at : 0;
+        const cAt = typeof c.at === "number" ? c.at : 0;
+        bySetId.set(e.setId, eAt > cAt ? e : c);
     });
     return Array.from(bySetId.values());
 }
@@ -94,13 +96,22 @@ function mergeHistoryDay(localH, cloudH) {
         return cloudH;
     if (!cloudH)
         return localH;
-    const localEntries = Array.isArray(localH.entries) && localH.entries.length ? localH.entries
-        : (typeof localH.load === "number" ? [{ setId: "_flat_local", kind: "working", load: localH.load, reps: localH.reps }] : []);
-    const cloudEntries = Array.isArray(cloudH.entries) && cloudH.entries.length ? cloudH.entries
-        : (typeof cloudH.load === "number" ? [{ setId: "_flat_cloud", kind: "working", load: cloudH.load, reps: cloudH.reps }] : []);
-    if (!localEntries.length && !cloudEntries.length)
-        return cloudH;
-    return { date: cloudH.date, entries: mergeEntriesBySetId(localEntries, cloudEntries) };
+    // formato antigo (achatado, sem entries) dos dois lados: é o MESMO registro -> fica o da nuvem.
+    // Antes cada lado virava uma série com setId diferente ("_flat_local"/"_flat_cloud") e o dia
+    // passava a ter a série duplicada (volume em dobro).
+    const localHasEntries = Array.isArray(localH.entries) && localH.entries.length > 0;
+    const cloudHasEntries = Array.isArray(cloudH.entries) && cloudH.entries.length > 0;
+    if (!localHasEntries && !cloudHasEntries)
+        return typeof cloudH.load === "number" ? cloudH : localH;
+    const flat = (h) => (typeof h.load === "number" ? [{ setId: "_flat", kind: "working", load: h.load, reps: h.reps }] : []);
+    const localEntries = localHasEntries ? localH.entries : flat(localH);
+    const cloudEntries = cloudHasEntries ? cloudH.entries : flat(cloudH);
+    const merged = { date: cloudH.date, entries: mergeEntriesBySetId(localEntries, cloudEntries) };
+    // a nota do aluno daquele dia sumia na mescla (o dia era remontado só com date + entries)
+    const note = localH.studentNote !== undefined ? localH.studentNote : cloudH.studentNote;
+    if (note !== undefined)
+        merged.studentNote = note;
+    return merged;
 }
 function mergeHistoryArrays(localHist, cloudHist) {
     const byDate = new Map();

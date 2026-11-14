@@ -376,7 +376,7 @@ function CancioClub() {
         return "missed";
     };
     // Salva-Vidas: 3 por mês, pra "perdoar" um dia perdido sem zerar a sequência de verdade
-    const curMonth = new Date().toISOString().slice(0, 7);
+    const curMonth = todayISO().slice(0, 7); // mês no fuso do aparelho (toISOString é UTC: virava o mês às 21h no último dia)
     const freezeInfo = (data?.freezes && data.freezes[focusId] && data.freezes[focusId].month === curMonth) ? data.freezes[focusId] : { month: curMonth, used: 0 };
     const freezesLeft = Math.max(0, 3 - freezeInfo.used);
     const studentStats = (sid) => { const wk = (data.workouts && data.workouts[sid]) || emptyWeek(); const ch = (data.checkins && data.checkins[sid]) || []; const twd = trainingWds(wk, data.cardio && data.cardio[sid]); return { streak: computeStreak(twd, new Set(ch)), week: ch.filter(isWithin7).length, total: ch.length, last: lastCheckinLabel(ch) }; };
@@ -461,7 +461,8 @@ function CancioClub() {
                 const maxReps = priorReps.length ? Math.max(...priorReps) : null;
                 const todayEntry = idx >= 0 ? hist[idx] : { date: entry.date, entries: [] };
                 const setIdx = todayEntry.entries.findIndex((se) => se.setId === entry.setId);
-                const newSetEntry = { setId: entry.setId, kind: entry.kind, targetReps: entry.targetReps, load: entry.load, reps: entry.reps };
+                // at: quando a série foi gravada — nas mesclas (app e Edge Function) a edição mais nova vence
+                const newSetEntry = { setId: entry.setId, kind: entry.kind, targetReps: entry.targetReps, load: entry.load, reps: entry.reps, at: Date.now() };
                 if (setIdx >= 0)
                     todayEntry.entries[setIdx] = newSetEntry;
                 else
@@ -535,8 +536,26 @@ function CancioClub() {
     const addTemplate = (name, exs) => setData((p) => { const next = { ...p, templates: [...(p.templates || []), { id: uid(), name, exercises: exs }] }; syncGlobalToCloud(next); return next; });
     const deleteTemplate = (id) => setData((p) => { const next = { ...p, templates: (p.templates || []).filter((t) => t.id !== id) }; syncGlobalToCloud(next); return next; });
     const archiveWorkout = () => { const label = archLabel.trim() || `Treino ${fmtDate(todayISO())}`; const snap = JSON.parse(JSON.stringify((data.workouts && data.workouts[profId]) || emptyWeek())); setData((p) => { const next = { ...p, archives: { ...(p.archives || {}), [profId]: [...(((p.archives || {})[profId]) || []), { id: uid(), label, date: new Date().toISOString(), week: snap }] } }; syncStudentToCloud(next, profId); return next; }); setArchLabel(""); };
-    const restoreArchive = (arc) => { const wk = JSON.parse(JSON.stringify(arc.week)); DAYS.forEach((d) => (wk[d.key] || []).forEach((e) => { e.id = uid(); })); setData((p) => { const next = { ...p, workouts: { ...p.workouts, [profId]: wk } }; syncStudentToCloud(next, profId); return next; }); };
-    const deleteArchive = (id) => setData((p) => { const next = { ...p, archives: { ...(p.archives || {}), [profId]: (((p.archives || {})[profId]) || []).filter((a) => a.id !== id) } }; syncStudentToCloud(next, profId); return next; });
+    // Restaurar troca a semana inteira do aluno (com o histórico atual). Antes era um toque só, sem
+    // confirmação, colado no "×". Agora confirma E arquiva a ficha atual antes de trocar — assim
+    // restaurar por engano dá pra desfazer restaurando o arquivo "Antes de restaurar…".
+    const restoreArchive = async (arc) => {
+        if (!(await ccConfirm(`A ficha atual vai ser trocada por "${arc.label}". Ela fica guardada como uma fase arquivada, pra você poder voltar.`, { title: "Restaurar esta fase?", ok: "Restaurar" })))
+            return;
+        const wk = JSON.parse(JSON.stringify(arc.week)); DAYS.forEach((d) => (wk[d.key] || []).forEach((e) => { e.id = uid(); }));
+        setData((p) => {
+            const current = JSON.parse(JSON.stringify((p.workouts && p.workouts[profId]) || emptyWeek()));
+            const backup = { id: uid(), label: `Antes de restaurar "${arc.label}" (${fmtDate(todayISO())})`, date: new Date().toISOString(), week: current };
+            const next = { ...p, workouts: { ...p.workouts, [profId]: wk }, archives: { ...(p.archives || {}), [profId]: [...(((p.archives || {})[profId]) || []), backup] } };
+            syncStudentToCloud(next, profId); return next;
+        });
+    };
+    const deleteArchive = async (id) => {
+        const arc = ((data.archives || {})[profId] || []).find((a) => a.id === id);
+        if (!(await ccConfirm(`"${arc ? arc.label : "Esta fase"}" vai ser apagada. Não pode ser desfeito.`, { title: "Apagar esta fase?", ok: "Apagar", danger: true })))
+            return;
+        setData((p) => { const next = { ...p, archives: { ...(p.archives || {}), [profId]: (((p.archives || {})[profId]) || []).filter((a) => a.id !== id) } }; syncStudentToCloud(next, profId); return next; });
+    };
     // nome ficou de antes de aceitar uma data explícita — hoje também cobre o check-in de um dia
     // atrasado (ver dayDate), não só "hoje" no sentido literal
     const checkInTodayFor = (p, sid, dt) => {
@@ -676,13 +695,29 @@ function CancioClub() {
                     ccAlert("Arquivo de backup inválido — não foi possível restaurar.");
                     return;
                 }
+                // alunos que estão na nuvem mas não no backup: antes ficavam lá e voltavam no próximo
+                // login do professor. Agora entram na confirmação e são apagados junto.
+                const keepIds = new Set(d.students.map((s) => "student_" + s.id));
+                let extraIds = [];
+                if (sb) {
+                    try {
+                        const { data: rows, error } = await sb.from("cancio").select("id").like("id", "student_%");
+                        if (error) throw error;
+                        extraIds = (rows || []).map((row) => row.id).filter((id) => !keepIds.has(id)).map((id) => id.slice("student_".length));
+                    }
+                    catch (e) {
+                        console.error("Cancio: não deu pra listar os alunos da nuvem antes de restaurar:", e);
+                    }
+                }
+                const extraMsg = extraIds.length ? ` ${extraIds.length} aluno${extraIds.length === 1 ? "" : "s"} que não ${extraIds.length === 1 ? "está" : "estão"} no backup ${extraIds.length === 1 ? "será apagado" : "serão apagados"} da nuvem.` : "";
                 // restaurar substitui TODOS os dados atuais (local e nuvem) — irreversível, por isso confirma antes
-                if (!(await ccConfirm(`Isso vai substituir todos os dados atuais por este backup (${d.students.length} aluno${d.students.length === 1 ? "" : "s"}). Não pode ser desfeito.`, { title: "Restaurar backup?", ok: "Substituir dados", danger: true })))
+                if (!(await ccConfirm(`Isso vai substituir todos os dados atuais por este backup (${d.students.length} aluno${d.students.length === 1 ? "" : "s"}).${extraMsg} Não pode ser desfeito.`, { title: "Restaurar backup?", ok: "Substituir dados", danger: true })))
                     return;
                 delete d.isSeed;
                 setData(d);
                 saveGlobalToCloud(splitGlobalForCloud(d));
                 d.students.forEach((s) => saveStudentToCloud(splitStudentForCloud(d, s)));
+                extraIds.forEach((id) => { deletedStudentIdsRef.current.add(id); deleteStudentFromCloud(id); });
             }
             catch (e) {
                 console.error("Cancio: falha ao importar backup:", e);

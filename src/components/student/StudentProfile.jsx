@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { C, F, SIL_URL } from "../../styles/tokens";
 import { fmtMemberNo, fmtSince } from "../../utils/members";
+import { todayISO } from "../../utils/date";
 import { AssessmentSummary } from "../assessment/AssessmentSummary";
 
 // Perfil do aluno (versão 1c): topo "pôster" + blocos que abrem o detalhe.
@@ -53,7 +54,8 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
     const series = useMemo(() => loadSeries(week), [week]);
     const records = useMemo(() => series.map((s) => { const b = s.pts.reduce((m, p) => (p.v > m.v ? p : m), s.pts[0]); return { name: s.name, best: b.v, date: b.date }; }).sort((a, b) => b.best - a.best), [series]);
     const evo = useMemo(() => [...series].sort((a, b) => b.pts.length - a.pts.length), [series]);
-    const now = new Date(), ym = now.toISOString().slice(0, 7), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    // ym no fuso do aparelho (toISOString é UTC: virava o mês às 21h no último dia)
+    const now = new Date(), ym = todayISO().slice(0, 7), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const monthSet = new Set((checkins || []).filter((d) => String(d).startsWith(ym)).map((d) => Number(String(d).slice(8, 10))));
     const a = student.assessment || {};
     const measures = [{ date: student.assessmentAt, peso: num(a.peso), base: true }, ...(student.reassessments || [])].filter((x) => x.date);

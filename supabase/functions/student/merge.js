@@ -40,9 +40,11 @@ function mergeHistoryDay(cloudH, incH) {
     const iE = Array.isArray(incH.entries) ? incH.entries : null;
     let out;
     if (cE && iE) {
+        // mesma série nos dois lados: a edição mais nova (`at`, gravado pelo app) vence; sem `at`
+        // dos dois lados, fica a do aluno, que é quem está mandando agora
         const bySet = new Map();
         cE.forEach((e) => bySet.set(e.setId, e));
-        iE.forEach((e) => bySet.set(e.setId, e));
+        iE.forEach((e) => { const c = bySet.get(e.setId); if (!c || !(typeof c.at === "number" && typeof e.at === "number" && c.at > e.at)) bySet.set(e.setId, e); });
         out = { ...cloudH, ...incH, entries: Array.from(bySet.values()) };
     } else if (iE && iE.length) out = { ...cloudH, ...incH };
     else if (cE && cE.length) out = { ...incH, ...cloudH };

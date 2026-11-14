@@ -1,6 +1,6 @@
 import React from "react";
 import { C, F, PILL_ON } from "../../styles/tokens";
-import { fmtDate } from "../../utils/date";
+import { daysAgo, fmtDate } from "../../utils/date";
 import { daySummary, sortedHistory } from "../../utils/workout";
 
 // card de evolução: a frase que motiva ("subiu 12 kg desde 3 mar"), recorde e as últimas 8 sessões
@@ -9,7 +9,7 @@ function EvolutionSummary({ ex, role }) {
     const sess = sortedHistory(ex.history).map((h) => ({ date: h.date, ...daySummary(h) })).filter((h) => h.load > 0);
     if (!sess.length) return React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, padding: "8px 0 14px" } }, "A evolução aparece depois da primeira sessão registrada.");
     const last = sess[sess.length - 1];
-    const cutoff = new Date(Date.now() - 56 * 864e5).toISOString().slice(0, 10);
+    const cutoff = daysAgo(56); // fuso do aparelho (toISOString é UTC)
     const base = sess.find((s) => s.date >= cutoff) || sess[0];
     const from = base === last ? sess[0] : base;
     const delta = Math.round((last.load - from.load) * 10) / 10;
