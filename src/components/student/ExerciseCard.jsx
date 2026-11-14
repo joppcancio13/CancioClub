@@ -315,7 +315,9 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                         React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, letterSpacing: "-0.03em", color: "#FFFFFF", fontSize: 24 } }, br(cur)),
                         React.createElement("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted } }, " kg")),
                     role === "aluno"
-                        ? (delta !== 0 && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, fontWeight: 600, color: C.muted, marginTop: 5, textAlign: "right" } }, (delta >= 0 ? "+" : "") + br(delta) + " kg"))
+                        // pro aluno, só o ganho desde a 1ª sessão e dito com todas as letras — um "-10 kg"
+                        // solto parecia regressão (era só a carga de hoje abaixo da primeira registrada)
+                        ? (delta > 0 && React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, fontWeight: 600, color: C.muted, marginTop: 5, textAlign: "right", lineHeight: 1.3 } }, "+" + br(delta) + " kg", React.createElement("br"), "desde o início"))
                         : React.createElement("div", { style: { display: "inline-flex", fontFamily: F.mono, fontSize: 11, fontWeight: 600, color: delta >= 0 ? C.ink : C.muted, background: delta >= 0 ? C.amber : "rgba(255,255,255,0.08)", borderRadius: 999, padding: "2px 8px", marginTop: 5 } },
                             delta >= 0 ? "+" : "",
                             delta,

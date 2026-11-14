@@ -987,6 +987,7 @@ function CancioClub() {
         setProfUnlocked(false); setRole(r); try { localStorage.setItem("cancio:lastRole", r); } catch (e) { } setExpanded(null); setAdding(false); setPickTpl(false); setSavingTpl(false); };
     const profStudent = students.find((s) => s.id === profId);
     const alunoStudent = students.find((s) => s.id === alunoId);
+    const alunoObs = alunoStudent && alunoStudent.obs ? alunoStudent.obs.split(/\n{2,}/).filter((p) => !/\(relatado pelo aluno\)/i.test(p)).join("\n\n").trim() : "";
     // número de membro por ordem de entrada: o professor numera quem ainda não tem e sincroniza com a ficha do aluno
     const numberedRef = React.useRef(false);
     // Só depois de rosterLoaded: profUnlocked vira true ANTES da lista da nuvem chegar (sessão
@@ -1543,7 +1544,9 @@ function CancioClub() {
                         React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15 } }, "Hora da reavalia\u00E7\u00E3o"),
                         React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 2 } }, "Peso e medidas, 2 minutos. Seu professor compara com o in\u00EDcio.")),
                     React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, "Fazer \u203A")),
-                alunoStudent.obs && obsChip(alunoStudent.obs),
+                // o aluno vê só a observação do professor: os trechos que a anamnese acrescenta em `obs`
+                // ("... (relatado pelo aluno): ...") são anotação pro professor, escrita na 3ª pessoa
+                alunoObs && obsChip(alunoObs),
                 (() => { const fresh = messages.filter((m) => m.studentId === alunoId && m.fromProf && !m.read); if (!fresh.length) return null; const last = fresh[fresh.length - 1];
                     return React.createElement("button", { className: "cc-tap", onClick: () => { setAlunoTab("treino"); markProfRead(alunoId); setTimeout(() => { const el = document.getElementById("cc-chat"); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: "smooth" }); }, 60); }, style: { width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginBottom: 14, borderRadius: 16, border: "none", background: C.text, color: C.ink, cursor: "pointer" } },
                         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
