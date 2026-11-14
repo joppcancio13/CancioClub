@@ -1328,8 +1328,14 @@ function CancioClub() {
                             const vmax = Math.max(1, ...vols);
                             const firstV = vols.find((v) => v > 0) || 0, lastV = vols[7] || vols[6] || 0;
                             const volDelta = firstV && lastV ? Math.round(((lastV - firstV) / firstV) * 100) : null;
-                            const planned = trainingWds(wkP, data.cardio && data.cardio[profId]).size * 8;
-                            const ch8 = ((data.checkins && data.checkins[profId]) || []).filter((d) => weekIdx(d) >= 0 && weekIdx(d) < 8).length;
+                            // janela da frequência: 8 semanas, ou menos se o aluno começou depois disso (início da
+                            // ficha ou 1º check-in, o que vier antes). Antes contava sempre 8 semanas inteiras, e
+                            // quem tinha começado há 2 semanas aparecia com ~20% mesmo treinando todo dia.
+                            const chP = (data.checkins && data.checkins[profId]) || [];
+                            const firstDay = [profStudent && profStudent.startDate, ...chP].filter(Boolean).sort()[0];
+                            const freqWeeks = firstDay ? Math.max(1, Math.min(8, weekIdx(String(firstDay).slice(0, 10)) + 1)) : 8;
+                            const planned = trainingWds(wkP, data.cardio && data.cardio[profId]).size * freqWeeks;
+                            const ch8 = chP.filter((d) => weekIdx(d) >= 0 && weekIdx(d) < freqWeeks).length;
                             const freqPct = planned ? Math.min(100, Math.round((ch8 / planned) * 100)) : null;
                             const progs = allEx.map((e) => {
                                 const hs = sortedHistory(e.history || []).map((x) => ({ date: x.date, ...daySummary(x) })).filter((x) => x.load > 0);
@@ -1343,7 +1349,7 @@ function CancioClub() {
                             const effN = eff.facil + eff.medida + eff.destruidor;
                             const num = (v, l, first) => React.createElement("div", { style: { padding: first ? "12px 0" : "12px 0 12px 12px", borderLeft: first ? "none" : "1px solid #1E222A" } }, React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24, lineHeight: 1 } }, v), React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 } }, l));
                             body = React.createElement("div", { className: "cc-view", style: { marginTop: 16 } },
-                                React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", borderTop: "1px solid #1E222A", borderBottom: "1px solid #1E222A" } }, num(freqPct != null ? freqPct + "%" : "\u2013", "frequ\u00EAncia \u00B7 8 sem", true), num(volDelta != null ? (volDelta > 0 ? "+" : "") + volDelta + "%" : "\u2013", "volume semanal"), num(prTotal + " \u2605", "recordes")),
+                                React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", borderTop: "1px solid #1E222A", borderBottom: "1px solid #1E222A" } }, num(freqPct != null ? freqPct + "%" : "\u2013", "frequ\u00EAncia \u00B7 " + freqWeeks + " sem", true), num(volDelta != null ? (volDelta > 0 ? "+" : "") + volDelta + "%" : "\u2013", "volume semanal"), num(prTotal + " \u2605", "recordes")),
                                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 18 } }, React.createElement("span", { style: tiny }, "VOLUME POR SEMANA"), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 13 } }, fmtVolume(vols[7]))),
                                 React.createElement("div", { style: { height: 74, display: "flex", alignItems: "flex-end", gap: 5, marginTop: 10 } }, vols.map((v, i) => React.createElement("div", { key: i, style: { flex: 1, height: Math.max(2, (v / vmax) * 74), borderRadius: 3, background: i === 7 ? "linear-gradient(180deg,#FFFFFF,#AEB9CB)" : v ? "#2E333D" : "#1A1D24" } }))),
                                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 11, color: "#7D8698", marginTop: 5 } }, React.createElement("span", null, "8 semanas atr\u00E1s"), React.createElement("span", null, "esta semana")),
@@ -1360,7 +1366,14 @@ function CancioClub() {
                                 React.createElement("div", { style: { ...tiny, marginTop: 20 } }, "SESS\u00D5ES (" + profSessions.length + ")"),
                                 profSessions.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, padding: "12px 0" } }, "Nenhuma sess\u00E3o registrada ainda."),
                                 [...profSessions].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 12).map((x) => React.createElement("div", { key: x.id, style: { padding: "11px 0", borderBottom: "1px solid #171B22" } },
-                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, fontFamily: F.body, fontSize: 13 } }, React.createElement("span", null, fmtDate(x.date) + " \u00B7 " + ((DAYS.find((d) => d.key === x.day) || {}).short || x.day || "")), React.createElement("span", { style: { color: C.muted } }, [x.durationSec ? fmtDur(x.durationSec) : "", x.effort ? ({ facil: "f\u00E1cil", medida: "na medida", destruidor: "destruidor", descanso: "recupera\u00E7\u00E3o" }[x.effort] || x.effort) : ""].filter(Boolean).join(" \u00B7 "))),
+                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, fontFamily: F.body, fontSize: 13 } }, React.createElement("span", null, (() => {
+                                        // dia da semana REAL da data + de qual ficha era, quando for outra (o aluno pode fazer o
+                                        // treino de s\u00E1bado numa sexta). Antes aparecia s\u00F3 o dia da ficha, como se fosse o da data.
+                                        const realKey = JS2KEY[new Date(x.date + "T00:00:00").getDay()];
+                                        const real = DAYS.find((d) => d.key === realKey) || {};
+                                        const ficha = DAYS.find((d) => d.key === x.day);
+                                        return fmtDate(x.date) + " \u00B7 " + (real.short || "") + (ficha && x.day !== realKey ? " \u00B7 ficha de " + ficha.full : "");
+                                    })()), React.createElement("span", { style: { color: C.muted } }, [x.durationSec ? fmtDur(x.durationSec) : "", x.effort ? ({ facil: "f\u00E1cil", medida: "na medida", destruidor: "destruidor", descanso: "recupera\u00E7\u00E3o" }[x.effort] || x.effort) : ""].filter(Boolean).join(" \u00B7 "))),
                                     x.feedback && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.4, color: "#C9D0DC", marginTop: 4 } }, "\u201C" + x.feedback + "\u201D"))));
                         }
                         else if (fichaTab === "volume") {

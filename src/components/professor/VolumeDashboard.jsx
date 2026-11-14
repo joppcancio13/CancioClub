@@ -1,6 +1,6 @@
 import React from "react";
 import { C, F, PILL_ON, flatPanel } from "../../styles/tokens";
-import { buildWeeklyVolumeReport } from "../../utils/volumeCalculator";
+import { buildWeeklyVolumeReport, countLoggedWorkingSetsInRange } from "../../utils/volumeCalculator";
 
 function Pills({ count, size }) {
     return React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 2.5 } },
@@ -19,7 +19,11 @@ function VolumeDashboard({ allEx, onOpenBulkLink }) {
     const [openGroups, setOpenGroups] = React.useState(() => new Set());
     const toggleGroup = (label) => setOpenGroups((s) => { const n = new Set(); if (!s.has(label)) n.add(label); return n; }); // só um grupo aberto por vez
 
-    const { groups, unmatched, totalSets } = React.useMemo(() => buildWeeklyVolumeReport(allEx, weekOffset), [allEx, weekOffset]);
+    const { groups, unmatched, startISO, endISO } = React.useMemo(() => buildWeeklyVolumeReport(allEx, weekOffset), [allEx, weekOffset]);
+    // total REAL de séries de trabalho registradas na semana, uma vez cada (de todos os exercícios,
+    // vinculados ou não ao catálogo). O totalSets do relatório soma a mesma série em cada grupo que
+    // ela trabalha (supino = peito + tríceps) — certo por grupo, mas não como "séries na semana".
+    const totalSets = React.useMemo(() => (allEx || []).reduce((n, ex) => n + (ex ? countLoggedWorkingSetsInRange(ex, startISO, endISO) : 0), 0), [allEx, startISO, endISO]);
     const weekLabel = weekOffset === 0 ? "esta semana" : "semana passada";
 
     const weekSelector = React.createElement("div", { style: { position: "relative", display: "inline-block" } },
