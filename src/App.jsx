@@ -234,8 +234,13 @@ function CancioClub() {
     // em vez de um efeito genérico observar `data` inteiro e decidir sozinho o que sincronizar
     // useCallback aqui não é só micro-otimização: são a base de que addLoad/updateExercise/etc.
     // dependem — sem serem estáveis, nenhum React.memo nos cards de exercício segura nada.
-    const syncGlobalToCloud = React.useCallback((next) => { saveGlobalToCloud(splitGlobalForCloud(next)).then((ok) => setCloudSynced(ok !== false)); }, []);
+    // Trava dos dados de exemplo: a checagem de isSeed em saveGlobalToCloud nunca disparava, porque
+    // splitGlobalForCloud não leva o isSeed adiante — e a biblioteca e os modelos de exemplo foram
+    // parar na linha global da nuvem. A checagem agora é aqui, antes de montar o payload.
+    const syncGlobalToCloud = React.useCallback((next) => { if (next && next.isSeed) return; saveGlobalToCloud(splitGlobalForCloud(next)).then((ok) => setCloudSynced(ok !== false)); }, []);
     const syncStudentToCloud = React.useCallback((next, sid) => {
+        if (next && next.isSeed)
+            return; // dados de exemplo nunca vão pra nuvem (o caminho do aluno, pela Edge Function, não checava)
         if (deletedStudentIdsRef.current.has(sid))
             return; // aluno removido — não deixa um sync atrasado (snapshot de antes da remoção) recriar a linha
         const student = (next.students || []).find((s) => s.id === sid);
@@ -791,7 +796,11 @@ function CancioClub() {
     const [loginBusy, setLoginBusy] = useState(false);
     // funde os dados de UM aluno vindos da nuvem no estado — usado tanto no login instantâneo
     // (checagem silenciosa em segundo plano) quanto no fallback de busca por código
-    const mergeFoundStudentInto = (p, found) => {
+    const mergeFoundStudentInto = (prev, found) => {
+        // aparelho que só tinha os dados de EXEMPLO: o aluno real entra numa base vazia. Antes ele
+        // entrava junto com a "Exemplo · Maria" e o dado inteiro continuava marcado isSeed — por isso
+        // nada do aluno era salvo no aparelho (sem rede de segurança offline).
+        const p = prev && prev.isSeed ? { students: [], checkins: {}, bestStreak: {}, archives: {}, sessions: {}, dayNames: {}, cardio: {}, cardioLog: {}, recoveryLog: {}, freezes: {}, workouts: {}, messages: [], library: [], templates: [], soundOn: prev.soundOn !== false, activeStudentId: found.id } : prev;
         const others = (p.students || []).filter((x) => x.id !== found.id);
         // `found` é o payload completo salvo na nuvem (splitStudentForCloud): os campos "de perfil"
         // do aluno (name, goal, assessment, assessmentAt, e qualquer campo novo que a ficha ganhe no
@@ -836,7 +845,9 @@ function CancioClub() {
             (async () => {
                 try {
                     const { data: found } = await callStudentApi("login", { code });
-                    if (found)
+                    // só se for o MESMO aluno (mesmo id): a aluna de exemplo usa o código 1234, que pode
+                    // coincidir com o de um aluno real na nuvem — aí não é atualização, é outra pessoa
+                    if (found && found.id === s.id)
                         setData((p) => ((found.updatedAt || 0) > (p.updatedAt || 0) ? mergeFoundStudentInto(p, found) : p));
                 }
                 catch (e) {
@@ -884,37 +895,46 @@ function CancioClub() {
     const fetchAllStudentsAfterAuth = async () => {
         setLoadingRoster(true);
         try {
-            const { data: allRows, error } = await sb.from("cancio").select("*").like("id", "student_%");
+            // a linha "global" (biblioteca, modelos...) vem junto: num aparelho que só tinha os dados de
+            // exemplo, é ela que substitui a biblioteca/modelos de exemplo (ver `local` logo abaixo)
+            const { data: allRows, error } = await sb.from("cancio").select("*").or("id.eq.global,id.like.student_%");
             if (error)
                 throw error;
             // ignora qualquer linha de aluno já removido por aqui — cobre o caso raro de a busca rodar
             // antes do DELETE se propagar de verdade na nuvem (mesma trava de syncStudentToCloud)
             const rows = (allRows || []).filter((r) => !(r.data && deletedStudentIdsRef.current.has(r.data.id)));
             if (rows && rows.length > 0) {
-                const cloud = mergeCloudRows(rows); // filtrado só em student_% -> profKey/soundOn/library/templates vêm com valor padrão aqui (a linha global não veio nessa busca), então preservamos os que já estavam carregados
+                const cloud = mergeCloudRows(rows);
                 setData((p) => {
+                    // Dados de EXEMPLO (aparelho sem nada salvo: "Exemplo · Maria", biblioteca de exemplo)
+                    // nunca entram na mescla. Antes a aluna de exemplo virava "aluno criado aqui e ainda
+                    // não sincronizado" e era GRAVADA na nuvem, porque o objeto mesclado perdia o isSeed.
+                    const local = p && !p.isSeed ? p : {};
                     const cloudIds = new Set(cloud.students.map((s) => s.id));
-                    const localOnly = (p.students || []).filter((s) => !cloudIds.has(s.id)); // preserva aluno recém-criado que ainda não sincronizou
+                    const localOnly = (local.students || []).filter((s) => !cloudIds.has(s.id)); // preserva aluno recém-criado que ainda não sincronizou
                     // Aluno que existe nos dois lados: a nuvem é a base (cadastro, fases, nomes de dia...).
                     // Antes, um updatedAt GLOBAL deste aparelho (qualquer mudança, de qualquer aluno) era
                     // comparado com o updatedAt de CADA aluno na nuvem — e a cópia local antiga "vencia",
                     // descartando check-ins/sessões que o aluno registrou no celular dele. O que é registro
                     // de atividade (check-ins, sessões, cardio, recuperação, recados) agora é somado dos
                     // dois lados em mergeLocalActivityInto, nunca escolhido por timestamp.
-                    const merged = { ...cloud, profKey: p.profKey, soundOn: p.soundOn, library: p.library, templates: p.templates, activeStudentId: p.activeStudentId, students: [...cloud.students, ...localOnly] };
+                    // biblioteca/modelos/som: os deste aparelho continuam valendo (é onde o professor edita);
+                    // só num aparelho com dados de exemplo é que vêm da linha global da nuvem
+                    const g = p && !p.isSeed ? p : cloud;
+                    const merged = { ...cloud, profKey: g.profKey, soundOn: g.soundOn, library: g.library, templates: g.templates, activeStudentId: local.activeStudentId || (cloud.students[0] && cloud.students[0].id), students: [...cloud.students, ...localOnly] };
                     const activityAdded = new Set();
-                    cloud.students.forEach((s) => { if (mergeLocalActivityInto(merged, p, s.id)) activityAdded.add(s.id); });
+                    cloud.students.forEach((s) => { if (mergeLocalActivityInto(merged, local, s.id)) activityAdded.add(s.id); });
                     localOnly.forEach((s) => {
-                        merged.checkins[s.id] = (p.checkins && p.checkins[s.id]) || [];
-                        merged.bestStreak[s.id] = (p.bestStreak && p.bestStreak[s.id]) || 0;
-                        merged.archives[s.id] = (p.archives && p.archives[s.id]) || [];
-                        merged.sessions[s.id] = (p.sessions && p.sessions[s.id]) || [];
-                        merged.dayNames[s.id] = (p.dayNames && p.dayNames[s.id]) || {};
-                        merged.cardio[s.id] = (p.cardio && p.cardio[s.id]) || {};
-                        merged.cardioLog[s.id] = (p.cardioLog && p.cardioLog[s.id]) || [];
-                        merged.recoveryLog[s.id] = (p.recoveryLog && p.recoveryLog[s.id]) || {};
-                        merged.freezes[s.id] = (p.freezes && p.freezes[s.id]) || { month: "", used: 0 };
-                        mergeLocalActivityInto(merged, p, s.id); // traz os recados locais desse aluno também
+                        merged.checkins[s.id] = (local.checkins && local.checkins[s.id]) || [];
+                        merged.bestStreak[s.id] = (local.bestStreak && local.bestStreak[s.id]) || 0;
+                        merged.archives[s.id] = (local.archives && local.archives[s.id]) || [];
+                        merged.sessions[s.id] = (local.sessions && local.sessions[s.id]) || [];
+                        merged.dayNames[s.id] = (local.dayNames && local.dayNames[s.id]) || {};
+                        merged.cardio[s.id] = (local.cardio && local.cardio[s.id]) || {};
+                        merged.cardioLog[s.id] = (local.cardioLog && local.cardioLog[s.id]) || [];
+                        merged.recoveryLog[s.id] = (local.recoveryLog && local.recoveryLog[s.id]) || {};
+                        merged.freezes[s.id] = (local.freezes && local.freezes[s.id]) || { month: "", used: 0 };
+                        mergeLocalActivityInto(merged, local, s.id); // traz os recados locais desse aluno também
                     });
                     // treino nunca escolhe um lado só: mescla local+nuvem por dia/exercício/data/série pra
                     // TODO aluno, ganhando ou perdendo a corrida de metadado acima — dado de cadastro
@@ -924,7 +944,7 @@ function CancioClub() {
                     const needsCloudSync = [];
                     merged.students.forEach((s) => {
                         const cloudWk = cloud.workouts[s.id] || {};
-                        const mergedWk = mergeWorkoutsForStudent((p.workouts && p.workouts[s.id]) || {}, cloudWk);
+                        const mergedWk = mergeWorkoutsForStudent((local.workouts && local.workouts[s.id]) || {}, cloudWk);
                         merged.workouts[s.id] = mergedWk;
                         if (activityAdded.has(s.id) || JSON.stringify(mergedWk) !== JSON.stringify(cloudWk))
                             needsCloudSync.push(s.id);
