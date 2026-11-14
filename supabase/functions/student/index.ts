@@ -2,16 +2,18 @@
 //
 // Por que existe: o aluno nunca autentica de verdade (só digita um código de 4 dígitos), então
 // o Postgres não tem como saber, via RLS, "esse pedido anônimo é desse aluno específico" — toda
-// visita ao app usa a mesma anon key pública. Por isso o app não pode mais falar direto com a
-// tabela `cancio` para o fluxo do aluno: isso exigiria liberar leitura/escrita de TODAS as fichas
-// pra qualquer pessoa com a anon key (que fica exposta no index.html, como é normal).
+// visita ao app usa a mesma anon key pública. Por isso o app não fala direto com a tabela
+// `cancio` no fluxo do aluno: esta função roda com a service role key (auto-injetada pela
+// Supabase, nunca exposta ao navegador), confere o código e só lê/grava a ÚNICA linha dele.
 //
-// Esta função roda no servidor com a service role key auto-injetada pela própria Supabase em
-// toda Edge Function (SUPABASE_SERVICE_ROLE_KEY — nunca exposta ao navegador), confere o código
-// antes de tocar no banco, e só lê/grava a ÚNICA linha que combina com aquele código. A tabela
-// `cancio` fica fechada pra `anon` (ver RLS do projeto).
+// v51 (13/nov):
+// - `sync` MESCLA o que o aluno enviou com a linha da nuvem (ver merge.js) em vez de gravar por
+//   cima. Antes, cada série registrada apagava o alerta clínico, desfazia mudanças do professor
+//   na ficha e sumia com recados do professor que o celular do aluno ainda não tinha.
+// - `login` não devolve mais o `clinicalAlert` (dado só do professor) pro celular do aluno.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { mergeStudentRow, publicStudentView } from "./merge.js";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -29,13 +31,8 @@ function json(body: unknown, status = 200, extraHeaders: Record<string, string> 
   });
 }
 
-// Rate limiting do código de 4 dígitos: o PIN é curto o bastante pra ser varrido por força
-// bruta (10.000 combinações) se nada travar tentativas repetidas. Depois de 5 tentativas com
-// código NÃO ENCONTRADO vindas do mesmo IP em 15 minutos, passa a responder 429 pra esse IP até
-// a janela expirar — sem nem tocar na tabela `cancio`. Um código encontrado (tentativa certa)
-// limpa o histórico de falhas daquele IP (são "tentativas falhas CONSECUTIVAS").
-// Guardado em public.student_login_rate_limits (migração correspondente em supabase/migrations) —
-// só a service role usada aqui enxerga essa tabela, nunca anon/authenticated.
+// Rate limiting do código de 4 dígitos (inalterado): 5 tentativas com código NÃO ENCONTRADO do
+// mesmo IP em 15 minutos -> 429 até a janela expirar. Acerto limpa o histórico daquele IP.
 const RATE_LIMIT_MAX_FAILURES = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 
@@ -59,7 +56,6 @@ async function checkRateLimit(admin: ReturnType<typeof createClient>, ip: string
     const retryAfterSeconds = Math.max(1, Math.ceil((windowStart + RATE_LIMIT_WINDOW_MS - Date.now()) / 1000));
     return { blocked: true, retryAfterSeconds };
   } catch {
-    // indisponibilidade da checagem de rate limit nunca deve derrubar o login de verdade — falha aberta
     return { blocked: false, retryAfterSeconds: 0 };
   }
 }
@@ -68,7 +64,7 @@ async function recordLoginFailure(admin: ReturnType<typeof createClient>, ip: st
   try {
     await admin.rpc("cancio_record_login_failure", { p_ip: ip, p_window_ms: RATE_LIMIT_WINDOW_MS });
   } catch {
-    // mesmo raciocínio: não deixa uma falha ao REGISTRAR a tentativa quebrar a resposta já decidida
+    // não deixa uma falha ao registrar a tentativa quebrar a resposta
   }
 }
 
@@ -76,7 +72,7 @@ async function recordLoginSuccess(admin: ReturnType<typeof createClient>, ip: st
   try {
     await admin.from("student_login_rate_limits").delete().eq("ip", ip);
   } catch {
-    // idem — limpar o histórico de falhas é só limpeza, não pode bloquear um login válido
+    // limpeza só
   }
 }
 
@@ -125,7 +121,7 @@ Deno.serve(async (req: Request) => {
   await recordLoginSuccess(admin, ip);
 
   if (action === "login") {
-    return json({ data: row.data });
+    return json({ data: publicStudentView(row.data) });
   }
 
   if (action === "sync") {
@@ -135,9 +131,11 @@ Deno.serve(async (req: Request) => {
     if (incoming.id !== row.data.id || incoming.code !== code) {
       return json({ error: "não autorizado a gravar nesse registro" }, 403);
     }
+    const merged = mergeStudentRow(row.data, incoming);
     const { error: upErr } = await admin
       .from("cancio")
-      .upsert({ id: row.id, data: { ...incoming, updatedAt: Date.now() } });
+      .update({ data: { ...merged, updatedAt: Date.now() } })
+      .eq("id", row.id);
     if (upErr) return json({ error: "erro ao gravar" }, 500);
     return json({ ok: true });
   }

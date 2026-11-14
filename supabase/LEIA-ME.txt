@@ -1,0 +1,28 @@
+EDGE FUNCTION "student" — v51 (13/nov/2026)
+
+O QUE MUDOU
+- "sync" (aluno grava): mescla com a ficha da nuvem em vez de gravar por cima.
+  Mantém o alerta clínico, as mudanças do professor na ficha e os recados do professor.
+  Do aluno entram: séries, notas, troca do dia, check-ins, sessões, cardio, recuperação,
+  recados, foto, contato, metas, reavaliações e a anamnese inicial (o alerta relatado é SOMADO).
+- "login": não manda mais o alerta clínico pro celular do aluno.
+- Rate limit do código: igual ao de antes.
+
+ARQUIVOS (os dois juntos, na mesma pasta da função)
+  supabase/functions/student/index.ts
+  supabase/functions/student/merge.js
+
+COMO PUBLICAR — opção A (Supabase CLI, na pasta do projeto que tem a pasta supabase/)
+  supabase functions deploy student --project-ref xyeydcgohqylaytpeabk
+
+COMO PUBLICAR — opção B (painel do Supabase)
+  Edge Functions -> student -> Code: troque o index.ts pelo novo, crie um arquivo merge.js
+  ao lado com o conteúdo do merge.js, e clique em Deploy.
+
+CONFERIR DEPOIS
+  1. Aluno entra com o código e registra uma série -> aparece pro professor.
+  2. Professor confere que o alerta clínico desse aluno continua lá.
+  3. Professor responde um recado; aluno registra outra série; o recado continua lá.
+
+A ordem entre publicar a função e subir o site (cancio-club-site-v51.zip) não importa:
+os dois funcionam com a versão antiga do outro.
