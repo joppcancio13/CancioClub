@@ -17,4 +17,16 @@ const fmtVolume = (kg) => kg >= 1000 ? `${(kg / 1000).toFixed(1).replace(".", ",
 // Sem número reconhecível (campo vazio, texto sem dígito) -> null, e quem usa cai pro número cru.
 const parseWeeklyTarget = (freqWeeklyText) => { const m = String(freqWeeklyText || "").match(/\d+/); return m ? parseInt(m[0], 10) : null; };
 const isWithin7 = (iso) => { const d = new Date(iso + "T00:00:00"); const now = new Date(); now.setHours(0, 0, 0, 0); const diff = (now - d) / 86400000; return diff >= 0 && diff < 7; };
-export { isoOf, todayISO, daysAgo, fmtDate, fmtDateTime, mmss, fmtDur, fmtVolume, parseWeeklyTarget, isWithin7 };
+// semana do calendário: de segunda a domingo da semana atual (mesma convenção do Diário e do
+// resumo de domingo). "6 de 6 essa semana" contava os últimos 7 dias, que no sábado já incluía o
+// domingo da semana anterior.
+const isThisWeek = (iso) => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return iso >= isoOf(monday) && iso <= isoOf(sunday) && iso <= isoOf(now);
+};
+export { isoOf, todayISO, daysAgo, fmtDate, fmtDateTime, mmss, fmtDur, fmtVolume, parseWeeklyTarget, isWithin7, isThisWeek };

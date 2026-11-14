@@ -48,7 +48,7 @@ import { useDataStore } from "./stores/useDataStore";
 import { BALL_URL, SIL_URL, C, DAYS, EASE, F, JS2KEY, MIRROR_GRID, NON_COUNTING_KINDS, PILL_ON, REST_PHRASES, SESS_KEY, TRAIN_PHRASES, flatPanel, glassPanel } from "./styles/tokens";
 import { mapAnamneseToFicha } from "./utils/assessment";
 import { playDisco, playFinishChime } from "./utils/audio";
-import { fmtDate, fmtDateTime, fmtDur, fmtVolume, isWithin7, isoOf, parseWeeklyTarget, todayISO } from "./utils/date";
+import { fmtDate, fmtDateTime, fmtDur, fmtVolume, isThisWeek, isoOf, parseWeeklyTarget, todayISO } from "./utils/date";
 import { mergeCloudRows, mergeLocalActivityInto, mergeWorkoutsForStudent, splitGlobalForCloud, splitStudentForCloud } from "./utils/merge";
 import { genCode, greeting, haptic, noop, pickDailyPhrase, uid, uidShort } from "./utils/misc";
 import { seed } from "./utils/seedData";
@@ -337,7 +337,7 @@ function CancioClub() {
     const trainingWeekdays = trainingWds(week, data?.cardio && data.cardio[focusId]);
     const streak = computeStreak(trainingWeekdays, checkinSet);
     const freqTotal = focusCheckins.length;
-    const freqWeek = focusCheckins.filter(isWithin7).length;
+    const freqWeek = focusCheckins.filter(isThisWeek).length;
     const bestStreak = Math.max((data?.bestStreak && data.bestStreak[focusId]) || 0, streak);
     // a cor/"patente" das celebrações e do ShareCard vem do total de treinos (freqTotal), não mais
     // da sequência de dias seguidos — um número que só sobe, nunca "quebra" (ver streakTier)
@@ -379,7 +379,7 @@ function CancioClub() {
     const curMonth = todayISO().slice(0, 7); // mês no fuso do aparelho (toISOString é UTC: virava o mês às 21h no último dia)
     const freezeInfo = (data?.freezes && data.freezes[focusId] && data.freezes[focusId].month === curMonth) ? data.freezes[focusId] : { month: curMonth, used: 0 };
     const freezesLeft = Math.max(0, 3 - freezeInfo.used);
-    const studentStats = (sid) => { const wk = (data.workouts && data.workouts[sid]) || emptyWeek(); const ch = (data.checkins && data.checkins[sid]) || []; const twd = trainingWds(wk, data.cardio && data.cardio[sid]); return { streak: computeStreak(twd, new Set(ch)), week: ch.filter(isWithin7).length, total: ch.length, last: lastCheckinLabel(ch) }; };
+    const studentStats = (sid) => { const wk = (data.workouts && data.workouts[sid]) || emptyWeek(); const ch = (data.checkins && data.checkins[sid]) || []; const twd = trainingWds(wk, data.cardio && data.cardio[sid]); return { streak: computeStreak(twd, new Set(ch)), week: ch.filter(isThisWeek).length, total: ch.length, last: lastCheckinLabel(ch) }; };
     const lastEffortFor = (sid) => { const sess = (data.sessions && data.sessions[sid]) || []; const withEffort = sess.filter((x) => x.effort); return withEffort.length ? withEffort[withEffort.length - 1].effort : null; };
     const todayKeyGlobal = JS2KEY[new Date().getDay()];
     const todayRoster = students.map((s) => {
@@ -416,16 +416,16 @@ function CancioClub() {
         DAYS.forEach((d) => {
             (week[d.key] || []).forEach((ex) => {
                 ex.history.forEach((h) => {
-                    if (isWithin7(h.date))
+                    if (isThisWeek(h.date))
                         weeklyVolume += daySummary(h).volume;
                 });
             });
         });
-        const weeklyTimeSec = focusSessions.filter((s) => isWithin7(s.date) && s.durationSec).reduce((acc, s) => acc + s.durationSec, 0);
+        const weeklyTimeSec = focusSessions.filter((s) => isThisWeek(s.date) && s.durationSec).reduce((acc, s) => acc + s.durationSec, 0);
         const hours = Math.floor(weeklyTimeSec / 3600);
         const mins = Math.round((weeklyTimeSec % 3600) / 60);
         const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
-        const sess7 = ((data.sessions && data.sessions[focusId]) || []).filter((x) => isWithin7(x.date));
+        const sess7 = ((data.sessions && data.sessions[focusId]) || []).filter((x) => isThisWeek(x.date));
         const dnW = (data.dayNames && data.dayNames[focusId]) || {};
         const weekDays = DAYS.map((d) => { const se = sess7.find((x) => x.day === d.key); const sets = se ? (week[d.key] || []).reduce((n, e) => { const h = (e.history || []).find((hh) => hh.date === se.date); return n + (h && h.entries ? h.entries.filter((en) => !NON_COUNTING_KINDS.has(en.kind)).length : 0); }, 0) : 0; return { short: d.short.toUpperCase(), name: se ? (dnW[d.key] || d.full) : null, sets }; });
         setShareCard({ isWeeklySummary: true, name: focusStudent.name, freqWeek, streak, tint: tier.tint, dateLabel: "Nesta semana", weeklyVolume, weeklyTime: timeStr, weekDays, weeklyTarget: parseWeeklyTarget(focusStudent && focusStudent.freqWeekly) });
@@ -1390,7 +1390,7 @@ function CancioClub() {
                         (() => { // 11a — semana em cartões, um por dia com treino; dias vazios numa linha só
                             const dnP = (data.dayNames && data.dayNames[profId]) || {};
                             const sessP = (data.sessions && data.sessions[profId]) || [];
-                            const doneDays = new Set(sessP.filter((x) => isWithin7(x.date)).map((x) => x.day));
+                            const doneDays = new Set(sessP.filter((x) => isThisWeek(x.date)).map((x) => x.day));
                             const withW = DAYS.filter((d) => (week[d.key] || []).length || (cardioFocus && cardioFocus[d.key]));
                             const empty = DAYS.filter((d) => !withW.includes(d));
                             const pick = (k) => { setDay(k); setExpanded(null); setPickTpl(false); setSavingTpl(false); };

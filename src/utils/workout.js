@@ -6,10 +6,14 @@ function defaultSetPlan(n, reps) { const c = Math.max(1, parseInt(n) || 1); retu
 function planSummary(ex) {
     if (!ex.setPlan || !ex.setPlan.length)
         return `${ex.sets}×${ex.reps}`;
+    // aquecimento e reconhecimento saem da conta das séries de trabalho (as mesmas regras das
+    // pastilhas do card) — antes o reconhecimento entrava como série de trabalho no "3×(...)"
     const warm = ex.setPlan.filter((s) => s.kind === "warmup").length;
-    const work = ex.setPlan.filter((s) => s.kind !== "warmup");
+    const recon = ex.setPlan.filter((s) => s.kind === "recon").length;
+    const work = ex.setPlan.filter((s) => s.kind !== "warmup" && s.kind !== "recon");
     const seq = work.map((s) => s.reps).join("·");
-    return (warm ? `${warm} aquec. + ` : "") + (work.length ? `${work.length}×(${seq})` : "");
+    const parts = [warm ? `${warm} aquec.` : "", recon ? `${recon} reconh.` : "", work.length ? `${work.length}×(${seq})` : ""].filter(Boolean);
+    return parts.join(" + ");
 }
 // interpreta a meta de reps de uma série: "8-12" (zona) -> teto 12; "10" (fixo) -> 10
 function repsCeiling(targetReps) {
