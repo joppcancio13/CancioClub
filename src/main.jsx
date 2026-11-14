@@ -26,8 +26,17 @@ try {
 }
 
 if ("serviceWorker" in navigator) {
+  // quando um SW novo assume (deploy novo), recarrega uma vez pra trocar o JS antigo pelo novo
+  var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (!hadController || reloaded) return;
+    reloaded = true; window.location.reload();
+  });
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("sw.js").catch(function (e) {
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      reg.update();
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") reg.update(); });
+    }).catch(function (e) {
       console.error("Cancio: Service Worker não registrou:", e);
     });
   });

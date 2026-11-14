@@ -25,7 +25,6 @@ import { Pill } from "./components/shared/Pill";
 import { PremiumEmptyState } from "./components/shared/PremiumEmptyState";
 import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
-import { AlunoProfile } from "./components/student/AlunoProfile";
 import { BottomActionBar } from "./components/student/BottomActionBar";
 import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
@@ -35,6 +34,8 @@ import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
 import { MyData } from "./components/student/MyData";
+import { MemberCard } from "./components/student/MemberCard";
+import { assignMemberNumbers } from "./utils/members";
 import { restrictionFor } from "./utils/restrictions";
 import { printStudent } from "./utils/printStudent";
 import { askNotify, canNotify, notify, setBadge } from "./utils/notify";
@@ -138,6 +139,7 @@ function CancioClub() {
     const [shareCard, setShareCard] = useState(null);
     const [logoCard, setLogoCard] = useState(false);
     const [myDataOpen, setMyDataOpen] = useState(false);
+    const [memberCardOpen, setMemberCardOpen] = useState(false);
     const [reassessOpen, setReassessOpen] = useState(false);
     const [advOpen, setAdvOpen] = useState(false);
     const [notifPerm, setNotifPerm] = useState(() => (canNotify() ? Notification.permission : "unsupported"));
@@ -951,6 +953,20 @@ function CancioClub() {
         setProfUnlocked(false); setRole(r); try { localStorage.setItem("cancio:lastRole", r); } catch (e) { } setExpanded(null); setAdding(false); setPickTpl(false); setSavingTpl(false); };
     const profStudent = students.find((s) => s.id === profId);
     const alunoStudent = students.find((s) => s.id === alunoId);
+    // número de membro por ordem de entrada: o professor numera quem ainda não tem e sincroniza com a ficha do aluno
+    useEffect(() => {
+        if (role !== "prof" || !students.length) return;
+        const nums = assignMemberNumbers(students);
+        const ids = Object.keys(nums);
+        if (!ids.length) return;
+        setData((p) => { const next = { ...p, students: p.students.map((st) => (nums[st.id] != null ? { ...st, memberNo: nums[st.id], memberSince: st.memberSince || st.startDate || todayISO() } : st)) }; ids.forEach((id) => syncStudentToCloud(next, id)); return next; });
+    }, [role, students]);
+    const memberTrainedDays = React.useMemo(() => {
+        const out = new Set(); if (!alunoId) return out;
+        const ym = todayISO().slice(0, 7), wk = (data && data.workouts && data.workouts[alunoId]) || {};
+        Object.values(wk).forEach((list) => (Array.isArray(list) ? list : []).forEach((ex) => (ex.history || []).forEach((h) => { if (h.date && h.date.startsWith(ym) && (h.entries ? h.entries.length : true)) out.add(Number(h.date.slice(8, 10))); })));
+        return out;
+    }, [data, alunoId]);
     // dispara sozinho no domingo, uma vez por aluno por semana — antes dependia do aluno lembrar de
     // abrir o app E apertar "Gerar Resumo da Semana"; um flag em localStorage evita repetir a cada
     // vez que ele abre o app no mesmo domingo. Só pro aluno vendo o próprio resumo (não no modo aula
@@ -1065,6 +1081,7 @@ function CancioClub() {
                 setShareCard(sd); } }),
         shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 13, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
+        role === "aluno" && alunoStudent && memberCardOpen && React.createElement(MemberCard, { student: alunoStudent, trainedDays: memberTrainedDays, onClose: () => setMemberCardOpen(false) }),
         serieOpen && profStudent && React.createElement(SerieExport, { student: profStudent, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, initialDay: day, onClose: () => setSerieOpen(false) }),
         role === "aluno" && alunoStudent && (!alunoStudent.ackAt || !alunoStudent.consentAt) && React.createElement(Disclaimer, { onAccept: () => { const now = new Date().toISOString(); updateStudent(alunoId, { ackAt: alunoStudent.ackAt || now, consentAt: now }); } }),
         role === "aluno" && alunoStudent && myDataOpen && React.createElement(MyData, { student: alunoStudent, onClose: () => setMyDataOpen(false), onDownload: () => { const mine = { aluno: { ...alunoStudent, clinicalAlert: undefined }, treinos: (data.workouts || {})[alunoId], sessoes: (data.sessions || {})[alunoId], cardio: (data.cardioLog || {})[alunoId], recados: messages.filter((m) => m.studentId === alunoId), exportadoEm: new Date().toISOString() }; const url = URL.createObjectURL(new Blob([JSON.stringify(mine, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = url; a.download = "meus-dados-cancio-club.json"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); printStudent({ student: alunoStudent, week: (data.workouts || {})[alunoId] || emptyWeek(), dayNames: (data.dayNames || {})[alunoId] || {} }); }, onRequestDelete: () => { updateStudent(alunoId, { deletionRequestedAt: new Date().toISOString() }); sendMessage("Pedido de exclus\u00E3o dos meus dados (LGPD)."); } }),
@@ -1445,10 +1462,11 @@ function CancioClub() {
                 const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "\u232B"].map((k, i) => React.createElement("button", { key: i, className: "cc-tap", onClick: () => k && press(k), style: { visibility: k ? "visible" : "hidden", height: 58, borderRadius: 16, border: "none", cursor: "pointer", background: "transparent", boxShadow: k === "\u232B" ? "none" : "inset 0 0 0 1px #1E222A", color: k === "\u232B" ? C.muted : C.text, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontSize: k === "\u232B" ? 20 : 26 } }, k));
                 return React.createElement("div", { className: "cc-full-h", style: { display: "flex", flexDirection: "column", alignItems: "center", maxWidth: 400, margin: "-44px auto 0", padding: "calc(40px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom))", boxSizing: "border-box" } },
                     React.createElement("div", { "aria-hidden": "true", style: { position: "fixed", inset: 0, background: "radial-gradient(60% 34% at 50% 22%, rgba(198,210,228,.12), transparent 70%)", pointerEvents: "none" } }),
-                    React.createElement("img", { src: BALL_URL, alt: "", width: 84, height: 84, style: { position: "relative", width: 84, height: 84, marginTop: 52 } }),
-                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, letterSpacing: "0.06em", marginTop: 14 } }, "CANCIO CLUB"),
-                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 8, textAlign: "center" } }, loginBusy ? "Buscando sua ficha\u2026" : codeErr ? "C\u00F3digo n\u00E3o encontrado. Confira com seu professor." : "Digite o c\u00F3digo que o professor te passou"),
-                    React.createElement("div", { style: { display: "flex", gap: 10, marginTop: "auto", paddingTop: 28 } }, boxes),
+                    React.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", gap: 14, marginTop: 96 } },
+                        React.createElement("img", { src: SIL_URL, alt: "", width: 84, height: 84, style: { width: 84, height: 84 } }),
+                        React.createElement("div", { style: { display: "flex", flexDirection: "column", fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 38, lineHeight: 0.92, letterSpacing: "-0.01em" } }, React.createElement("span", null, "CANCIO"), React.createElement("span", { style: { color: C.silver } }, "CLUB"))),
+                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: codeErr ? C.warn : C.muted, marginTop: "auto", paddingTop: 28, textAlign: "center" } }, loginBusy ? "Buscando sua ficha\u2026" : codeErr ? "C\u00F3digo n\u00E3o encontrado. Confira com seu professor." : "Digite o c\u00F3digo que o professor te passou"),
+                    React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 12 } }, boxes),
                     React.createElement("div", { style: { width: "100%", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 28, padding: "0 24px", boxSizing: "border-box" } }, keys),
                     React.createElement("button", { className: "cc-tap", onClick: () => switchRole("prof"), style: { minHeight: 44, marginTop: 10, fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 10, cursor: "pointer" } }, "Sou professor \u203A"));
             })(),
@@ -1472,6 +1490,7 @@ function CancioClub() {
                             React.createElement("div", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.silver, marginTop: 5 } }, sub),
                             weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`),
                             alunoTab === "treino" && React.createElement("button", { onClick: () => setDayEntryOpen(true), style: { minHeight: 44, ...tiny, padding: "6px 0 0", color: C.silver, fontWeight: 700 } }, "Trocar treino \u203A"),
+                            React.createElement("button", { onClick: () => setMemberCardOpen(true), style: { minHeight: 44, ...tiny, padding: "6px 0 0" } }, "Carteirinha \u203A"),
                             React.createElement("button", { onClick: () => setLogoCard(true), style: { minHeight: 44, ...tiny, padding: "6px 0 0" } }, "Selo Cancio Club \u203A"),
                             React.createElement("button", { onClick: () => setMyDataOpen(true), style: { minHeight: 44, ...tiny, padding: "6px 0 0" } }, "Meus dados \u203A")));
                 })(),
@@ -1489,8 +1508,7 @@ function CancioClub() {
                         React.createElement("span", { style: { fontFamily: F.body, fontWeight: 800, fontSize: 13, flexShrink: 0 } }, "Ver \u203A")); })(),
                 React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 14 } },
                     React.createElement(Pill, { active: alunoTab === "treino", onClick: () => setAlunoTab("treino") }, "Treino"),
-                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio"),
-                    React.createElement(Pill, { active: alunoTab === "perfil", onClick: () => setAlunoTab("perfil") }, "Perfil")),
+                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio")),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
@@ -1527,8 +1545,7 @@ function CancioClub() {
                     React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 12 } }, "Conversa com o professor"),
                     notifButton,
                     React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })))),
-                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }),
-                alunoTab === "perfil" && React.createElement(AlunoProfile, { student: alunoStudent, streak: streak, freqWeek: freqWeek, freqTotal: freqTotal, bestStreak: bestStreak, records: records, week: week, dayNames: (data?.dayNames && data.dayNames[focusId]) || {} }))),
+                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }))),
             null)));
 }
 export { CancioClub };

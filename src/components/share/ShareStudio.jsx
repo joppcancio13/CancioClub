@@ -23,14 +23,24 @@ function summarize(data) {
     (data.exercises || []).forEach((ex) => {
         const h = (ex.history || []).find((x) => x.date === date);
         const es = h && h.entries ? h.entries.filter((e) => !NON_COUNTING_KINDS.has(e.kind)) : [];
-        if (!es.length) return;
+        const planPlan = Array.isArray(ex.setPlan) ? ex.setPlan.filter((x) => !NON_COUNTING_KINDS.has(x.kind)).length : 0;
+        const planned = Math.max(es.length, planPlan || Number(ex.sets) || 0, 1);
         let best = null;
         es.forEach((e) => { const l = num(e.load), r = num(e.reps) || 0; if (l != null) { volume += l * r; if (best == null || l > best) best = l; } });
         sets += es.length;
-        rows.push({ id: ex.id, name: ex.name, load: best, sets: es.length, pr: recIds.has(ex.id) });
+        rows.push({ id: ex.id, name: ex.name, load: best, sets: es.length, planned, reps: ex.reps, pr: recIds.has(ex.id) });
     });
-    return { rows, sets, volume, records: recs.length, title: (data.workoutName || "Treino").toUpperCase(), duration: data.durationLabel && data.durationLabel !== "—" ? data.durationLabel : null, date: dateTag(date) };
+    return { rows, sets, volume, records: recs.length, title: (data.workoutName || "Treino").toUpperCase(), duration: data.durationLabel && data.durationLabel !== "—" ? data.durationLabel : null, date: dateTag(data.targetDate) };
 }
+// áreas que o Instagram cobre nos stories (nome/progresso no topo, campo de resposta embaixo)
+const SAFE_T = 250, SAFE_B = 1640;
+const pl = (n, one, many) => (Number(n) === 1 ? one : many);
+function fitText(ctx, t, maxW) { if (ctx.measureText(t).width <= maxW) return t; let x = t; while (x.length > 1 && ctx.measureText(x + "…").width > maxW) x = x.slice(0, -1); return x.trimEnd() + "…"; }
+function fitSize(ctx, t, w, px, maxW, min, st) { let f = px; font(ctx, w, f, st); while (f > min && ctx.measureText(t).width > maxW) { f -= 2; font(ctx, w, f, st); } return f; }
+// valor que aparece ao lado do exercício: maior carga, ou séries×reps quando não tem carga
+const rowValue = (r) => (r.load != null ? { v: kg(r.load), u: "kg" } : { v: `${r.planned}×${r.reps || "—"}`, u: "" });
+function tileOff(ctx, x, y, w, h, r) { ctx.fillStyle = "#1A1D24"; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); ctx.strokeStyle = "#2A2E37"; ctx.lineWidth = 2; ctx.stroke(); }
+function tilesRow(ctx, r, x, y, w, h, gap, rad) { for (let k = 0; k < r.planned; k++) (k < r.sets ? tile : tileOff)(ctx, x + k * (w + gap), y, w, h, rad); }
 
 // reduz em etapas (metade por vez) — evita o serrilhado de desenhar o PNG grande direto pequeno
 function hq(img, size) {
@@ -48,37 +58,36 @@ function tile(ctx, x, y, w, h, r) { const g = ctx.createLinearGradient(x, y, x +
 function drawCard(ctx, s, ball, phrase) {
     ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
     const L = 72, R = W - 72;
-    // 17e — silhueta grande e quase apagada no canto, como marca d'água
     ctx.globalAlpha = 0.09; ctx.drawImage(hq(ball.big, 1100), W - 640, -520, 1100, 1100); ctx.globalAlpha = 1;
-    // marca
-    ctx.drawImage(hq(ball.small, 64), L, 110, 64, 64);
-    ctx.fillStyle = TEXT; font(ctx, 900, 30, "expanded"); spaced(ctx, "CANCIO CLUB", L + 84, 154, 5);
-    ctx.fillStyle = MUTED; font(ctx, 500, 26); spaced(ctx, s.date, R, 154, 2, "right");
-    // título
-    ctx.fillStyle = "#C6D2E4"; font(ctx, 700, 24); spaced(ctx, "TREINO CONCLUÍDO", L, 520, 6);
+    ctx.drawImage(hq(ball.small, 64), L, SAFE_T - 40, 64, 64);
+    ctx.fillStyle = TEXT; font(ctx, 900, 30, "expanded"); spaced(ctx, "CANCIO CLUB", L + 84, SAFE_T + 4, 5);
+    ctx.fillStyle = MUTED; font(ctx, 500, 26); spaced(ctx, s.date, R, SAFE_T + 4, 2, "right");
+    ctx.fillStyle = "#C6D2E4"; font(ctx, 700, 24); spaced(ctx, "TREINO CONCLUÍDO", L, 540, 6);
     ctx.fillStyle = TEXT; font(ctx, 900, s.title.length > 14 ? 84 : 100, "expanded");
-    const words = s.title.split(" "); let line = "", y = 620; const lines = [];
+    const words = s.title.split(" "); let line = "", y = 640; const lines = [];
     words.forEach((w) => { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > R - L && line) { lines.push(line); line = w; } else line = t; }); lines.push(line);
     lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, L, y + i * 96)); y += (Math.min(lines.length, 2) - 1) * 96 + 60;
-    // faixa de 3 números
     ctx.fillStyle = LINE; ctx.fillRect(L, y, R - L, 2); ctx.fillRect(L, y + 150, R - L, 2);
-    const cells = [[s.duration || String(s.rows.length), s.duration ? "tempo" : "exercícios"], [String(s.sets), "séries"], [s.records ? `${s.records} ★` : thousands(s.volume), s.records ? (s.records > 1 ? "recordes" : "recorde") : "kg levantados"]];
+    const cells = [[s.duration || String(s.rows.length), s.duration ? "tempo" : pl(s.rows.length, "exercício", "exercícios")], [String(s.sets), pl(s.sets, "série", "séries")], [s.records ? `${s.records} ★` : thousands(s.volume), s.records ? pl(s.records, "recorde", "recordes") : "kg levantados"]];
     const cw = (R - L) / 3;
     cells.forEach(([v, l], i) => { const cx = L + i * cw + (i ? 28 : 0); if (i) { ctx.fillStyle = LINE; ctx.fillRect(L + i * cw, y + 2, 2, 148); } ctx.fillStyle = TEXT; font(ctx, 900, 66, "condensed"); ctx.textAlign = "left"; ctx.fillText(v, cx, y + 90); ctx.fillStyle = MUTED; font(ctx, 400, 24); ctx.fillText(l, cx, y + 128); });
     y += 230;
-    // exercícios
-    const maxRows = 7, rows = s.rows.slice(0, maxRows);
-    rows.forEach((r) => {
-        ctx.fillStyle = TEXT; font(ctx, 600, 34); ctx.textAlign = "left";
-        let name = r.name + (r.pr ? " ★" : ""); while (ctx.measureText(name).width > R - L - 220 && name.length > 4) name = name.slice(0, -2);
-        if (name !== r.name + (r.pr ? " ★" : "")) name = name.trimEnd() + "…";
-        ctx.fillText(name, L, y);
-        if (r.load != null) { font(ctx, 800, 40, "condensed"); ctx.textAlign = "right"; const kw = (() => { ctx.save(); font(ctx, 600, 24); const w = ctx.measureText(" kg").width; ctx.restore(); return w; })(); ctx.fillText(kg(r.load), R - kw, y); ctx.fillStyle = MUTED; font(ctx, 600, 24); ctx.fillText(" kg", R, y); }
-        for (let k = 0; k < r.sets; k++) tile(ctx, L + k * 52, y + 20, 46, 20, 4);
-        y += 112;
+    const bottom = SAFE_B - 60, n = s.rows.length;
+    const two = n > 0 && (bottom - y) / n < 78, cols = two ? 2 : 1, perCol = Math.max(1, Math.ceil(n / cols));
+    const rowH = Math.min(112, (bottom - y) / perCol), colW = (R - L - (two ? 40 : 0)) / cols;
+    const fs = two ? Math.min(28, Math.max(22, rowH * 0.32)) : Math.min(34, Math.max(26, rowH * 0.3)), vs = fs * 1.18, th = Math.max(12, Math.min(20, rowH * 0.18));
+    s.rows.forEach((r, idx) => {
+        const col = Math.floor(idx / perCol), ry = y + (idx % perCol) * rowH, x0 = L + col * (colW + 40), right = x0 + colW;
+        const { v, u } = rowValue(r);
+        font(ctx, 600, fs * 0.7); const uw = u ? ctx.measureText(" " + u).width : 0;
+        font(ctx, 800, vs, "condensed"); const vw = ctx.measureText(v).width;
+        if (u) { ctx.fillStyle = MUTED; font(ctx, 600, fs * 0.7); ctx.textAlign = "right"; ctx.fillText(" " + u, right, ry); }
+        ctx.fillStyle = TEXT; font(ctx, 800, vs, "condensed"); ctx.textAlign = "right"; ctx.fillText(v, right - uw, ry); ctx.textAlign = "left";
+        font(ctx, 600, fs); ctx.fillText(fitText(ctx, r.name + (r.pr ? " ★" : ""), colW - vw - uw - fs), x0, ry);
+        const tw = Math.min(46, (colW * 0.6) / r.planned - 6);
+        tilesRow(ctx, r, x0, ry + fs * 0.6, tw, th, 6, 4);
     });
-    if (s.rows.length > maxRows) { ctx.fillStyle = MUTED; font(ctx, 500, 26); ctx.textAlign = "left"; ctx.fillText(`+${s.rows.length - maxRows} exercícios`, L, y); }
-    ctx.fillStyle = "#5A6273"; font(ctx, 400, 26); ctx.textAlign = "center"; ctx.fillText(phrase, W / 2, H - 110);
+    ctx.fillStyle = "#5A6273"; font(ctx, 400, 26); ctx.textAlign = "center"; ctx.fillText(phrase, W / 2, SAFE_B); ctx.textAlign = "left";
 }
 
 // 14c — card de descanso: "Pista fechada" + frase de recuperação + sequência
@@ -129,30 +138,32 @@ function shadowOn(ctx) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 2
 function shadowOff(ctx) { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
 
 function drawNumbers(ctx, s, ball) {
-    const cx = W / 2; let y = 470;
+    const cx = W / 2;
+    const items = [s.duration && [s.duration, "TEMPO"], [String(s.sets), pl(s.sets, "SÉRIE", "SÉRIES")], s.volume > 0 && [`${thousands(s.volume)} kg`, "LEVANTADOS"], s.records > 0 && [`${s.records} ★`, pl(s.records, "RECORDE", "RECORDES")]].filter(Boolean);
+    const blockH = 170 + 80 + 40 + items.length * 170 + 60;
+    let y = SAFE_T + Math.max(0, (SAFE_B - SAFE_T - blockH) / 2);
     shadowOn(ctx); ctx.drawImage(hq(ball.big, 170), cx - 85, y, 170, 170); y += 250;
-    ctx.fillStyle = "#FFFFFF"; font(ctx, 900, s.title.length > 14 ? 60 : 72, "expanded"); ctx.textAlign = "center"; ctx.fillText(s.title, cx, y); y += 110;
-    const items = [s.duration && [s.duration, "TEMPO"], [String(s.sets), "SÉRIES"], s.volume > 0 && [`${thousands(s.volume)} kg`, "LEVANTADOS"], s.records > 0 && [`${s.records} ★`, s.records > 1 ? "RECORDES" : "RECORDE"]].filter(Boolean);
+    ctx.fillStyle = "#FFFFFF"; fitSize(ctx, s.title, 900, s.title.length > 14 ? 60 : 72, W - 140, 40, "expanded"); ctx.textAlign = "center"; ctx.fillText(s.title, cx, y); y += 110;
     items.forEach(([v, l]) => { font(ctx, 700, 24); spaced(ctx, l, cx, y, 6, "center"); font(ctx, 900, 92, "condensed"); ctx.textAlign = "center"; ctx.fillText(v, cx, y + 92); y += 170; });
     font(ctx, 900, 26, "expanded"); spaced(ctx, "CANCIO CLUB", cx, y + 20, 8, "center");
-    shadowOff(ctx);
+    shadowOff(ctx); ctx.textAlign = "left";
 }
 
 function drawTiles(ctx, s, ball) {
-    const L = 80, R = W - 80; const rows = s.rows.slice(0, 8);
-    const blockH = 40 + rows.length * 46 + 200;
-    let y = H - 220 - blockH;
+    const L = 80, R = W - 80, rows = s.rows, n = rows.length;
+    const RH = n > 9 ? 40 : 46, TH = n > 9 ? 26 : 30, TW = n > 9 ? 46 : 54, TG = 8;
+    const statY = SAFE_B - 34, divY = statY - 70, listTop = divY - 24 - n * RH;
+    const titleY = listTop - 46, dateY = titleY - 74;
     shadowOn(ctx); ctx.fillStyle = "#FFFFFF";
-    font(ctx, 700, 26); spaced(ctx, s.date, L, y, 6);
-    font(ctx, 900, 64, "expanded"); ctx.textAlign = "left"; ctx.fillText(s.title.length > 18 ? s.title.slice(0, 17) + "…" : s.title, L, y + 74);
-    ctx.drawImage(hq(ball.big, 120), R - 120, y - 30, 120, 120);
-    y += 120;
-    rows.forEach((r) => { for (let k = 0; k < r.sets; k++) tile(ctx, L + k * 62, y, 54, 30, 5); ctx.fillStyle = "#FFFFFF"; font(ctx, 600, 26); ctx.textAlign = "left"; ctx.fillText(r.name + (r.pr ? " ★" : ""), L + Math.max(r.sets, 1) * 62 + 14, y + 25); y += 46; });
-    y += 24; ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.fillRect(L, y, R - L, 2); y += 70;
-    const items = [s.duration && [s.duration, "tempo"], [String(s.sets), "séries"], s.records > 0 && [`${s.records} ★`, s.records > 1 ? "recordes" : "recorde"]].filter(Boolean);
+    font(ctx, 700, 26); spaced(ctx, s.date, L, dateY, 6);
+    fitSize(ctx, s.title, 900, 64, R - L - 150, 36, "expanded"); ctx.textAlign = "left"; ctx.fillText(fitText(ctx, s.title, R - L - 150), L, titleY);
+    ctx.drawImage(hq(ball.big, 120), R - 120, dateY - 30, 120, 120);
+    rows.forEach((r, i) => { const y = listTop + i * RH; tilesRow(ctx, r, L, y, TW, TH, TG, 5); ctx.fillStyle = "#FFFFFF"; font(ctx, 600, 26); ctx.textAlign = "left"; const nx = L + r.planned * (TW + TG) + 6; ctx.fillText(fitText(ctx, r.name + (r.pr ? " ★" : ""), R - nx), nx, y + TH * 0.82); });
+    ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.fillRect(L, divY, R - L, 2);
+    const items = [s.duration && [s.duration, "tempo"], [String(s.sets), pl(s.sets, "série", "séries")], s.records > 0 && [`${s.records} ★`, pl(s.records, "recorde", "recordes")]].filter(Boolean);
     let x = L; ctx.fillStyle = "#FFFFFF";
-    items.forEach(([v, l]) => { font(ctx, 900, 60, "condensed"); ctx.textAlign = "left"; ctx.fillText(v, x, y); const w = ctx.measureText(v).width; font(ctx, 500, 22); ctx.fillText(l, x, y + 34); x += Math.max(w, 120) + 56; });
-    font(ctx, 900, 22, "expanded"); spaced(ctx, "CANCIO CLUB", R, y + 34, 6, "right");
+    items.forEach(([v, l]) => { font(ctx, 900, 60, "condensed"); ctx.textAlign = "left"; ctx.fillText(v, x, statY); const w = ctx.measureText(v).width; font(ctx, 500, 22); ctx.fillText(l, x, statY + 34); x += Math.max(w, 120) + 56; });
+    font(ctx, 900, 22, "expanded"); spaced(ctx, "CANCIO CLUB", R, statY + 34, 6, "right");
     shadowOff(ctx);
 }
 
