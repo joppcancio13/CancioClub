@@ -49,7 +49,7 @@ import { BALL_URL, SIL_URL, C, DAYS, EASE, F, JS2KEY, MIRROR_GRID, NON_COUNTING_
 import { mapAnamneseToFicha } from "./utils/assessment";
 import { playDisco, playFinishChime } from "./utils/audio";
 import { fmtDate, fmtDateTime, fmtDur, fmtVolume, isWithin7, isoOf, parseWeeklyTarget, todayISO } from "./utils/date";
-import { mergeCloudRows, mergeWorkoutsForStudent, splitGlobalForCloud, splitStudentForCloud } from "./utils/merge";
+import { mergeCloudRows, mergeLocalActivityInto, mergeWorkoutsForStudent, splitGlobalForCloud, splitStudentForCloud } from "./utils/merge";
 import { genCode, greeting, haptic, noop, pickDailyPhrase, uid, uidShort } from "./utils/misc";
 import { seed } from "./utils/seedData";
 import { computeStreak, lastCheckinLabel, streakTier, trainingWds } from "./utils/streak";
@@ -173,6 +173,7 @@ function CancioClub() {
         year += 1;
     } return { year, month }; });
     const [loadingRoster, setLoadingRoster] = useState(false);
+    const [rosterLoaded, setRosterLoaded] = useState(false); // true = fetchAllStudentsAfterAuth já trouxe a lista da nuvem nesta abertura
     const cloudSynced = useDataStore((s) => s.cloudSynced); // true = última gravação chegou na nuvem; false = só ficou salva localmente por enquanto
     const setCloudSynced = useDataStore((s) => s.setCloudSynced);
     const localFull = useDataStore((s) => s.localFull); // true = localStorage estourou a cota (ver saveLocal) — rede de segurança offline caiu
@@ -856,28 +857,19 @@ function CancioClub() {
             const rows = (allRows || []).filter((r) => !(r.data && deletedStudentIdsRef.current.has(r.data.id)));
             if (rows && rows.length > 0) {
                 const cloud = mergeCloudRows(rows); // filtrado só em student_% -> profKey/soundOn/library/templates vêm com valor padrão aqui (a linha global não veio nessa busca), então preservamos os que já estavam carregados
-                const cloudUpdatedById = {};
-                rows.forEach((r) => { if (r.data && r.data.id)
-                    cloudUpdatedById[r.data.id] = r.data.updatedAt || 0; });
                 setData((p) => {
-                    const localTs = p.updatedAt || 0;
                     const cloudIds = new Set(cloud.students.map((s) => s.id));
                     const localOnly = (p.students || []).filter((s) => !cloudIds.has(s.id)); // preserva aluno recém-criado que ainda não sincronizou
-                    // proteção contra conflito offline: pra cada aluno que existe nos dois lados, o updatedAt maior vence.
-                    // se o local vencer, mantém a versão local e agenda uma sincronização silenciosa pra atualizar a nuvem.
-                    const cloudWinners = [];
-                    const localWinners = [];
-                    cloud.students.forEach((s) => {
-                        const cloudTs = cloudUpdatedById[s.id] || 0;
-                        const localCopy = (p.students || []).find((ls) => ls.id === s.id);
-                        if (localCopy && localTs > cloudTs)
-                            localWinners.push(localCopy);
-                        else
-                            cloudWinners.push(s);
-                    });
-                    const preserveLocal = [...localWinners, ...localOnly];
-                    const merged = { ...cloud, profKey: p.profKey, soundOn: p.soundOn, library: p.library, templates: p.templates, activeStudentId: p.activeStudentId, students: [...cloudWinners, ...preserveLocal] };
-                    preserveLocal.forEach((s) => {
+                    // Aluno que existe nos dois lados: a nuvem é a base (cadastro, fases, nomes de dia...).
+                    // Antes, um updatedAt GLOBAL deste aparelho (qualquer mudança, de qualquer aluno) era
+                    // comparado com o updatedAt de CADA aluno na nuvem — e a cópia local antiga "vencia",
+                    // descartando check-ins/sessões que o aluno registrou no celular dele. O que é registro
+                    // de atividade (check-ins, sessões, cardio, recuperação, recados) agora é somado dos
+                    // dois lados em mergeLocalActivityInto, nunca escolhido por timestamp.
+                    const merged = { ...cloud, profKey: p.profKey, soundOn: p.soundOn, library: p.library, templates: p.templates, activeStudentId: p.activeStudentId, students: [...cloud.students, ...localOnly] };
+                    const activityAdded = new Set();
+                    cloud.students.forEach((s) => { if (mergeLocalActivityInto(merged, p, s.id)) activityAdded.add(s.id); });
+                    localOnly.forEach((s) => {
                         merged.checkins[s.id] = (p.checkins && p.checkins[s.id]) || [];
                         merged.bestStreak[s.id] = (p.bestStreak && p.bestStreak[s.id]) || 0;
                         merged.archives[s.id] = (p.archives && p.archives[s.id]) || [];
@@ -887,6 +879,7 @@ function CancioClub() {
                         merged.cardioLog[s.id] = (p.cardioLog && p.cardioLog[s.id]) || [];
                         merged.recoveryLog[s.id] = (p.recoveryLog && p.recoveryLog[s.id]) || {};
                         merged.freezes[s.id] = (p.freezes && p.freezes[s.id]) || { month: "", used: 0 };
+                        mergeLocalActivityInto(merged, p, s.id); // traz os recados locais desse aluno também
                     });
                     // treino nunca escolhe um lado só: mescla local+nuvem por dia/exercício/data/série pra
                     // TODO aluno, ganhando ou perdendo a corrida de metadado acima — dado de cadastro
@@ -898,7 +891,7 @@ function CancioClub() {
                         const cloudWk = cloud.workouts[s.id] || {};
                         const mergedWk = mergeWorkoutsForStudent((p.workouts && p.workouts[s.id]) || {}, cloudWk);
                         merged.workouts[s.id] = mergedWk;
-                        if (JSON.stringify(mergedWk) !== JSON.stringify(cloudWk))
+                        if (activityAdded.has(s.id) || JSON.stringify(mergedWk) !== JSON.stringify(cloudWk))
                             needsCloudSync.push(s.id);
                     });
                     try {
@@ -909,6 +902,7 @@ function CancioClub() {
                     return merged;
                 });
             }
+            setRosterLoaded(true); // só agora a lista local reflete a nuvem — libera a numeração de membros
         }
         catch (e) {
             console.error("Cancio: falha ao buscar todos os alunos:", e);
@@ -949,6 +943,7 @@ function CancioClub() {
     const lockProf = () => {
         sb && sb.auth.signOut();
         setProfUnlocked(false);
+        setRosterLoaded(false);
         setProfKeyInput("");
         setProfKeyErr("");
         setData((p) => ({ ...p, students: [], checkins: {}, bestStreak: {}, archives: {}, sessions: {}, dayNames: {}, cardio: {}, cardioLog: {}, recoveryLog: {}, freezes: {}, workouts: {}, messages: [], activeStudentId: null }));
@@ -959,15 +954,18 @@ function CancioClub() {
     const alunoStudent = students.find((s) => s.id === alunoId);
     // número de membro por ordem de entrada: o professor numera quem ainda não tem e sincroniza com a ficha do aluno
     const numberedRef = React.useRef(false);
+    // Só depois de rosterLoaded: profUnlocked vira true ANTES da lista da nuvem chegar (sessão
+    // restaurada), e numerar com a lista antiga deste aparelho enviava a ficha velha inteira de cada
+    // aluno pra nuvem, apagando treinos/check-ins registrados depois.
     useEffect(() => {
-        if (role !== "prof" || !ready || !profUnlocked || !students.length || numberedRef.current) return;
+        if (role !== "prof" || !ready || !profUnlocked || !rosterLoaded || !students.length || numberedRef.current) return;
         let nums = {};
         try { nums = assignMemberNumbers(students); } catch (e) { console.error("Cancio: numeração", e); }
         numberedRef.current = true;
         const ids = Object.keys(nums);
         if (!ids.length) return;
         setData((p) => { const next = { ...p, students: p.students.map((st) => (nums[st.id] != null ? { ...st, memberNo: nums[st.id], memberSince: st.memberSince || st.startDate || todayISO() } : st)) }; ids.forEach((id) => syncStudentToCloud(next, id)); return next; });
-    }, [role, ready, profUnlocked, students]);
+    }, [role, ready, profUnlocked, rosterLoaded, students]);
     const memberTrainedDays = React.useMemo(() => {
         const out = new Set(); if (!alunoId) return out;
         const ym = todayISO().slice(0, 7), wk = (data && data.workouts && data.workouts[alunoId]) || {};
@@ -1090,7 +1088,7 @@ function CancioClub() {
         recordCel && React.createElement(RecordCelebration, { records: recordCel.records, sound: recordCel.sound, onShare: () => { const s = recordCel.shareData; setRecordCel(null); setShareCard(s); }, onClose: () => setRecordCel(null) }),
         celebration && React.createElement(Celebration, { ...celebration, onClose: () => setCelebration(null), onDone: () => { const t = celebration.then; setCelebration(null); if (t)
                 t(); } }),
-        pseModal && React.createElement(PSEModal, { summary: [dayName || dayFull, workoutStart ? fmtDur(Math.round((Date.now() - (typeof workoutStart === "number" ? workoutStart : Date.parse(workoutStart))) / 1000)) : null].filter(Boolean).join(" · "), onSelect: (effort) => finalizeWorkout(effort), onCancel: () => setPseModal(false) }),
+        pseModal && React.createElement(PSEModal, { summary: [dayName || dayFull, (() => { const t0 = typeof workoutStart === "number" ? workoutStart : workoutStart && workoutStart.startedAt; return Number.isFinite(t0) ? fmtDur(Math.max(1, Math.round((Date.now() - t0) / 1000))) : null; })()].filter(Boolean).join(" · "), onSelect: (effort) => finalizeWorkout(effort), onCancel: () => setPseModal(false) }),
         feedbackModal && React.createElement(FeedbackModal, { question: feedbackModal.question, onSend: (txt) => { submitFeedback(feedbackModal.sessionId, txt); const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); }, onSkip: () => { const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); } }),

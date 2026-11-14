@@ -176,6 +176,11 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
     // já que a posição dela no array pode mudar durante a espera do debounce.
     const rowsRef = React.useRef(rows);
     rowsRef.current = rows;
+    // os timers e o flushMine (registrado UMA vez, na montagem) precisam chamar o saveRow do render
+    // MAIS RECENTE — o da montagem enxerga `rows` ainda vazio e não salvava nada (carga "" -> NaN),
+    // o que anulava a proteção de "Finalizar" logo depois de digitar e a de trocar de dia
+    const saveRowRef = React.useRef(saveRow);
+    saveRowRef.current = saveRow;
     const autoSaveTimersRef = React.useRef({});
     useEffect(() => {
         rows.forEach((r) => {
@@ -187,9 +192,10 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
             if (autoSaveTimersRef.current[key])
                 clearTimeout(autoSaveTimersRef.current[key]);
             autoSaveTimersRef.current[key] = setTimeout(() => {
+                autoSaveTimersRef.current[key] = null; // já salvou — o flush não precisa repetir
                 const idx = rowsRef.current.findIndex((rr) => rr.setId === key);
                 if (idx !== -1)
-                    saveRow(idx, true);
+                    saveRowRef.current(idx, true);
             }, 800);
         });
     }, [rows]);
@@ -205,7 +211,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
                 autoSaveTimersRef.current[key] = null;
                 const idx = rowsRef.current.findIndex((rr) => rr.setId === key);
                 if (idx !== -1)
-                    saveRow(idx, true);
+                    saveRowRef.current(idx, true);
             });
         };
         pendingFlushes.add(flushMine);
@@ -224,7 +230,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpd
         return false; const ln = parseFloat(String(r.load).replace(",", ".")); return se.load === ln; };
     const commit = (patch) => onUpdate(ex.id, patch);
     const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? undefined : n; };
-    const commitPlan = (np) => { const workingReps = (np.filter((s) => !NON_COUNTING_KINDS.has(s.kind))[0] || {}).reps || "10"; onUpdate(ex.id, { setPlan: np, sets: np.length, reps: workingReps }); };
+    const commitPlan = (np) => { const workingReps = (np.filter((s) => !NON_COUNTING_KINDS.has(s.kind))[0] || {}).reps || "10"; onUpdate(ex.id, { setPlan: np, sets: np.length, reps: workingReps, planAt: Date.now() }); }; // planAt: a Edge Function usa pra saber qual plano é o mais novo (aluno x professor)
     const setRowKind = (i, kind) => {
         setRows((rs) => rs.map((r, k) => (k === i ? { ...r, kind } : r)));
         commitPlan(plan.map((s, k) => (k === i ? { ...s, kind } : s)));

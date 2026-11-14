@@ -133,6 +133,35 @@ function mergeWorkoutsForStudent(localWorkouts, cloudWorkouts) {
     });
     return merged;
 }
+// Soma (nunca escolhe um lado) os registros de ATIVIDADE de um aluno que existem neste aparelho
+// mas ainda não chegaram na nuvem: check-ins, sessões, cardio, recuperação e recados. `merged` já
+// tem a versão da nuvem e é alterado no lugar. Devolve true se algo local foi acrescentado (aí a
+// nuvem precisa receber a versão somada).
+function unionById(cloudList, localList) {
+    const ids = new Set((cloudList || []).map((x) => x && x.id));
+    const add = (localList || []).filter((x) => x && x.id != null && !ids.has(x.id));
+    return add.length ? [...(cloudList || []), ...add] : null;
+}
+function mergeLocalActivityInto(merged, local, sid) {
+    let changed = false;
+    const lc = (local.checkins && local.checkins[sid]) || [];
+    const cc = merged.checkins[sid] || [];
+    const addC = lc.filter((d) => !cc.includes(d));
+    if (addC.length) { merged.checkins[sid] = [...cc, ...addC].sort(); changed = true; }
+    const sess = unionById(merged.sessions[sid], local.sessions && local.sessions[sid]);
+    if (sess) { merged.sessions[sid] = sess.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)); changed = true; }
+    const cl = unionById(merged.cardioLog[sid], local.cardioLog && local.cardioLog[sid]);
+    if (cl) { merged.cardioLog[sid] = cl; changed = true; }
+    const lr = (local.recoveryLog && local.recoveryLog[sid]) || {};
+    const cr = merged.recoveryLog[sid] || {};
+    const missingDates = Object.keys(lr).filter((dt) => !(dt in cr));
+    if (missingDates.length) { const r = { ...cr }; missingDates.forEach((dt) => { r[dt] = lr[dt]; }); merged.recoveryLog[sid] = r; changed = true; }
+    const lb = (local.bestStreak && local.bestStreak[sid]) || 0;
+    if (lb > (merged.bestStreak[sid] || 0)) { merged.bestStreak[sid] = lb; changed = true; }
+    const msgs = unionById(merged.messages, (local.messages || []).filter((m) => m.studentId === sid));
+    if (msgs) { merged.messages = msgs; changed = true; }
+    return changed;
+}
 function applyGlobalToLocal(local, globalData) {
     const base = local || { students: [], checkins: {}, bestStreak: {}, archives: {}, sessions: {}, dayNames: {}, cardio: {}, cardioLog: {}, recoveryLog: {}, freezes: {}, workouts: {}, messages: [] };
     return {
@@ -144,4 +173,4 @@ function applyGlobalToLocal(local, globalData) {
         activeStudentId: globalData.activeStudentId !== undefined ? globalData.activeStudentId : base.activeStudentId,
     };
 }
-export { splitGlobalForCloud, splitStudentForCloud, mergeCloudRows, mergeEntriesBySetId, mergeHistoryDay, mergeHistoryArrays, mergeExerciseArray, mergeWorkoutsForStudent, applyGlobalToLocal };
+export { splitGlobalForCloud, splitStudentForCloud, mergeCloudRows, mergeEntriesBySetId, mergeHistoryDay, mergeHistoryArrays, mergeExerciseArray, mergeWorkoutsForStudent, mergeLocalActivityInto, applyGlobalToLocal };

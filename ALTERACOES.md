@@ -1,0 +1,115 @@
+# Cancio Club — alterações (nov 2026)
+
+Duas pastas:
+- **cancio-club-site/** → pronto pra subir. Arraste a pasta inteira no Netlify. Não precisa rodar nada.
+- **cancio-club-projeto/** → código-fonte. `npm install` + `npm run build` gera a mesma coisa em `dist/`.
+(`cancio-club-deploy/` é a versão antiga, não use.)
+
+## Marca
+- Login com a assinatura horizontal: silhueta + CANCIO / CLUB. "Digite o código" virou rótulo colado nas caixas; erro em laranja.
+- Selo novo (anel CANCIO CLUB / TREINOS · PROGRESSÃO + silhueta), gerado no app como PNG transparente 2160 px, em prata ou preto.
+- Ícone do app continua a bola 3D.
+  Arquivos: `App.jsx`, `components/share/LogoCard.jsx`, `public/selo-silhueta*.png`
+
+## Cards de compartilhar (PNG 1080×1920)
+- Entram todos os exercícios do dia, inclusive os não feitos (pastilhas apagadas). Sem carga mostra séries×reps.
+- Tudo dentro da área livre dos stories (topo 250 px / base 280 px vazios).
+- Card: lista em 1 ou 2 colunas. Números: sem exercícios, com TEMPO, SÉRIES, LEVANTADOS. Pastilhas: cresce de baixo pra cima.
+- Singular/plural corrigido.
+  Arquivo: `components/share/ShareStudio.jsx`
+
+## Carteirinha e número de membro
+- Carteirinha: frente crachá (selo, nome, nº, desde, treinos do mês), verso cartão prata. Só pra mostrar.
+- Número por ordem de entrada. João Pedro Cancio = 0000, Ana Bia = 0001. O professor numera ao abrir o app.
+  Arquivos: `components/student/MemberCard.jsx`, `utils/members.js`, `App.jsx`
+
+## Perfil do aluno (novo)
+- Abre tocando no nome ou na foto no topo do treino.
+- Topo: foto, nº de membro, desde, nome grande, treinos / maior sequência / recordes, botões Carteirinha e Selo.
+- Blocos: Frequência do mês, Recordes, Evolução (gráfico por exercício), Metas, Corpo (medidas e reavaliação), Conquistas (12).
+- Lista: Meu professor (abre recados), Minha anamnese (só leitura), Contato, Notificações, Meus dados, Sair.
+- Aluno edita foto, WhatsApp, e-mail e metas de carga.
+- Se já treinou hoje, o app abre no perfil com a faixa "TREINO DE HOJE FEITO · Ver e compartilhar".
+  Arquivos: `components/student/StudentProfile.jsx`, `App.jsx`
+
+## Treino
+- "DESCANSO" cabe dentro do anel do cronômetro. (`components/student/ExerciseCard.jsx`)
+- Topo do treino: só "Trocar treino" como botão; Carteirinha, Selo, Meus dados e Sair foram pro perfil.
+
+## Atualização automática
+- O app procura versão nova sempre que abre ou volta pra tela e recarrega sozinho uma vez. Cache v41.
+  Arquivos: `main.jsx`, `sw.js`
+
+## Depois de subir
+1. Abra como professor uma vez (numera os alunos).
+2. No celular, feche o app e abra de novo.
+3. Conferir: compartilhar card (iPhone e Android), carteirinha, perfil, abrir o app depois de já ter treinado.
+
+Supabase: nada mudou. No site pronto, React/Supabase/gráficos carregam do esm.sh na 1ª abertura e ficam em cache.
+
+## Correções (v42)
+- Tela preta ao abrir depois da atualização: agora, se uma tela quebrar, aparece a mensagem de erro e um botão "Recarregar".
+- Número de membro, metas, contato: não somem mais quando o app sincroniza com a nuvem.
+- Numeração dos alunos roda uma vez por abertura, só depois de o professor entrar.
+
+## Pente fino (v44)
+**Texto**
+- Português do Brasil: "Compartilhar treino" (era "Partilhar Treino"), "Imagem salva na galeria", "Compartilhe".
+- Sentence case: "Finalizar treino", "Concluir exercício", "Salvar recuperação", "Modo edição", "Modo aula", "Gerar resumo da semana", "Recuperação ativa", "Cancelar", "Restaurar".
+- "Selecione…" com reticências; exclamação removida.
+**Leitura e toque**
+- 25 textos em cinza #5A6273 (3,3:1) subiram para #7D8698 (5,3:1).
+- Nenhum texto abaixo de 11px; tamanhos fora da escala encaixados em 11/13/15/18/24.
+- 8 botões que tinham 34–40px agora têm 44px.
+- 7 botões só de símbolo (×, ‹, +, ↑) ganharam descrição para leitor de tela.
+**Consistência**
+- Cores quase iguais unificadas (fios, fundos, pratas) e cinzas da paleta antiga trocados.
+- Raios fora do padrão encaixados em 10/16/24.
+- 26 números grandes agora com algarismos de largura fixa (não tremem no cronômetro e nas cargas).
+**Comportamento**
+- "Remover aluno", "Apagar aluno" e "Restaurar backup" usam confirmação no visual do app (botão laranja), não a caixa do navegador. Avisos de backup também.
+  Arquivo novo: `utils/confirm.js`
+- Cache v44.
+
+## v45 — correção urgente
+- **A v44 quebrava a tela de treino do aluno** ("br is not defined" no card de exercício). Corrigido. Se você subiu a v44, suba a v45 já.
+- Cargas com vírgula decimal em todo o card (12,5 kg; +7,5 kg).
+- Aviso de restrição no card fechado virou um selo curto ("● ombro"); o texto completo aparece ao abrir o exercício.
+- Pastilhas do card fechado maiores (28×14).
+- Cache v45.
+
+## v46
+- Card aberto: séries vêm primeiro; data/anotação, "Concluir exercício", vídeo e histórico ficam embaixo.
+- Topo do treino: aviso de reavaliação só aparece quando não há recado novo do professor (um aviso por vez).
+- Cache v46.
+
+## v47
+- Entrada do dia: botão "Começar treino" branco chapado (sem degradê), 52px.
+- Série: "alvo" aparece uma vez só (no cabeçalho); embaixo fica só "REPS".
+- Carga vazia mostra a carga da última vez apagada ("40 kg") em vez de "—", e "última vez" com vírgula decimal.
+- Cache v47.
+
+## v48
+- Entrada do dia: "Fechar" com maiúscula, 15px, área de toque maior.
+- Card fechado: sem o ponto branco no canto e sem o botão "Pular exercício". "Pular" aparece só com o card aberto.
+- Frases de apoio com maiúscula e ponto final ("Registre ao menos 1 série…", "Cada série é salva sozinha…").
+- Cache v48.
+
+## v49
+- **Correção importante:** a tela de compartilhar não derruba mais o app quando a imagem da silhueta não carrega (internet fraca na academia). Antes aparecia "Algo deu errado nesta tela".
+- Título do treino no topo não vaza mais da tela com nomes longos ("SUPERIORES" cortava): diminui e quebra linha.
+- "Finalizar treino", "Pular descanso" e a aba ativa do professor: branco chapado, sem degradê metálico (mesmo padrão do resto).
+- Cache v49.
+
+## v50
+- Anamnese, Volume e cronômetro de descanso no mesmo padrão: botões brancos chapados, sem degradê; prata no lugar do tom antigo; rótulos com maiúscula inicial.
+- Cache v50.
+
+## v51 — correções de perda de dados
+- **Numeração de membros** só roda depois que a lista de alunos chega da nuvem. Antes, com a sessão do professor já salva, ela rodava com a lista antiga do aparelho e enviava essa ficha velha pra nuvem, apagando treinos e check-ins registrados depois. (`App.js`)
+- **Login do professor** não descarta mais check-ins, sessões, cardio, recuperação e recados que o aluno registrou no celular dele. A nuvem é a base, e o que só existe no aparelho é somado (`mergeLocalActivityInto` em `utils/merge.js`). Antes, um horário geral do aparelho decidia quem "ganhava".
+- **"Finalizar" logo depois de digitar a carga** agora salva a última série. A proteção existia, mas lia a linha ainda vazia e não salvava nada. (`components/student/ExerciseCard.js`)
+- **Tela de esforço** mostrava "NaN s" na duração. Corrigido. (`App.js`)
+- Plano de séries carimbado com `planAt` sempre que muda (aluno ou professor), pra Edge Function saber qual é o mais novo. (`components/student/ExerciseCard.js`)
+- **Edge Function `student` nova** (pasta `supabase/functions/student/`, publicar à parte no Supabase): o `sync` mescla em vez de gravar por cima, e o `login` não manda mais o alerta clínico pro aluno.
+- Cache v51.
