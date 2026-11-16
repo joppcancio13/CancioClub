@@ -3,9 +3,10 @@ import { Field } from "../shared/FormFields";
 import { C, F, glassPanel } from "../../styles/tokens";
 import { defaultSetPlan, planSummary } from "../../utils/workout";
 
-function TemplateBuilder({ onSave, library }) {
-    const [name, setName] = useState("");
-    const [exs, setExs] = useState([]);
+function TemplateBuilder({ onSave, library, initial, onCancel }) {
+    // initial: modelo existente pra editar (Biblioteca v3); onCancel mostra o botão Cancelar
+    const [name, setName] = useState(initial ? initial.name : "");
+    const [exs, setExs] = useState(initial ? initial.exercises : []);
     const [f, setF] = useState({ name: "", sets: "3", reps: "10", rest: "", note: "", url: "" });
     const [pickLib, setPickLib] = useState(false);
     const [libFilter, setLibFilter] = useState("");
@@ -14,7 +15,7 @@ function TemplateBuilder({ onSave, library }) {
     const save = () => { if (!name.trim() || !exs.length)
         return; onSave(name.trim(), exs); setName(""); setExs([]); };
     return (React.createElement("div", { style: { ...glassPanel, borderRadius: 24, padding: 16, marginBottom: 20 } },
-        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 12 } }, "Novo modelo"),
+        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 12 } }, initial ? "Editar modelo" : "Novo modelo"),
         React.createElement(Field, { label: "Nome do modelo", type: "text", placeholder: "Ex.: Inferiores B", value: name, onChange: (e) => setName(e.target.value) }),
         exs.length > 0 && React.createElement("div", { style: { marginTop: 12, display: "flex", flexDirection: "column", gap: 6 } }, exs.map((e, i) => React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 8, fontFamily: F.mono, fontSize: 13, color: C.text, background: C.ink, borderRadius: 10, padding: "8px 10px" } },
             React.createElement("span", { style: { flex: 1 } },
@@ -43,6 +44,7 @@ function TemplateBuilder({ onSave, library }) {
         React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 8, lineHeight: 1.5 } }, "Cria s\u00E9ries de trabalho iguais. Pra diferenciar (aquecimento, pir\u00E2mide), ajuste depois de aplicar o modelo."),
         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } },
             React.createElement("button", { onClick: add, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "+ Adicionar exerc\u00EDcio"),
-            React.createElement("button", { onClick: save, disabled: !name.trim() || !exs.length, style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: C.ink, background: name.trim() && exs.length ? C.silver : C.line, border: "none", borderRadius: 10, padding: "11px", cursor: name.trim() && exs.length ? "pointer" : "default" } }, "Salvar modelo"))));
+            React.createElement("button", { onClick: save, disabled: !name.trim() || !exs.length, style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: C.ink, background: name.trim() && exs.length ? C.silver : C.line, border: "none", borderRadius: 10, padding: "11px", cursor: name.trim() && exs.length ? "pointer" : "default" } }, initial ? "Salvar alterações" : "Salvar modelo")),
+        onCancel && React.createElement("button", { onClick: onCancel, style: { minHeight: 44, width: "100%", marginTop: 6, fontFamily: F.body, fontSize: 13, color: C.muted, background: "none", border: "none", cursor: "pointer" } }, "Cancelar")));
 }
 export { TemplateBuilder };

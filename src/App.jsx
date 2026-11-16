@@ -2,11 +2,9 @@ import React, { useState, useEffect } from "react";
 import { AssessmentInicial } from "./components/assessment/AssessmentInicial";
 import { CardioSection } from "./components/professor/CardioSection";
 import { FichaEditor } from "./components/professor/FichaEditor";
-import { LibraryManager } from "./components/professor/LibraryManager";
 import { PSEModal } from "./components/professor/PSEModal";
 import { RecoverySection } from "./components/professor/RecoverySection";
-import { TemplateBuilder } from "./components/professor/TemplateBuilder";
-import { TemplateCard } from "./components/professor/TemplateCard";
+import { BibliotecaV3 } from "./components/professor/BibliotecaV3";
 import { BulkLinkSheet } from "./components/professor/BulkLinkSheet";
 import { VolumeDashboard } from "./components/professor/VolumeDashboard";
 import { LogoCard } from "./components/share/LogoCard";
@@ -580,10 +578,11 @@ function CancioClub() {
     const deleteRecord = React.useCallback((exId, historyItem) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, history: e.history.filter((x) => x !== historyItem) } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
     const moveExercise = React.useCallback((exId, dir) => setData((p) => { const w = { ...p.workouts[focusId] }; const arr = [...(w[day] || [])]; const i = arr.findIndex((e) => e.id === exId); const j = i + dir; if (i < 0 || j < 0 || j >= arr.length)
         return p; [arr[i], arr[j]] = [arr[j], arr[i]]; w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
-    const applyTemplate = (tpl, targetDay) => { setData((p) => { const w = { ...(p.workouts[profId] || emptyWeek()) }; const adds = tpl.exercises.map((e) => ({ id: uid(), name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, note: e.note, url: e.url, setPlan: (e.setPlan && e.setPlan.length ? e.setPlan : defaultSetPlan(e.sets, e.reps)).map((s) => ({ ...s, id: uidShort() })), history: [] })); w[targetDay] = [...(w[targetDay] || []), ...adds]; const dn = { ...(p.dayNames || {}) }; const sd = { ...(dn[profId] || {}) }; sd[targetDay] = tpl.name; dn[profId] = sd; const next = { ...p, workouts: { ...p.workouts, [profId]: w }, dayNames: dn }; syncStudentToCloud(next, profId); return next; }); };
+    const applyTemplate = (tpl, targetDay, sid = profId) => { setData((p) => { const w = { ...(p.workouts[sid] || emptyWeek()) }; const adds = tpl.exercises.map((e) => ({ id: uid(), name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, note: e.note, url: e.url, setPlan: (e.setPlan && e.setPlan.length ? e.setPlan : defaultSetPlan(e.sets, e.reps)).map((s) => ({ ...s, id: uidShort() })), history: [] })); w[targetDay] = [...(w[targetDay] || []), ...adds]; const dn = { ...(p.dayNames || {}) }; const sd = { ...(dn[sid] || {}) }; sd[targetDay] = tpl.name; dn[sid] = sd; const next = { ...p, workouts: { ...p.workouts, [sid]: w }, dayNames: dn }; syncStudentToCloud(next, sid); return next; }); };
     const saveDayAsTemplate = () => { const name = tplName.trim(); const exs = (week[day] || []).map((e) => ({ name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, note: e.note, url: e.url, setPlan: e.setPlan })); if (!name || !exs.length)
         return; setData((p) => { const next = { ...p, templates: [...(p.templates || []), { id: uid(), name, exercises: exs }] }; syncGlobalToCloud(next); return next; }); setTplName(""); setSavingTpl(false); };
     const addTemplate = (name, exs) => setData((p) => { const next = { ...p, templates: [...(p.templates || []), { id: uid(), name, exercises: exs }] }; syncGlobalToCloud(next); return next; });
+    const updateTemplate = (id, name, exs) => setData((p) => { const next = { ...p, templates: (p.templates || []).map((t) => (t.id === id ? { ...t, name, exercises: exs } : t)) }; syncGlobalToCloud(next); return next; });
     const deleteTemplate = (id) => setData((p) => { const next = { ...p, templates: (p.templates || []).filter((t) => t.id !== id) }; syncGlobalToCloud(next); return next; });
     const archiveWorkout = () => { const label = archLabel.trim() || `Treino ${fmtDate(todayISO())}`; const snap = JSON.parse(JSON.stringify((data.workouts && data.workouts[profId]) || emptyWeek())); setData((p) => { const next = { ...p, archives: { ...(p.archives || {}), [profId]: [...(((p.archives || {})[profId]) || []), { id: uid(), label, date: new Date().toISOString(), week: snap }] } }; syncStudentToCloud(next, profId); return next; }); setArchLabel(""); };
     // Restaurar troca a semana inteira do aluno (com o histórico atual). Antes era um toque só, sem
@@ -1279,11 +1278,11 @@ function CancioClub() {
                     React.createElement("div", { style: { display: "flex", gap: 2, padding: 6, borderRadius: 16, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}, 0 -16px 40px rgba(5,6,10,.9)` } },
                         [
                             ["alunos", "Alunos", () => { setProfTab("alunos"); setProfView("home"); setRendEx(null); setExpanded(null); }],
-                            ["modelos", "Modelos", () => { setProfTab("modelos"); setExpanded(null); }],
+                            ["modelos", "Biblioteca", () => { setProfTab("modelos"); setExpanded(null); }],
                             ["recados", React.createElement(React.Fragment, { key: "r" }, "Recados", unread > 0 && React.createElement("span", { style: { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 16, height: 16, marginLeft: 6, borderRadius: 999, background: profTab === "recados" ? C.ink : C.warn, color: profTab === "recados" ? "#fff" : C.ink, fontFamily: F.mono, fontSize: 11, fontWeight: 700, padding: "0 4px" } }, unread)), () => { setProfTab("recados"); setExpanded(null); }],
                             ["mais", "Mais", () => { setProfTab("painel"); setExpanded(null); }],
                         ].map(([key, label, onClick]) => {
-                            const active = key === "mais" ? (profTab === "painel" || profTab === "biblioteca") : profTab === key;
+                            const active = key === "mais" ? profTab === "painel" : key === "modelos" ? (profTab === "modelos" || profTab === "biblioteca") : profTab === key;
                             return React.createElement("button", { key: key, className: "cc-tap", onClick, style: { minHeight: 44, flex: 1, fontFamily: F.display, fontWeight: active ? 700 : 600, fontSize: 13, padding: "11px 0", borderRadius: 16, border: "none", cursor: "pointer", color: active ? C.ink : C.muted, background: active ? C.text : "transparent" } }, label);
                         }))),
                 profTab === "alunos" && (React.createElement(React.Fragment, null,
@@ -1503,12 +1502,9 @@ function CancioClub() {
                                     setPseModal(true); }, disabled: !hasLoggedSomething || dayDone, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: hasLoggedSomething && !dayDone ? C.ink : C.muted, background: hasLoggedSomething && !dayDone ? C.text : C.panel2, boxShadow: hasLoggedSomething && !dayDone ? "inset 0 0 0 1px rgba(255,255,255,0.06)" : "none", border: "none", borderRadius: 16, padding: "17px", cursor: hasLoggedSomething && !dayDone ? "pointer" : "default", marginBottom: 6, transition: `transform .18s ${EASE.spring}` } }, dayDone ? (isRestDay ? "✓ Recuperação registrada" : "✓ Treino finalizado") : (isRestDay ? "✓ Salvar recuperação" : "Finalizar treino")),
                             !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.body, fontSize: 13, color: C.muted, marginBottom: 14 } }, "Registre ao menos 1 s\u00E9rie ou o cardio pra finalizar."),
                             React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), onSend: (text) => sendMessage(text, profId) }))))))),
-                profTab === "modelos" && (React.createElement(React.Fragment, null,
-                    React.createElement("p", { style: { fontFamily: F.mono, fontSize: 13, color: C.muted, lineHeight: 1.7, marginTop: 0, marginBottom: 18 } }, "Dias de treino prontos. Crie aqui ou salve um dia montado, e aplique em qualquer aluno com um toque."),
-                    React.createElement(TemplateBuilder, { onSave: addTemplate, library: library }),
-                    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
-                        templates.length === 0 && React.createElement(PremiumEmptyState, { icon: "grid", title: "Nenhum modelo salvo ainda.", sub: "Crie o primeiro acima e reaproveite em qualquer aluno." }),
-                        templates.map((t) => React.createElement(TemplateCard, { key: t.id, tpl: t, targetLabel: `${profStudent ? profStudent.name : "—"} · ${dayFull}`, onApply: () => applyTemplate(t, day), onRemove: () => deleteTemplate(t.id) }))))),
+                (profTab === "modelos" || profTab === "biblioteca") && React.createElement(BibliotecaV3, { templates, library, students, workouts: data.workouts, dayNames: data.dayNames, defaultStudent: profId || undefined,
+                    onApplyTemplate: (t, sid, dk) => applyTemplate(t, dk, sid),
+                    onAddTemplate: addTemplate, onUpdateTemplate: updateTemplate, onRemoveTemplate: deleteTemplate, onAddLib: addLibrary, onUpdateLib: updateLibrary, onRemoveLib: removeLibrary }),
                 profTab === "recados" && (React.createElement(React.Fragment, null,
                     // design v3: o título (não lidos + RECADOS) agora vem do próprio ProfInbox
                     React.createElement("div", { style: { marginBottom: 26 } },
@@ -1516,7 +1512,6 @@ function CancioClub() {
                         React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead, eventsFor: sessionEvents,
                             onOpenFicha: (sid) => { setActive(sid); setProfTab("alunos"); setProfView("aluno"); setFichaTab("resumo"); setRendEx(null); setExpanded(null); window.scrollTo(0, 0); } })))),
                 profTab === "painel" && (React.createElement(React.Fragment, null,
-                    React.createElement("button", { onClick: () => setProfTab("biblioteca"), style: { minHeight: 44, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", marginBottom: 22, background: "none", border: "none", borderBottom: `1px solid ${C.line}`, cursor: "pointer", color: C.text, textAlign: "left" } }, React.createElement("span", null, React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 500, fontSize: 15 } }, "Biblioteca de exerc\u00EDcios"), React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 13, color: "#7D8698", marginTop: 2 } }, library.length + " exerc\u00EDcios com v\u00EDdeo e tag")), React.createElement("span", { style: { color: "#3A404C", fontSize: 18 } }, "\u203A")),
                     React.createElement("button", { onClick: () => setAdvOpen((v) => !v), style: { minHeight: 44, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 8 } }, "Avan\u00E7ado \u00B7 backup e restaura\u00E7\u00E3o", React.createElement("span", { style: { color: C.muted, transform: advOpen ? "rotate(90deg)" : "none" } }, "\u203A")),
                     advOpen && React.createElement(React.Fragment, null,
                     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
@@ -1535,8 +1530,7 @@ function CancioClub() {
                         React.createElement("button", { onClick: () => setRestorePicker(null), style: { minHeight: 44, marginTop: 10, fontFamily: F.mono, fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } }, "Cancelar"))),
                     React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, margin: "22px 0 10px" } }, "Marca"),
                     React.createElement("button", { onClick: () => setLogoCard(true), style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Selo Cancio Club"),
-                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 8, lineHeight: 1.5 } }, "Uma imagem do selo do app pra usar como perfil ou postar nas redes."))),
-                profTab === "biblioteca" && (React.createElement(LibraryManager, { library: library, onAdd: addLibrary, onUpdate: updateLibrary, onRemove: removeLibrary })))),
+                    React.createElement("div", { style: { fontFamily: F.mono, fontSize: 11, color: C.muted, marginTop: 8, lineHeight: 1.5 } }, "Uma imagem do selo do app pra usar como perfil ou postar nas redes."))))),
             role === "aluno" && !alunoStudent && (() => {
                 const boxes = [0, 1, 2, 3].map((i) => React.createElement("span", { key: i, style: { width: 60, height: 72, borderRadius: 16, background: codeInput[i] && !codeErr ? C.text : "transparent", transition: "background .15s ease", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 38, color: codeInput[i] && !codeErr ? C.ink : C.text, boxShadow: codeErr ? "inset 0 0 0 1.5px " + C.warn : codeInput[i] ? "none" : i === codeInput.length ? "inset 0 0 0 1.5px " + C.silver : "inset 0 0 0 1px #2A2E37" } }, codeInput[i] || ""));
                 const press = (k) => { if (loginBusy) return; haptic("tick"); setCodeErr(false); if (k === "\u232B") setCodeInput((c) => c.slice(0, -1)); else setCodeInput((c) => (c.length >= 4 ? c : c + k)); };
