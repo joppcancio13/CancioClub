@@ -143,3 +143,11 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Ficha em página única** (`components/professor/FichaV3.jsx`): Aula hoje + Modo aula, semana, resumo do rendimento, volume planejado e ficha do dia com prescrito × feito (no alvo, abaixo, no teto, X de Y, não fez). Telas completas com "‹ Resumo"; o botão do cabeçalho virou "Dados".
 - **Volume pela ativação** (`utils/volumeCalculator.js`): cada série soma a ativação do exercício em cada grupo (11 grupos, uma casa decimal); eretores da espinha fora. Na edição, bloco "Séries na semana" com a mudança desde que abriu. Na tela Volume, barras no lugar das pastilhas.
 - Cache v55.
+
+## v56 — design v3, fase 4c (professor)
+- **Recados** (`components/professor/ProfInbox.jsx`): contador de não lidos, lista por aluno e conversa no mesmo padrão de balões do aluno, com os treinos do aluno na linha do tempo, respostas rápidas e "Abrir ficha".
+- **Rendimento** (`components/professor/RendimentoV3.jsx`, `utils/rendimento.js`): resumo de volume, frequência e recordes, e a evolução por exercício.
+- **Modo aula** (`components/professor/AulaV3.jsx`): registro guiado com notas de técnica rápidas.
+- **Biblioteca** (`components/professor/BibliotecaV3.jsx`): a aba "Modelos" virou "Biblioteca", com Modelos (aplicar escolhendo aluno e dia, editar, apagar) e Exercícios (busca que cria, quantas fichas usam). Saiu do "Mais".
+- **Dados do aluno** (`components/professor/DadosV3.jsx`): resumo de leitura com o alerta clínico privado no topo e gavetas com escolhas prontas; pedido de exclusão (LGPD) só quando o aluno pede. Substitui o FichaEditor.
+- Cache v56.
