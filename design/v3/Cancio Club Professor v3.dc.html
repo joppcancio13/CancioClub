@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght,wdth@100..900,62.5..125&display=swap">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:#171B22;color:#F2F5FA;font-family:'Archivo',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font-family:inherit;color:inherit}
+button:focus-visible,input:focus-visible{outline:2px solid #C6D2E4;outline-offset:2px}
+input::placeholder{color:#7D8698}
+*::-webkit-scrollbar{display:none}
+a{color:#C6D2E4}a:hover{color:#F2F5FA}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 16px">
+<div data-screen-label="Phone" style="position:relative;width:390px;height:844px;flex:none;border-radius:48px;overflow:hidden;background:#05060A;box-shadow:0 0 0 1px #2E333D, 0 30px 80px rgba(0,0,0,.6)">
+
+<div style="position:absolute;top:0;left:0;right:0;height:47px;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 34px;z-index:60;font-size:15px;font-weight:600;background:#05060A"><span>16:30</span><div style="display:flex;gap:6px;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph ph-wifi-high"></i><i class="ph-fill ph-battery-full"></i></div></div>
+
+<sc-if value="{{ isAlunos }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Prof · Alunos" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:20px 20px 120px">
+<span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">SÁBADO · 16:30</span>
+<div style="margin-top:6px;font-size:30px;font-weight:900;font-stretch:125%;line-height:1">ALUNOS</div>
+<div style="margin:18px -20px 0;padding:0 20px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none">
+<sc-for list="{{ live }}" as="l" hint-placeholder-count="2">
+<button onClick="{{ l.onClick }}" style="flex:none;display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:999px;border:none;background:#0E1015;text-align:left;cursor:pointer"><span style="position:relative;width:32px;height:32px"><svg width="32" height="32" viewBox="0 0 32 32" style="position:absolute;inset:0"><circle cx="16" cy="16" r="14" fill="none" stroke="#1E222A" stroke-width="2.5"></circle><circle cx="16" cy="16" r="14" fill="none" stroke="#F2F5FA" stroke-width="2.5" stroke-dasharray="88" stroke-dashoffset="{{ l.off }}" transform="rotate(-90 16 16)" stroke-linecap="round"></circle></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ l.ini }}</span></span><span style="display:flex;flex-direction:column;line-height:1.2"><span style="font-size:13px;font-weight:700">{{ l.name }}</span><span style="font-size:11px;color:#AEB7C6">{{ l.sub }}</span></span></button>
+</sc-for>
+</div>
+<sc-if value="{{ hasAttn }}">
+<div style="margin-top:22px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#E8794B">{{ attnTitle }}</div>
+<div style="margin-top:8px;display:flex;flex-direction:column;gap:2px;border-radius:16px;overflow:hidden">
+<sc-for list="{{ attn }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0E1015"><button onClick="{{ a.open }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:none;border:none;padding:0;text-align:left;cursor:pointer"><span style="width:36px;height:36px;flex:none;border-radius:50%;background:#171B22;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">{{ a.ini }}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600">{{ a.name }}</span><span style="font-size:13px;color:{{ a.color }}">{{ a.text }}</span></span></button><button onClick="{{ a.act }}" style="background:none;border:none;padding:0 2px;min-height:44px;font-size:13px;font-weight:700;cursor:pointer">{{ a.action }}</button></div>
+</sc-for>
+</div>
+</sc-if>
+<div style="margin-top:22px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">TREINAM HOJE · 4</span><span style="font-size:13px;color:#7D8698">semana</span></div>
+<div style="margin-top:4px;display:flex;flex-direction:column">
+<sc-for list="{{ today }}" as="t" hint-placeholder-count="4">
+<button onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:12px;min-height:46px;padding:0;border:none;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px;text-align:left;cursor:pointer"><span style="flex:1;font-size:15px;color:{{ t.color }}">{{ t.name }} <span style="color:#7D8698;font-size:13px">· {{ t.plan }}</span></span><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#C6D2E4">{{ t.tag }}</span><i class="{{ t.icon }}" style="color:#C6D2E4"></i><span style="width:40px;text-align:right;font-size:13px;font-weight:700">{{ t.week }}</span></button>
+</sc-for>
+</div>
+<div style="margin-top:22px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">OUTROS · 2</div>
+<div style="margin-top:4px;display:flex;flex-direction:column">
+<sc-for list="{{ others }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:12px;min-height:46px;padding:0;border:none;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px;text-align:left;cursor:pointer"><span style="flex:1;font-size:15px">{{ t.name }} <span style="color:#7D8698;font-size:13px">· {{ t.plan }}</span></span><span style="width:40px;text-align:right;font-size:13px;font-weight:700">{{ t.week }}</span></button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVivo }}">
+<div data-screen-label="Prof · Ao vivo" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:12px 20px 40px">
+<div style="display:flex;align-items:center;gap:8px"><button onClick="{{ back }}" aria-label="Voltar" style="width:44px;height:44px;margin-left:-12px;border:none;background:none;font-size:20px;color:#AEB7C6;cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="flex:1;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#C6D2E4;display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#F2F5FA"></span>AO VIVO · {{ vivoMin }} MIN</span></div>
+<div style="margin-top:6px;font-size:32px;font-weight:900;font-stretch:125%;line-height:1">{{ stuUpper }}</div>
+<span style="display:block;margin-top:8px;font-size:13px;color:#AEB7C6">Superiores · {{ vivoDone }} de {{ vivoTotal }} séries</span>
+<div style="margin-top:12px;height:4px;border-radius:2px;background:#171B22;overflow:hidden"><div style="width:{{ vivoPct }};height:100%;background:linear-gradient(90deg,#6E7889,#AEB9CB 55%,#FFFFFF)"></div></div>
+<div style="margin-top:18px;padding:12px 14px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">ÚLTIMA SÉRIE · HÁ 1 MIN</span><span style="font-size:15px">{{ vivoLast }}</span></div>
+<div style="margin-top:14px;display:flex;flex-direction:column">
+<sc-for list="{{ vivoEx }}" as="e" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span style="width:22px;font-size:13px;font-weight:700;color:#7D8698">{{ e.idx }}<i class="{{ e.icon }}" style="color:#C6D2E4"></i></span><span style="flex:1;font-size:16px;font-weight:700;font-stretch:110%;color:{{ e.color }}">{{ e.name }}</span><div style="display:flex;gap:3px"><sc-for list="{{ e.pills }}" as="p" hint-placeholder-count="4"><span style="width:12px;height:12px;border-radius:3px;background:{{ p.bg }};box-shadow:{{ p.shadow }}"></span></sc-for></div></div>
+</sc-for>
+</div>
+<div style="margin-top:16px;display:flex;gap:12px;font-size:11px;color:#7D8698"><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#3A404C"></span>Aquecimento</span><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#7D8698"></span>Reconhecimento</span><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span>Válida</span></div>
+<div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><button onClick="{{ openThreadStu }}" style="height:52px;border-radius:16px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:15px;font-weight:700;cursor:pointer">Mandar recado</button><button onClick="{{ openFicha }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-size:15px;font-weight:800;cursor:pointer">Ver ficha</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isFicha }}">
+<div data-screen-label="Prof · Ficha" ref="{{ fichaRef }}" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:12px 20px 60px">
+<div style="display:flex;align-items:center;gap:8px"><button onClick="{{ back }}" aria-label="Voltar" style="width:44px;height:44px;margin-left:-12px;border:none;background:none;font-size:20px;color:#AEB7C6;cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="flex:1;font-size:24px;font-weight:900;font-stretch:125%">{{ stuUpper }}</span><button onClick="{{ openMenu }}" aria-label="Mais opções" style="width:44px;height:44px;margin-right:-10px;border:none;background:none;font-size:24px;color:#AEB7C6;cursor:pointer"><i class="ph ph-dots-three"></i></button></div>
+<div style="margin-top:10px;padding:14px;border-radius:16px;background:#0E1015;display:flex;align-items:center;gap:12px"><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">AULA HOJE?</span><span style="font-size:15px">Sábado · Superiores · 21 séries</span></div><button onClick="{{ startAula }}" style="height:44px;padding:0 16px;border-radius:10px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:13px;cursor:pointer">Modo aula</button></div>
+<div style="position:sticky;top:-12px;z-index:5;margin:14px -20px 0;padding:10px 20px;background:#05060A;box-shadow:inset 0 -1px 0 #1E222A;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+<sc-for list="{{ secChips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.onClick }}" style="flex:none;min-height:34px;padding:0 12px;border-radius:999px;border:none;background:{{ c.bg }};color:{{ c.color }};box-shadow:{{ c.shadow }};font-size:13px;font-weight:{{ c.weight }};cursor:pointer">{{ c.label }}</button></sc-for>
+</div>
+<div id="sec-semana" style="padding-top:16px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">SEMANA</div>
+<div style="margin-top:6px;display:flex;flex-direction:column">
+<sc-for list="{{ week }}" as="w" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span style="width:36px;font-size:13px;font-weight:{{ w.weight }};color:{{ w.dColor }}">{{ w.d }}</span><span style="flex:1;font-size:15px;font-weight:{{ w.weight }}">{{ w.plan }}</span><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#C6D2E4">{{ w.tag }}</span><i class="{{ w.icon }}" style="color:#C6D2E4"></i></div></sc-for>
+</div>
+<div id="sec-rend" style="padding-top:26px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">RENDIMENTO · 8 SEMANAS</span><button onClick="{{ openRend }}" style="background:none;border:none;padding:0;min-height:36px;font-size:13px;color:#C6D2E4;cursor:pointer">Abrir ›</button></div>
+<div style="margin-top:6px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ rendStats }}" as="s" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;font-weight:900;font-stretch:110%">{{ s.v }}</span><span style="font-size:11px;color:#7D8698">{{ s.l }}</span></div></sc-for>
+</div>
+<div id="sec-vol" style="padding-top:26px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">VOLUME POR MÚSCULO · SÉRIES NA SEMANA</div>
+<div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ vol }}" as="v" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:10px"><span style="width:64px;font-size:13px">{{ v.l }}</span><span style="flex:1;height:8px;border-radius:4px;background:#171B22;overflow:hidden"><span style="display:block;width:{{ v.w }};height:100%;background:#C6D2E4"></span></span><span style="width:24px;text-align:right;font-size:13px;font-weight:700">{{ v.n }}</span></div></sc-for>
+</div>
+<div id="sec-ficha" style="padding-top:26px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">FICHA DE SÁBADO · SUPERIORES</span><button onClick="{{ editFicha }}" style="background:none;border:none;padding:0;min-height:36px;font-size:13px;color:#C6D2E4;cursor:pointer">Editar</button></div>
+<span style="display:block;font-size:13px;color:#AEB7C6">{{ pvSummary }}</span>
+<div style="margin-top:4px;display:flex;flex-direction:column">
+<sc-for list="{{ pvRows }}" as="e" hint-placeholder-count="6">
+<div style="background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px">
+<button onClick="{{ e.toggle }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:{{ e.pad }};border:none;background:none;text-align:left;cursor:pointer"><span style="width:22px;font-size:13px;font-weight:{{ e.weight }};color:{{ e.idxColor }}">{{ e.idx }}</span><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;font-stretch:110%">{{ e.name }}</span><span style="font-size:15px;font-weight:600;font-stretch:75%;color:#AEB7C6;font-variant-numeric:tabular-nums">{{ e.plan }}<sc-if value="{{ e.restr }}"><span style="margin-left:8px;color:#E8794B;font-size:13px;font-weight:700;font-stretch:100%">● {{ e.restr }}</span></sc-if></span></span><span style="font-size:13px;font-weight:{{ e.stWeight }};color:{{ e.stColor }}">{{ e.status }}</span><i class="{{ e.caret }}" style="color:#7D8698"></i></button>
+<sc-if value="{{ e.open }}"><div style="padding:0 0 14px 34px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px"><sc-for list="{{ e.sets }}" as="p" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:{{ p.weight }};color:{{ p.lColor }}">{{ p.n }}</span><span style="font-size:15px;font-weight:700;color:{{ p.color }};font-variant-numeric:tabular-nums">{{ p.v }}</span></div></sc-for></div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRend }}">
+<div data-screen-label="Prof · Rendimento" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:12px 20px 40px">
+<div style="display:flex;align-items:center;gap:8px"><button onClick="{{ back }}" aria-label="Voltar" style="width:44px;height:44px;margin-left:-12px;border:none;background:none;font-size:20px;color:#AEB7C6;cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="flex:1;font-size:20px;font-weight:900;font-stretch:125%">RENDIMENTO</span><span style="font-size:13px;color:#AEB7C6">{{ stuName }}</span></div>
+<div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ rendStats }}" as="s" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:24px;font-weight:900;font-stretch:110%">{{ s.v }}</span><span style="font-size:11px;color:#7D8698">{{ s.l }}</span></div></sc-for>
+</div>
+<div style="margin-top:14px;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;align-items:end;height:80px"><sc-for list="{{ bars }}" as="b" hint-placeholder-count="8"><span style="height:{{ b.h }};border-radius:4px;background:{{ b.bg }}"></span></sc-for></div>
+<div style="margin-top:6px;display:flex;justify-content:space-between;font-size:11px;color:#7D8698"><span>8 sem atrás</span><span>volume semanal</span><span>esta</span></div>
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+<div style="margin-top:24px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">{{ g.title }}</div>
+<div style="margin-top:4px;display:flex;flex-direction:column">
+<sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+<button onClick="{{ r.onClick }}" style="display:flex;align-items:center;gap:12px;padding:12px 0;border:none;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px;text-align:left;cursor:pointer"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;font-stretch:110%;color:{{ r.color }}">{{ r.name }}</span><span style="display:block;font-size:13px;color:#7D8698"><sc-for list="{{ r.subP }}" as="q" hint-placeholder-count="1"><span style="font-size:{{ q.fs }};font-weight:{{ q.fw }};font-stretch:{{ q.st }};font-variant-numeric:tabular-nums">{{ q.t }}</span></sc-for></span></span><svg viewBox="0 0 96 32" width="96" height="32" style="flex:none"><polyline points="{{ r.spark }}" fill="none" stroke="{{ r.stroke }}" stroke-width="2" stroke-linejoin="round"></polyline></svg><span style="width:56px;text-align:right;font-size:15px;font-weight:800;color:{{ r.color }}">{{ r.delta }}</span></button>
+</sc-for>
+</div>
+</sc-for>
+<span style="display:block;margin-top:16px;font-size:13px;color:#7D8698">Toque num exercício para ver o gráfico.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ isFoco }}">
+<div data-screen-label="Prof · Exercício" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:12px 20px 40px">
+<div style="display:flex;align-items:center;gap:8px"><button onClick="{{ back }}" aria-label="Voltar" style="width:44px;height:44px;margin-left:-12px;border:none;background:none;font-size:20px;color:#AEB7C6;cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="flex:1;font-size:20px;font-weight:900;font-stretch:125%">RENDIMENTO</span><span style="font-size:13px;color:#AEB7C6">{{ stuName }}</span></div>
+<div style="margin:12px -20px 0;padding:0 20px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+<sc-for list="{{ focoChips }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.onClick }}" style="flex:none;min-height:36px;padding:0 12px;border-radius:999px;border:none;background:{{ c.bg }};color:{{ c.color }};box-shadow:{{ c.shadow }};font-size:13px;font-weight:{{ c.weight }};cursor:pointer">{{ c.label }}</button></sc-for>
+</div>
+<span style="display:block;margin-top:20px;font-size:15px;color:#AEB7C6">{{ fName }}</span>
+<div style="margin-top:4px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-size:40px;font-weight:900;font-stretch:125%;line-height:1">{{ fNow }}</span><span style="font-size:15px;font-weight:700;color:{{ fDeltaColor }}">{{ fDelta }}</span></div>
+<svg viewBox="0 -14 350 184" width="100%" style="margin-top:4px;display:block;font-family:Archivo">
+<g stroke="#1E222A"><line x1="30" y1="14" x2="346" y2="14"></line><line x1="30" y1="62" x2="346" y2="62"></line><line x1="30" y1="110" x2="346" y2="110"></line></g>
+<g fill="#AEB7C6" font-size="11">{{ fLabels }}</g>
+<g fill="#7D8698" font-size="11" text-anchor="middle"><text x="42" y="160">S1</text><text x="84" y="160">S2</text><text x="125" y="160">S3</text><text x="167" y="160">S4</text><text x="209" y="160">S5</text><text x="251" y="160">S6</text><text x="292" y="160">S7</text><text x="334" y="160">hoje</text></g>
+<polyline points="{{ fPoints }}" fill="none" stroke="{{ fStroke }}" stroke-width="2.5" stroke-linejoin="round"></polyline>
+<circle cx="42" cy="{{ fFirstY }}" r="4" fill="#05060A" stroke="#C6D2E4" stroke-width="2"></circle>
+<circle cx="334" cy="{{ fLastY }}" r="5" fill="#F2F5FA"></circle>
+</svg>
+<div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ fStats }}" as="s" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;color:#7D8698">{{ s.l }}</span><span style="font-size:15px;font-weight:700">{{ s.v }}</span></div></sc-for>
+</div>
+<sc-if value="{{ fStalled }}"><div style="margin-top:18px;padding:12px 14px;border-radius:16px;background:#0E1015;display:flex;align-items:center;gap:12px"><span style="flex:1;font-size:15px;line-height:1.35">Carga parada há 3 semanas.</span><button onClick="{{ editFicha }}" style="min-height:40px;padding:0 14px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;font-weight:700;cursor:pointer">Ajustar ficha</button></div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAula }}">
+<div data-screen-label="Prof · Modo aula" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:16px 20px 230px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#C6D2E4;flex:1">MODO AULA · {{ stuUpper }} · {{ aulaClock }}</span><button onClick="{{ endAula }}" style="background:none;border:none;padding:0;min-height:36px;font-size:13px;font-weight:700;color:#C6D2E4;cursor:pointer">Encerrar</button></div>
+<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><button onClick="{{ prevEx }}" aria-label="Exercício anterior" style="width:36px;height:36px;margin-left:-8px;border:none;background:none;font-size:18px;color:{{ prevColor }};cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="font-size:13px;font-weight:700;color:#7D8698;font-variant-numeric:tabular-nums">{{ aulaPos }}</span><button onClick="{{ nextEx }}" aria-label="Próximo exercício" style="width:36px;height:36px;border:none;background:none;font-size:18px;color:{{ nextColor }};cursor:pointer"><i class="ph ph-caret-right"></i></button><div style="flex:1;display:flex;gap:3px;justify-content:flex-end"><sc-for list="{{ aulaDots }}" as="d" hint-placeholder-count="6"><span style="width:16px;height:4px;border-radius:2px;background:{{ d.bg }}"></span></sc-for></div></div>
+<div style="margin-top:8px;font-size:24px;font-weight:900;font-stretch:125%;line-height:1.05">{{ aName }}</div>
+<span style="display:block;margin-top:6px;font-size:13px;color:#AEB7C6">Alvo {{ aTarget }} · descanso {{ aRest }}<sc-if value="{{ aRestr }}"><span style="margin-left:8px;color:#E8794B;font-weight:700">● {{ aRestr }}</span></sc-if></span>
+<div style="margin-top:16px;padding:12px 14px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">SESSÃO PASSADA · SÁB 7 NOV</span>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+<sc-for list="{{ aPast }}" as="p" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:{{ p.weight }};color:{{ p.lColor }}">{{ p.n }}</span><span style="font-size:15px;font-weight:700;color:{{ p.color }};font-variant-numeric:tabular-nums">{{ p.v }}</span></div></sc-for>
+</div>
+<sc-if value="{{ aNote }}"><span style="font-size:13px;color:#AEB7C6;line-height:1.4">Nota: "{{ aNote }}"</span></sc-if>
+</div>
+<div style="margin-top:16px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">HOJE</div>
+<div style="margin-top:4px;display:flex;flex-direction:column">
+<sc-for list="{{ aSets }}" as="s" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px;padding:10px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px;font-size:15px;color:{{ s.color }}"><span style="width:22px;font-size:{{ s.nSize }};font-weight:800">{{ s.n }}</span><span style="flex:1;font-weight:{{ s.weight }};font-variant-numeric:tabular-nums">{{ s.text }}</span><span style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#C6D2E4">{{ s.tag }}</span><i class="{{ s.icon }}" style="color:#C6D2E4"></i></div></sc-for>
+</div>
+<div style="margin-top:14px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">TÉCNICA · VAI PRO HISTÓRICO DELA</div>
+<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ aTech }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="min-height:40px;padding:0 12px;border-radius:999px;border:none;background:{{ t.bg }};color:{{ t.color }};box-shadow:{{ t.shadow }};font-size:13px;font-weight:{{ t.weight }};cursor:pointer">{{ t.label }}</button></sc-for>
+<sc-if value="{{ techClosed }}"><button onClick="{{ openTech }}" style="min-height:40px;padding:0 12px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;cursor:pointer">+ Escrever</button></sc-if>
+</div>
+<sc-if value="{{ techOpen }}"><input value="{{ techDraft }}" onChange="{{ onTechDraft }}" onKeyDown="{{ onTechKey }}" placeholder="Observação e Enter" style="margin-top:8px;width:100%;height:48px;padding:0 14px;border-radius:10px;border:none;outline:none;background:#0E1015;font-size:15px"></input></sc-if>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:20;padding:14px 12px 30px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:10px">
+<sc-if value="{{ barReg }}">
+<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;padding:0 4px"><span style="color:#C6D2E4">{{ barLabel }}</span><span style="color:#7D8698">{{ barCount }}</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+<sc-for list="{{ steppers }}" as="s" hint-placeholder-count="2"><div style="display:flex;align-items:center;justify-content:space-between;height:56px;border-radius:10px;background:#171B22"><button onClick="{{ s.minus }}" aria-label="Diminuir" style="width:48px;height:56px;border:none;background:none;font-size:22px;color:#AEB7C6;cursor:pointer">−</button><span style="display:flex;flex-direction:column;align-items:center"><span style="font-size:24px;font-weight:900;font-stretch:110%;line-height:1;font-variant-numeric:tabular-nums">{{ s.v }}</span><span style="font-size:11px;color:#7D8698">{{ s.u }}</span></span><button onClick="{{ s.plus }}" aria-label="Aumentar" style="width:48px;height:56px;border:none;background:none;font-size:22px;color:#AEB7C6;cursor:pointer">+</button></div></sc-for>
+</div>
+<button onClick="{{ doneSet }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Feito</button>
+</sc-if>
+<sc-if value="{{ barNext }}">
+<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;padding:0 4px"><span style="color:#C6D2E4">EXERCÍCIO FEITO</span><span style="color:#7D8698">{{ nextName }}</span></div>
+<button onClick="{{ nextEx }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">Próximo exercício<i class="ph-bold ph-arrow-right"></i></button>
+</sc-if>
+<sc-if value="{{ barEnd }}">
+<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;padding:0 4px"><span style="color:#C6D2E4">AULA COMPLETA</span><span style="color:#7D8698">{{ aulaClock }}</span></div>
+<button onClick="{{ endAula }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Encerrar e salvar</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRecados }}">
+<div data-screen-label="Prof · Recados" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:20px 20px 120px">
+<span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">{{ unreadText }}</span>
+<div style="margin-top:6px;font-size:30px;font-weight:900;font-stretch:125%;line-height:1">RECADOS</div>
+<div style="margin-top:14px;display:flex;flex-direction:column">
+<sc-for list="{{ inbox }}" as="i" hint-placeholder-count="4">
+<button onClick="{{ i.onClick }}" style="display:flex;align-items:center;gap:12px;padding:14px 0;border:none;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px;text-align:left;cursor:pointer"><span style="width:40px;height:40px;flex:none;border-radius:50%;background:#171B22;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">{{ i.ini }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:15px;font-weight:{{ i.weight }}">{{ i.name }}</span><span style="font-size:11px;color:#7D8698">{{ i.time }}</span></span><span style="font-size:13px;color:{{ i.color }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.preview }}</span></span><sc-if value="{{ i.unread }}"><span style="width:8px;height:8px;flex:none;border-radius:50%;background:#F2F5FA"></span></sc-if></button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isThread }}">
+<div data-screen-label="Prof · Conversa" style="position:absolute;top:47px;left:0;right:0;bottom:0;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:8px;padding:8px 20px 8px 8px;box-shadow:inset 0 -1px 0 #1E222A"><button onClick="{{ back }}" aria-label="Voltar" style="width:44px;height:44px;border:none;background:none;font-size:20px;color:#AEB7C6;cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="flex:1;font-size:18px;font-weight:900;font-stretch:125%">{{ stuUpper }}</span><button onClick="{{ openFicha }}" style="background:none;border:none;min-height:44px;font-size:13px;font-weight:700;color:#C6D2E4;cursor:pointer">Ver ficha</button></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:16px 20px;display:flex;flex-direction:column;gap:10px;justify-content:flex-end">
+<sc-if value="{{ threadEmpty }}"><span style="text-align:center;font-size:13px;color:#7D8698">Nenhum recado ainda.</span></sc-if>
+<sc-for list="{{ thread }}" as="m" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;align-items:{{ m.align }};gap:4px">
+<div style="max-width:84%;border-radius:{{ m.radius }};background:{{ m.bg }};color:{{ m.color }};overflow:hidden">
+<sc-if value="{{ m.link }}"><div style="padding:8px 14px;background:#DCE4F0;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#05060A">{{ m.link }}</div></sc-if>
+<div style="padding:11px 14px;font-size:15px;line-height:1.4">{{ m.text }}</div>
+</div>
+<span style="font-size:11px;color:#7D8698">{{ m.time }}</span>
+</div>
+</sc-for>
+</div>
+<div style="padding:8px 16px 30px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ replies }}" as="q" hint-placeholder-count="3"><button onClick="{{ q.onClick }}" style="flex:none;min-height:40px;padding:0 12px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;cursor:pointer">{{ q.label }}</button></sc-for></div>
+<div style="display:flex;gap:8px"><input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" placeholder="Responder" style="flex:1;height:48px;padding:0 14px;border-radius:10px;border:none;outline:none;background:#0E1015;font-size:15px"></input><button onClick="{{ send }}" aria-label="Enviar" style="width:48px;height:48px;border-radius:10px;border:none;background:{{ sendBg }};color:{{ sendColor }};font-size:18px;cursor:pointer"><i class="ph-bold ph-arrow-up"></i></button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBiblio }}">
+<div data-screen-label="Prof · Biblioteca" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:20px 20px 120px">
+<div style="font-size:30px;font-weight:900;font-stretch:125%;line-height:1">BIBLIOTECA</div>
+<div style="margin-top:14px;display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:#0E1015"><sc-for list="{{ bibTabs }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="min-height:36px;padding:0 16px;border-radius:999px;border:none;background:{{ t.bg }};color:{{ t.color }};font-size:13px;font-weight:700;cursor:pointer">{{ t.label }}</button></sc-for></div>
+<sc-if value="{{ bibModelos }}">
+<div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ tpls }}" as="t" hint-placeholder-count="4">
+<div style="border-radius:16px;background:{{ t.bg }};box-shadow:{{ t.shadow }};overflow:hidden">
+<button onClick="{{ t.toggle }}" style="width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 16px;border:none;background:none;text-align:left;cursor:pointer"><span style="font-size:{{ t.size }};font-weight:{{ t.fw }};font-stretch:{{ t.stretch }}">{{ t.title }}</span><span style="font-size:13px;color:#7D8698">{{ t.sub }}</span></button>
+<sc-if value="{{ t.open }}">
+<div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;flex-direction:column"><sc-for list="{{ t.rows }}" as="r" hint-placeholder-count="6"><div style="display:flex;gap:10px;padding:7px 0;box-shadow:inset 0 1px 0 #171B22;font-size:15px"><span style="width:20px;font-size:11px;color:#7D8698;padding-top:3px">{{ r.idx }}</span><span style="flex:1;font-size:16px;font-weight:700;font-stretch:110%">{{ r.name }}</span><span style="font-size:15px;font-weight:600;font-stretch:75%;color:#AEB7C6;font-variant-numeric:tabular-nums">{{ r.plan }}</span></div></sc-for></div>
+<div style="display:flex;gap:8px"><button onClick="{{ t.apply }}" style="flex:2;height:46px;border-radius:10px;border:none;background:#F2F5FA;color:#05060A;font-size:13px;font-weight:800;cursor:pointer">Aplicar em um aluno</button><button onClick="{{ t.edit }}" style="flex:1;height:46px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2A2E37;font-size:13px;color:#AEB7C6;cursor:pointer">Editar</button></div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<button onClick="{{ newTpl }}" style="margin-top:12px;width:100%;height:48px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2A2E37;font-size:13px;color:#C6D2E4;cursor:pointer">+ Novo modelo</button>
+</sc-if>
+<sc-if value="{{ bibExercicios }}">
+<input value="{{ bibQ }}" onChange="{{ onBibQ }}" onKeyDown="{{ onBibKey }}" placeholder="Buscar ou criar exercício" style="margin-top:16px;width:100%;height:48px;padding:0 14px;border-radius:10px;border:none;outline:none;background:#0E1015;box-shadow:inset 0 0 0 1.5px #C6D2E4;font-size:15px"></input>
+<div style="margin-top:6px;display:flex;flex-direction:column">
+<sc-for list="{{ libRows }}" as="r" hint-placeholder-count="8"><div style="display:flex;align-items:center;gap:10px;padding:12px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;font-stretch:110%;color:{{ r.color }}">{{ r.name }}</span><span style="display:block;font-size:13px;color:#7D8698"><sc-for list="{{ r.subP }}" as="q" hint-placeholder-count="1"><span style="font-size:{{ q.fs }};font-weight:{{ q.fw }};font-stretch:{{ q.st }};font-variant-numeric:tabular-nums">{{ q.t }}</span></sc-for></span></span><i class="ph ph-caret-right" style="color:#7D8698"></i></div></sc-for>
+</div>
+<sc-if value="{{ bibCreate }}"><button onClick="{{ createLib }}" style="margin-top:12px;width:100%;min-height:48px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2A2E37;font-size:13px;color:#C6D2E4;cursor:pointer">{{ bibCreate }}</button></sc-if>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDados }}">
+<div data-screen-label="Prof · Dados do aluno" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:12px 20px 40px">
+<div style="display:flex;align-items:center;gap:8px"><button onClick="{{ back }}" aria-label="Voltar" style="width:44px;height:44px;margin-left:-12px;border:none;background:none;font-size:20px;color:#AEB7C6;cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="flex:1;font-size:24px;font-weight:900;font-stretch:125%">{{ stuUpper }}</span></div>
+<div style="margin-top:10px;padding:12px 14px;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(232,121,75,.35);display:flex;gap:10px"><i class="ph ph-lock-simple" style="color:#E8794B;margin-top:2px"></i><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#E8794B">ALERTA · SÓ VOCÊ VÊ</span><span style="font-size:15px;line-height:1.4">Dor no ombro direito em elevação acima de 90°.</span></span></div>
+<div style="margin-top:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;border-radius:16px 16px 0 0;overflow:hidden">
+<sc-for list="{{ dCells }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.onClick }}" style="background:#0E1015;padding:12px 14px;border:none;display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer"><span style="font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;color:#7D8698">{{ c.l }}</span><span style="font-size:15px;font-weight:700">{{ c.v }}</span></button></sc-for>
+</div>
+<div style="margin-top:2px;padding:12px 14px;border-radius:0 0 16px 16px;background:#0E1015;display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;color:#7D8698;display:flex;align-items:center;gap:6px">OBSERVAÇÕES<i class="ph ph-eye" style="font-size:13px"></i>a {{ stuFirst }} vê</span><span style="font-size:15px;line-height:1.4">Prefere treinar à tarde. Gosta de saber a carga antes.</span></div>
+<div style="margin-top:14px;display:flex;gap:8px"><button onClick="{{ openFreq }}" style="flex:1;height:44px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer"><i class="ph ph-pencil-simple"></i>Editar</button><button onClick="{{ pdf }}" style="flex:1;height:44px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;font-weight:600;color:#C6D2E4;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer"><i class="ph ph-file-arrow-down"></i>PDF</button></div>
+</div>
+<sc-if value="{{ dSheetOpen }}">
+<div onClick="{{ closeDSheet }}" style="position:absolute;inset:0;z-index:40;background:rgba(5,6,10,.55)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:41;padding:18px 16px 30px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;color:#C6D2E4">{{ dSheetTitle }}</span><button onClick="{{ closeDSheet }}" style="background:none;border:none;font-size:15px;color:#7D8698;min-height:36px;cursor:pointer">Fechar</button></div>
+<sc-for list="{{ dSheetRows }}" as="row" hint-placeholder-count="2"><div style="display:flex;gap:6px"><sc-for list="{{ row.opts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.onClick }}" style="flex:1;height:44px;border-radius:10px;border:none;background:{{ o.bg }};color:{{ o.color }};box-shadow:{{ o.shadow }};font-size:{{ o.size }};font-weight:{{ o.weight }};cursor:pointer">{{ o.label }}</button></sc-for></div></sc-for>
+<button onClick="{{ saveDSheet }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Salvar</button>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ isEditar }}">
+<div data-screen-label="Prof · Editar ficha" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:12px 20px 110px">
+<div style="display:flex;align-items:center;gap:8px"><button onClick="{{ back }}" aria-label="Voltar" style="width:44px;height:44px;margin-left:-12px;border:none;background:none;font-size:20px;color:#AEB7C6;cursor:pointer"><i class="ph ph-caret-left"></i></button><span style="flex:1;font-size:20px;font-weight:900;font-stretch:125%">FICHA · SÁBADO</span><span style="font-size:13px;color:#7D8698">{{ stuName }}</span></div>
+<div style="margin-top:8px;padding:12px 14px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">SÉRIES NA SEMANA</span><span style="font-size:11px;color:#7D8698">todas as fichas</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px">
+<sc-for list="{{ volRows }}" as="v" hint-placeholder-count="11"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><div style="display:flex;align-items:baseline;gap:6px;font-size:13px"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ v.lColor }}">{{ v.l }}</span><span style="font-weight:700;font-variant-numeric:tabular-nums">{{ v.v }}</span><span style="min-width:28px;text-align:right;font-size:11px;font-weight:700;color:{{ v.dColor }};font-variant-numeric:tabular-nums">{{ v.d }}</span></div><span style="height:4px;border-radius:2px;background:#171B22;overflow:hidden"><span style="display:block;width:{{ v.w }};height:100%;border-radius:2px;background:{{ v.bar }};transition:width .3s"></span></span></div></sc-for>
+</div>
+</div>
+<div style="margin-top:6px;display:flex;flex-direction:column">
+<sc-for list="{{ edRows }}" as="e" hint-placeholder-count="6"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span style="width:22px;font-size:13px;color:#7D8698">{{ e.idx }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;font-stretch:110%">{{ e.name }}</span><span style="font-size:15px;font-weight:600;font-stretch:75%;color:#AEB7C6;font-variant-numeric:tabular-nums">{{ e.plan }}</span></span><button onClick="{{ e.swap }}" style="flex:none;min-height:40px;padding:0 12px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;cursor:pointer">Trocar</button></div></sc-for>
+</div>
+<button onClick="{{ openAdd }}" style="margin-top:14px;width:100%;height:48px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2A2E37;font-size:13px;color:#C6D2E4;cursor:pointer">+ Adicionar exercício</button>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:20;padding:12px 16px 30px;background:#05060A;box-shadow:inset 0 1px 0 #1E222A"><button onClick="{{ saveFicha }}" style="width:100%;height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Concluir</button></div>
+<sc-if value="{{ edSheetOpen }}">
+<div onClick="{{ closeEdSheet }}" style="position:absolute;inset:0;z-index:40;background:rgba(5,6,10,.6)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;top:{{ edSheetTop }};z-index:41;padding:18px 16px 26px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:12px;overflow-y:auto;scrollbar-width:none">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:10px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;color:#C6D2E4">{{ edSheetTitle }}</span><button onClick="{{ closeEdSheet }}" style="background:none;border:none;font-size:15px;color:#7D8698;min-height:36px;cursor:pointer">Fechar</button></div>
+<sc-if value="{{ isAddSheet }}">
+<input value="{{ addQ }}" onChange="{{ onAddQ }}" placeholder="Buscar no catálogo" style="height:44px;padding:0 14px;border-radius:10px;border:none;outline:none;background:#05060A;font-size:15px"></input>
+<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:none"><sc-for list="{{ addGroups }}" as="g" hint-placeholder-count="5"><button onClick="{{ g.onClick }}" style="flex:none;min-height:36px;padding:0 12px;border-radius:999px;border:none;background:{{ g.bg }};color:{{ g.color }};box-shadow:{{ g.shadow }};font-size:13px;font-weight:{{ g.weight }};cursor:pointer">{{ g.label }}</button></sc-for></div>
+<sc-if value="{{ hasAddLib }}"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">NA SUA BIBLIOTECA</span>
+<div style="display:flex;flex-direction:column;margin-top:-6px"><sc-for list="{{ addLib }}" as="r" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;box-shadow:inset 0 -1px 0 #171B22"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;font-stretch:110%">{{ r.name }}</span><span style="display:block;font-size:13px;color:#AEB7C6"><sc-for list="{{ r.subP }}" as="q" hint-placeholder-count="1"><span style="font-size:{{ q.fs }};font-weight:{{ q.fw }};font-stretch:{{ q.st }};font-variant-numeric:tabular-nums">{{ q.t }}</span></sc-for></span></span><button onClick="{{ r.add }}" style="flex:none;background:none;border:none;min-height:40px;font-size:13px;font-weight:700;cursor:pointer">+ Pôr</button></div></sc-for></div></sc-if>
+<sc-if value="{{ hasAddCat }}"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">DO CATÁLOGO</span>
+<div style="display:flex;flex-direction:column;margin-top:-6px"><sc-for list="{{ addCat }}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;box-shadow:inset 0 -1px 0 #171B22"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;font-stretch:110%">{{ r.name }}</span><span style="display:block;font-size:13px;color:#7D8698"><sc-for list="{{ r.subP }}" as="q" hint-placeholder-count="1"><span style="font-size:{{ q.fs }};font-weight:{{ q.fw }};font-stretch:{{ q.st }};font-variant-numeric:tabular-nums">{{ q.t }}</span></sc-for></span></span><button onClick="{{ r.add }}" style="flex:none;background:none;border:none;min-height:40px;font-size:13px;font-weight:700;cursor:pointer">+ Pôr</button></div></sc-for></div></sc-if>
+<sc-if value="{{ addEmpty }}"><span style="font-size:13px;color:#7D8698">Nada no catálogo com esse nome.</span></sc-if>
+</sc-if>
+<sc-if value="{{ isSwapSheet }}">
+<span style="font-size:13px;line-height:1.45;color:#AEB7C6">{{ swapIntro }}</span>
+<div style="display:flex;flex-direction:column;gap:2px;border-radius:16px;overflow:hidden">
+<sc-for list="{{ swapOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="padding:12px 14px;border:none;background:#171B22;display:flex;flex-direction:column;gap:6px;text-align:left;cursor:pointer"><span style="width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:700">{{ o.name }}</span><span style="font-size:13px;font-weight:700">Trocar</span></span><span style="font-size:13px;color:#C6D2E4">{{ o.diff }}</span></button></sc-for>
+</div>
+<span style="font-size:13px;line-height:1.45;color:#7D8698">Séries, reps e descanso ficam. O histórico do exercício antigo continua guardado.</span>
+<button onClick="{{ removeEx }}" style="height:44px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px rgba(232,121,75,.4);color:#E8794B;font-size:13px;cursor:pointer">Tirar da ficha</button>
+</sc-if>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ showTabs }}">
+<div style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;display:flex;gap:4px;padding:5px;border-radius:999px;background:#0E1015;box-shadow:inset 0 0 0 1px #1E222A, 0 8px 24px rgba(0,0,0,.5)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" aria-label="{{ t.aria }}" style="position:relative;height:48px;min-width:52px;padding:0 {{ t.padX }};border-radius:999px;border:none;background:{{ t.bg }};color:{{ t.color }};display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;cursor:pointer;transition:background .2s"><i class="{{ t.icon }}" style="font-size:21px"></i>{{ t.label }}<sc-if value="{{ t.dot }}"><span style="position:absolute;top:10px;right:12px;width:7px;height:7px;border-radius:50%;background:#F2F5FA"></span></sc-if></button></sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMenu }}">
+<div onClick="{{ closeMenu }}" style="position:absolute;inset:0;z-index:40;background:rgba(5,6,10,.6)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:41;padding:10px 16px 30px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column">
+<sc-for list="{{ menu }}" as="m" hint-placeholder-count="4"><button onClick="{{ m.onClick }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 4px;border:none;background:none;box-shadow:inset 0 -1px 0 #171B22;text-align:left;font-size:15px;color:{{ m.color }};cursor:pointer"><i class="{{ m.icon }}" style="font-size:20px;color:#AEB7C6"></i>{{ m.label }}</button></sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}"><div style="position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;padding:10px 16px;border-radius:999px;background:#F2F5FA;color:#05060A;font-size:13px;font-weight:700;white-space:nowrap">{{ toast }}</div></sc-if>
+<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#C6D2E4;z-index:80"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;telaInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;alunos&quot;,&quot;ficha&quot;,&quot;editar&quot;,&quot;rendimento&quot;,&quot;aula&quot;,&quot;recados&quot;,&quot;biblioteca&quot;,&quot;dados&quot;],&quot;default&quot;:&quot;alunos&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const PG = 'linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)';
+const OFF = 'inset 0 0 0 1px #2A2E37';
+const kg = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
+const mmss = (s) => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const AULA = [
+  { name: 'Supino reto com barra', kinds: ['warmup', 'recon', 'working', 'working'], last: [[20, 12], [35, 5], [40, 9], [40, 8]], rest: '2:00', target: '2×8–10', tech: ['Escápulas encaixadas', 'Pés firmes', 'Controlar a descida'] },
+  { name: 'Remada curvada', kinds: ['working', 'working', 'working', 'working'], last: [[35, 10], [35, 10], [35, 10], [35, 7]], rest: '1:30', target: '4×10', note: 'lombar cansou na 4ª', tech: ['Lombar neutra', 'Controlar a descida'] },
+  { name: 'Desenvolvimento com halteres', kinds: ['working', 'working', 'working'], last: [[14, 10], [14, 10], [14, 10]], rest: '1:15', target: '3×10', restr: 'ombro', tech: ['Cotovelos à frente', 'Sem arquear'] },
+  { name: 'Puxada frontal', kinds: ['warmup', 'working', 'working', 'working'], last: [[22.5, 12], [45, 12], [45, 12], [45, 12]], rest: '1:15', target: '3×12', tech: ['Peito alto', 'Sem balanço'] },
+  { name: 'Rosca direta', kinds: ['working', 'working', 'working'], last: [[12.5, 12], [12.5, 12], null], rest: '1:00', target: '3×12', tech: ['Cotovelo parado'] },
+  { name: 'Tríceps na corda', kinds: ['working', 'working', 'working'], last: [[20, 12], [20, 12], [20, 11]], rest: '1:00', target: '3×12', tech: ['Abrir no final'] },
+];
+const REND = [
+  { title: 'FICHA DE SÁBADO · SUPERIORES', rows: [
+    { k: 'sup', name: 'Supino reto com barra', chip: 'Supino · Sáb', v: [35, 35, 37.5, 37.5, 40, 40, 42.5, 45], best: '45 × 8', vol: '1.420 kg' },
+    { k: 'rem1', name: 'Remada curvada', chip: 'Remada · Sáb', v: [30, 30, 32.5, 32.5, 35, 35, 35, 37.5], best: '37,5 × 10', vol: '1.500 kg' },
+    { k: 'dev', name: 'Desenvolvimento com halteres', chip: 'Desenvolvimento', v: [12, 12, 12, 14, 14, 14, 14, 14], best: '14 × 10', vol: '840 kg' },
+    { k: 'pux', name: 'Puxada frontal', chip: 'Puxada', v: [40, 40, 42.5, 42.5, 45, 45, 47.5, 52.5], best: '52,5 × 10', vol: '1.575 kg' } ] },
+  { title: 'FICHA DE SEGUNDA · INFERIORES', rows: [
+    { k: 'aga', name: 'Agachamento livre', chip: 'Agachamento', v: [50, 55, 60, 60, 65, 65, 70, 70], best: '70 × 8', vol: '2.240 kg' },
+    { k: 'rem2', name: 'Remada curvada', chip: 'Remada · Seg', v: [30, 30, 30, 30, 32.5, 32.5, 32.5, 32.5], best: '32,5 × 12', vol: '1.170 kg' },
+    { k: 'leg', name: 'Leg press 45°', chip: 'Leg press', v: [100, 110, 110, 120, 120, 130, 130, 140], best: '140 × 10', vol: '5.600 kg' } ] },
+];
+const ALL = REND.flatMap((g) => g.rows);
+const LIB = [['Agachamento livre', 'Pernas', true, 4], ['Desenvolvimento com halteres', 'Ombros', false, 3], ['Leg press 45°', 'Pernas', true, 4], ['Puxada frontal', 'Costas', false, 5], ['Remada curvada', 'Costas', true, 7], ['Remada unilateral', 'Costas', false, 0], ['Rosca direta', 'Braços', false, 6], ['Supino reto com barra', 'Peito', true, 5], ['Tríceps na corda', 'Braços', false, 6]];
+const CAT = {
+  peit_supino_reto: { n: 'Supino Reto', c: 'Empurrar Horizontal', g: 'Peitoral', a: { peitoral_esternocostal: 0.9, peitoral_clavicular: 0.6, deltoide_anterior: 0.6, triceps_lateral: 0.6, triceps_medial: 0.6 } },
+  peit_supino_inclinado: { n: 'Supino Inclinado', c: 'Empurrar Inclinado', g: 'Peitoral', a: { peitoral_clavicular: 1.0, peitoral_esternocostal: 0.5, deltoide_anterior: 0.8, triceps_lateral: 0.5, triceps_medial: 0.5 } },
+  peit_crucifixo: { n: 'Crucifixo', c: 'Isolador Peitoral', g: 'Peitoral', a: { peitoral_esternocostal: 0.9, peitoral_clavicular: 0.6, deltoide_anterior: 0.4 } },
+  peit_cross_baixa: { n: 'Cross Over Polia Baixa', c: 'Isolador Peitoral', g: 'Peitoral', a: { peitoral_clavicular: 1.0, peitoral_esternocostal: 0.4, deltoide_anterior: 0.7 } },
+  peit_flexao_reta: { n: 'Flexão Reta', c: 'Empurrar Horizontal', g: 'Peitoral', a: { peitoral_esternocostal: 0.8, peitoral_clavicular: 0.6, deltoide_anterior: 0.6, triceps_lateral: 0.5, triceps_medial: 0.5 } },
+  cost_remada_aberta: { n: 'Remada Aberta', c: 'Puxar Horizontal', g: 'Costas', a: { trapezio_medio: 1.0, romboides: 1.0, deltoide_posterior: 1.0, latissimo_dorso: 0.4, biceps_cabeca_longa: 0.4 } },
+  cost_remada_fechada: { n: 'Remada Fechada', c: 'Puxar Horizontal', g: 'Costas', a: { latissimo_dorso: 1.0, romboides: 0.6, trapezio_medio: 0.5, braquial: 0.6, biceps_cabeca_longa: 0.4 } },
+  cost_puxada_aberta: { n: 'Puxada Aberta', c: 'Puxar Vertical', g: 'Costas', a: { latissimo_dorso: 0.9, redondos: 1.0, trapezio_inferior: 0.6, deltoide_posterior: 0.5, biceps_cabeca_curta: 0.4 } },
+  cost_puxada_fechada: { n: 'Puxada Fechada', c: 'Puxar Vertical', g: 'Costas', a: { latissimo_dorso: 1.0, redondos: 0.7, braquial: 0.6, biceps_cabeca_curta: 0.5 } },
+  cost_barra_pronada: { n: 'Barra pegada Pronada', c: 'Puxar Vertical', g: 'Costas', a: { latissimo_dorso: 0.8, redondos: 0.9, trapezio_inferior: 0.6, romboides: 0.5, deltoide_posterior: 0.5, biceps_cabeca_curta: 0.3 } },
+  cost_pulldown: { n: 'Pulldown', c: 'Isolador Dorsais', g: 'Costas', a: { latissimo_dorso: 1.0, redondos: 0.8, triceps_longa: 0.4 } },
+  omb_desenvolvimento: { n: 'Desenvolvimento', c: 'Empurrar Vertical', g: 'Ombros', a: { deltoide_anterior: 1.0, deltoide_lateral: 0.5, triceps: 0.6, trapezio: 0.3 } },
+  omb_elevacao_lateral: { n: 'Elevação Lateral', c: 'Isolador Superior', g: 'Ombros', a: { deltoide_lateral: 1.0, trapezio: 0.3 } },
+  omb_elevacao_frontal: { n: 'Elevação Frontal', c: 'Isolador Superior', g: 'Ombros', a: { deltoide_anterior: 1.0, peitoral_clavicular: 0.2 } },
+  omb_crucifixo_inverso: { n: 'Crucifixo Inverso', c: 'Isolador Superior', g: 'Ombros', a: { deltoide_posterior: 1.0, romboides: 0.5, trapezio: 0.4 } },
+  omb_face_pull: { n: 'Face Pull', c: 'Puxar Horizontal', g: 'Ombros', a: { deltoide_posterior: 1.0, trapezio: 0.6, romboides: 0.5, biceps: 0.3 } },
+  bic_rosca_biceps: { n: 'Rosca Bíceps', c: 'Isolador Bíceps', g: 'Bíceps', a: { biceps_cabeca_longa: 0.8, biceps_cabeca_curta: 0.8, braquial: 0.5, braquiorradial: 0.4 } },
+  bic_rosca_scott: { n: 'Rosca Scott', c: 'Isolador Bíceps', g: 'Bíceps', a: { biceps_cabeca_curta: 1.0, biceps_cabeca_longa: 0.4, braquial: 0.6, braquiorradial: 0.4 } },
+  bic_rosca_martelo: { n: 'Rosca Martelo', c: 'Isolador Braquial', g: 'Bíceps', a: { braquial: 1.0, braquiorradial: 0.9, biceps_cabeca_longa: 0.3, biceps_cabeca_curta: 0.3 } },
+  bic_banco_inclinado: { n: 'Bíceps banco Inclinado', c: 'Isolador Bíceps', g: 'Bíceps', a: { biceps_cabeca_longa: 1.0, biceps_cabeca_curta: 0.5, braquial: 0.3 } },
+  tri_polia: { n: 'Tríceps Polia', c: 'Isolador Tríceps', g: 'Tríceps', a: { triceps_lateral: 1.0, triceps_medial: 1.0, triceps_longa: 0.4 } },
+  tri_frances_polia: { n: 'Tríceps Francês Polia', c: 'Isolador Tríceps', g: 'Tríceps', a: { triceps_longa: 1.0, triceps_lateral: 0.6, triceps_medial: 0.6 } },
+  tri_testa_polia: { n: 'Tríceps Testa Polia', c: 'Isolador Tríceps', g: 'Tríceps', a: { triceps_longa: 0.8, triceps_lateral: 0.8, triceps_medial: 0.8 } },
+  tri_mergulho: { n: 'Tríceps Mergulho no Banco', c: 'Empurrar Vertical', g: 'Tríceps', a: { triceps_lateral: 1.0, triceps_medial: 1.0, triceps_longa: 0.5, peitoral_esternocostal: 0.4, deltoide_anterior: 0.6 } },
+};
+Object.assign(CAT, {
+  cost_barra_supinada: { n: 'Barra pegada Supinada', c: 'Puxar Vertical', g: 'Costas', a: { latissimo_dorso: 1.0, redondos: 0.5, biceps_cabeca_curta: 0.8, trapezio_inferior: 0.4 } },
+  cost_barra_neutra: { n: 'Barra pegada Neutra', c: 'Puxar Vertical', g: 'Costas', a: { latissimo_dorso: 1.0, redondos: 0.6, braquial: 0.6, braquiorradial: 0.5, biceps_cabeca_longa: 0.4 } },
+  cost_kelso_shrugs: { n: 'Kelso Shrugs', c: 'Isolador Escapular', g: 'Costas', a: { trapezio_medio: 1.0, trapezio_superior: 0.8, romboides: 1.0 } },
+  peit_flexao_inclinada: { n: 'Flexão Inclinada (Mãos Apoiadas)', c: 'Empurrar Horizontal', g: 'Peitoral', a: { peitoral_esternocostal: 1.0, peitoral_clavicular: 0.3, deltoide_anterior: 0.3, triceps_lateral: 0.4, triceps_medial: 0.4 } },
+  peit_flexao_declinada: { n: 'Flexão Declinada (Pés Apoiados)', c: 'Empurrar Horizontal', g: 'Peitoral', a: { peitoral_clavicular: 1.0, peitoral_esternocostal: 0.5, deltoide_anterior: 0.8, triceps_lateral: 0.5, triceps_medial: 0.5 } },
+  peit_cross_alta: { n: 'Cross Over Polia Alta', c: 'Isolador Peitoral', g: 'Peitoral', a: { peitoral_esternocostal: 1.0, peitoral_menor: 0.6, peitoral_clavicular: 0.2, deltoide_anterior: 0.3 } },
+  peit_paralela: { n: 'Paralela', c: 'Empurrar Vertical', g: 'Peitoral', a: { peitoral_esternocostal: 1.0, peitoral_menor: 0.8, triceps_lateral: 0.8, triceps_medial: 0.8, triceps_longa: 0.4, deltoide_anterior: 0.6 } },
+  tri_testa_halter: { n: 'Tríceps Testa Halter', c: 'Isolador Tríceps', g: 'Tríceps', a: { triceps_longa: 0.8, triceps_lateral: 0.8, triceps_medial: 0.8 } },
+  tri_frances_halter: { n: 'Tríceps Francês Halter', c: 'Isolador Tríceps', g: 'Tríceps', a: { triceps_longa: 1.0, triceps_lateral: 0.6, triceps_medial: 0.6 } },
+  quad_agachamento_livre: { n: 'Agachamento Livre', c: 'Joelho Dominante', g: 'Quadríceps', a: { vasto_lateral: 1.0, vasto_medial: 1.0, vasto_intermedio: 1.0, gluteo_maximo: 0.9, adutores: 0.6, eretores_espinha: 0.6, reto_femoral: 0.1 } },
+  quad_leg_press_45: { n: 'Leg Press 45', c: 'Joelho Dominante', g: 'Quadríceps', a: { vasto_lateral: 1.0, vasto_medial: 1.0, vasto_intermedio: 1.0, gluteo_maximo: 0.7, adutores: 0.4, reto_femoral: 0.1 } },
+  quad_pendulo: { n: 'Pêndulo', c: 'Joelho Dominante', g: 'Quadríceps', a: { vasto_lateral: 1.0, vasto_medial: 1.0, vasto_intermedio: 1.0, gluteo_maximo: 0.8, reto_femoral: 0.1 } },
+  quad_hack_machine: { n: 'Hack Machine', c: 'Joelho Dominante', g: 'Quadríceps', a: { vasto_lateral: 1.0, vasto_medial: 1.0, vasto_intermedio: 1.0, gluteo_maximo: 0.7, reto_femoral: 0.1 } },
+  quad_cadeira_extensora: { n: 'Cadeira Extensora', c: 'Isolador Quadríceps', g: 'Quadríceps', a: { reto_femoral: 1.0, vasto_lateral: 1.0, vasto_medial: 1.0, vasto_intermedio: 1.0 } },
+  quad_afundo: { n: 'Afundo', c: 'Joelho Dominante (Unilateral)', g: 'Quadríceps', a: { vasto_lateral: 0.9, vasto_medial: 0.9, vasto_intermedio: 0.9, gluteo_maximo: 0.9, gluteo_medio: 0.4, adutores: 0.4, reto_femoral: 0.2 } },
+  quad_flexao_quadril_deitado: { n: 'Flexão de Quadril Deitado', c: 'Isolador Flexores de Quadril', g: 'Quadríceps', a: { reto_femoral: 1.0, iliopsoas: 1.0 } },
+  quad_flexao_nordica_inversa: { n: 'Flexão Nórdica Inversa', c: 'Isolador Quadríceps', g: 'Quadríceps', a: { reto_femoral: 1.0, vasto_lateral: 0.8, vasto_medial: 0.8, vasto_intermedio: 0.8 } },
+  isq_stiff: { n: 'Stiff', c: 'Quadril Dominante', g: 'Isquiotibiais', a: { isquiotibiais: 1.0, gluteo_maximo: 0.8, eretores_espinha: 0.6, adutores: 0.4 } },
+  isq_bom_dia: { n: 'Bom dia', c: 'Quadril Dominante', g: 'Isquiotibiais', a: { isquiotibiais: 0.9, gluteo_maximo: 0.8, eretores_espinha: 0.9, adutores: 0.3 } },
+  isq_mesa_flexora: { n: 'Mesa Flexora', c: 'Isolador Isquiotibiais', g: 'Isquiotibiais', a: { isquiotibiais: 0.8, gastrocnemio: 0.3 } },
+  isq_cadeira_flexora: { n: 'Cadeira Flexora', c: 'Isolador Isquiotibiais', g: 'Isquiotibiais', a: { isquiotibiais: 1.0, gastrocnemio: 0.3 } },
+  isq_flexora_em_pe: { n: 'Flexora em pé', c: 'Isolador Isquiotibiais', g: 'Isquiotibiais', a: { isquiotibiais: 0.8, gastrocnemio: 0.3 } },
+  isq_flexao_nordica: { n: 'Flexão Nórdica', c: 'Isolador Isquiotibiais', g: 'Isquiotibiais', a: { isquiotibiais: 1.0, gastrocnemio: 0.4 } },
+  glut_cadeira_abdutora: { n: 'Cadeira Abdutora', c: 'Isolador Glúteo', g: 'Glúteos', a: { gluteo_medio: 1.0, gluteo_minimo: 1.0, gluteo_maximo: 0.2 } },
+  glut_rdl: { n: 'RDL', c: 'Quadril Dominante', g: 'Glúteos', a: { gluteo_maximo: 1.0, isquiotibiais: 0.8, eretores_espinha: 0.6, adutores: 0.4 } },
+  glut_extensao_quadril_polia: { n: 'Extensão de Quadril Polia', c: 'Isolador Glúteo', g: 'Glúteos', a: { gluteo_maximo: 1.0, isquiotibiais: 0.4, gluteo_medio: 0.3 } },
+  glut_coice_polia: { n: 'Coice Polia', c: 'Isolador Glúteo', g: 'Glúteos', a: { gluteo_maximo: 1.0, isquiotibiais: 0.1 } },
+  glut_levantamento_terra: { n: 'Levantamento Terra', c: 'Híbrido Quadril/Joelho', g: 'Glúteos', a: { gluteo_maximo: 1.0, isquiotibiais: 0.7, eretores_espinha: 1.0, vasto_lateral: 0.6, vasto_medial: 0.6, vasto_intermedio: 0.6 } },
+  glut_elevacao_pelvica: { n: 'Elevação Pélvica', c: 'Extensão de Quadril', g: 'Glúteos', a: { gluteo_maximo: 1.0, isquiotibiais: 0.2, vasto_lateral: 0.3, vasto_medial: 0.3 } },
+  glut_bulgaro: { n: 'Búlgaro', c: 'Híbrido Unilateral', g: 'Glúteos', a: { gluteo_maximo: 1.0, gluteo_medio: 0.5, vasto_lateral: 0.8, vasto_medial: 0.8, vasto_intermedio: 0.8, adutores: 0.5 } },
+  glut_step_up: { n: 'Step Up', c: 'Híbrido Unilateral', g: 'Glúteos', a: { gluteo_maximo: 1.0, gluteo_medio: 0.6, vasto_lateral: 0.8, vasto_medial: 0.8, vasto_intermedio: 0.8 } },
+  glut_krause: { n: 'Glúteo Krause', c: 'Isolador Glúteo', g: 'Glúteos', a: { gluteo_maximo: 1.0, isquiotibiais: 0.2 } },
+  extensao_quadril_romano: { n: 'Extensão de Quadril no Banco Romano', c: 'Extensão de Quadril', g: 'Glúteos', a: { gluteo_maximo: 1.0, isquiotibiais: 0.8, eretores_espinha: 0.6 } },
+  adut_cadeira_adutora: { n: 'Cadeira Adutora', c: 'Isolador Adutores', g: 'Adutores', a: { adutores: 1.0 } },
+  pant_em_pe: { n: 'Panturrilha em Pé', c: 'Isolador Inferior', g: 'Panturrilha', a: { gastrocnemio: 1.0, soleo: 0.3 } },
+  pant_solear: { n: 'Cadeira Solear', c: 'Isolador Inferior', g: 'Panturrilha', a: { soleo: 1.0, gastrocnemio: 0.1 } },
+  abd_maquina: { n: 'Abdominal Máquina', c: 'Core', g: 'Abdômen', a: { reto_abdominal: 1.0 } },
+  abd_infra: { n: 'Abdominal Infra', c: 'Core', g: 'Abdômen', a: { reto_abdominal: 1.0, iliopsoas: 0.8 } },
+  abd_remador: { n: 'Abdominal Remador', c: 'Core', g: 'Abdômen', a: { reto_abdominal: 1.0, iliopsoas: 0.5, transverso: 0.4 } },
+  abd_prancha: { n: 'Prancha Isométrica', c: 'Core', g: 'Abdômen', a: { reto_abdominal: 1.0, transverso: 1.0, core: 1.0 } },
+  abd_v_up: { n: 'V-Up (Canivete)', c: 'Core', g: 'Abdômen', a: { reto_abdominal: 1.0, iliopsoas: 0.7, transverso: 0.5 } },
+  abd_v_up_alternado: { n: 'V-Up Alternado', c: 'Core', g: 'Abdômen', a: { reto_abdominal: 1.0, obliquos: 0.6, iliopsoas: 0.6 } },
+  abd_banco_romano: { n: 'Abdominal no Banco Romano', c: 'Core', g: 'Abdômen', a: { reto_abdominal: 1.0, iliopsoas: 0.4 } },
+});
+const MUS = (m) => m.startsWith('peitoral') ? 'Peitoral' : m.startsWith('deltoide') ? 'Ombros' : m.startsWith('triceps') ? 'Tríceps' : (m.startsWith('biceps') || m.startsWith('braqui')) ? 'Bíceps' : (m.startsWith('latissimo') || m.startsWith('redondos') || m.startsWith('trapezio') || m.startsWith('romboides')) ? 'Costas'
+  : (m.startsWith('vasto') || m === 'reto_femoral' || m === 'iliopsoas') ? 'Quadríceps' : m === 'isquiotibiais' ? 'Isquiotibiais' : m.startsWith('gluteo') ? 'Glúteos' : m === 'adutores' ? 'Adutores' : (m === 'gastrocnemio' || m === 'soleo') ? 'Panturrilha' : ['reto_abdominal', 'transverso', 'core', 'obliquos'].includes(m) ? 'Abdômen' : null;
+const MNAME = { latissimo_dorso: 'dorsal', redondos: 'redondos', trapezio_medio: 'trapézio méd.', trapezio_inferior: 'trapézio inf.', trapezio: 'trapézio', romboides: 'romboides', deltoide_posterior: 'deltoide post.', deltoide_anterior: 'deltoide ant.', deltoide_lateral: 'deltoide lat.', biceps_cabeca_longa: 'bíceps longa', biceps_cabeca_curta: 'bíceps curta', biceps: 'bíceps', braquial: 'braquial', braquiorradial: 'braquiorradial', peitoral_esternocostal: 'peitoral', peitoral_clavicular: 'peitoral sup.', triceps_lateral: 'tríceps lat.', triceps_medial: 'tríceps med.', triceps_longa: 'tríceps longa', triceps: 'tríceps',
+  peitoral_menor: 'peitoral menor', trapezio_superior: 'trapézio sup.', vasto_lateral: 'vasto lat.', vasto_medial: 'vasto med.', vasto_intermedio: 'vasto int.', reto_femoral: 'reto femoral', iliopsoas: 'iliopsoas',
+  isquiotibiais: 'isquiotibiais', gluteo_maximo: 'glúteo máx.', gluteo_medio: 'glúteo méd.', gluteo_minimo: 'glúteo mín.', adutores: 'adutores', eretores_espinha: 'eretores', gastrocnemio: 'gastrocnêmio', soleo: 'sóleo',
+  reto_abdominal: 'reto abdominal', transverso: 'transverso', core: 'core', obliquos: 'oblíquos' };
+const GROUPS = ['Costas', 'Peitoral', 'Ombros', 'Bíceps', 'Tríceps', 'Quadríceps', 'Isquiotibiais', 'Glúteos', 'Adutores', 'Panturrilha', 'Abdômen'];
+const BASE = { Costas: 6, Peitoral: 4, Ombros: 2.4, Bíceps: 3, Tríceps: 2.4, Quadríceps: 18, Isquiotibiais: 9, Glúteos: 14, Adutores: 4, Panturrilha: 6, Abdômen: 6 };
+const MYLIB = { peit_supino_reto: { name: 'Supino reto com barra', sets: 2, reps: '8–10', rest: '2:00', vid: true }, cost_remada_aberta: { name: 'Remada curvada', sets: 4, reps: '10', rest: '1:30', vid: true },
+  omb_desenvolvimento: { name: 'Desenvolvimento com halteres', sets: 3, reps: '10', rest: '1:15', vid: false }, cost_puxada_aberta: { name: 'Puxada frontal', sets: 3, reps: '12', rest: '1:15', vid: false },
+  bic_rosca_biceps: { name: 'Rosca direta', sets: 3, reps: '12', rest: '1:00', vid: false }, tri_polia: { name: 'Tríceps na corda', sets: 3, reps: '12', rest: '1:00', vid: false },
+  omb_elevacao_lateral: { name: 'Elevação lateral', sets: 3, reps: '15', rest: '0:45', vid: true }, bic_rosca_martelo: { name: 'Rosca martelo', sets: 3, reps: '12', rest: '1:00', vid: false },
+  quad_agachamento_livre: { name: 'Agachamento livre', sets: 4, reps: '8', rest: '2:00', vid: true }, quad_leg_press_45: { name: 'Leg press 45°', sets: 3, reps: '12', rest: '1:30', vid: true },
+  isq_mesa_flexora: { name: 'Mesa flexora', sets: 3, reps: '12', rest: '1:00', vid: false }, glut_elevacao_pelvica: { name: 'Elevação pélvica', sets: 4, reps: '10', rest: '1:30', vid: true },
+  pant_em_pe: { name: 'Panturrilha em pé', sets: 4, reps: '15', rest: '0:45', vid: false }, abd_prancha: { name: 'Prancha', sets: 3, reps: '40s', rest: '0:45', vid: false } };
+const FICHA0 = ['peit_supino_reto', 'cost_remada_aberta', 'omb_desenvolvimento', 'cost_puxada_aberta', 'bic_rosca_biceps', 'tri_polia'].map((id) => ({ id, name: MYLIB[id].name, sets: MYLIB[id].sets, reps: MYLIB[id].reps, rest: MYLIB[id].rest }));
+const grpAct = (id) => { const g = {}; Object.entries(CAT[id].a).forEach(([m, v]) => { const k = MUS(m); if (k) g[k] = Math.max(g[k] || 0, v); }); return g; };
+const volOf = (f) => { const v = { ...BASE }; f.forEach((e) => { const g = grpAct(e.id); Object.keys(g).forEach((k) => { v[k] = (v[k] || 0) + g[k] * e.sets; }); }); return v; };
+const num = (x) => String(Math.round(x * 10) / 10).replace('.', ',');
+const VOL0 = volOf(FICHA0);
+const PARTS = (s) => String(s).split(/(\d[\d×,.:–\/]*(?:\s?(?:kg|min|sem))?)/).filter(Boolean).map((t) => /^\d/.test(t) && /[×:,–]|kg|min/.test(t) ? { t, fs: '15px', fw: '600', st: '75%' } : { t, fs: '13px', fw: '400', st: '100%' });
+const TPLS = [{ name: 'Superiores A', n: 6, alunos: 3, rows: null }, { name: 'Inferiores A', n: 7, alunos: 4, rows: ['Agachamento livre', 'Leg press 45°', 'Remada curvada', 'Cadeira extensora', 'Mesa flexora', 'Panturrilha em pé', 'Prancha'] }, { name: 'Full body iniciante', n: 6, alunos: 2, rows: ['Agachamento goblet', 'Supino com halteres', 'Puxada frontal', 'Desenvolvimento com halteres', 'Rosca direta', 'Prancha'] }, { name: 'Inferiores B', n: 6, alunos: 0, rows: ['Levantamento terra romeno', 'Afundo', 'Cadeira abdutora', 'Elevação pélvica', 'Mesa flexora', 'Panturrilha sentado'] }];
+const stalled = (v) => v[7] === v[6] && v[6] === v[5];
+const STU = {
+  ab: { name: 'Ana Bia', ini: 'AB', plan: 'Superiores', week: '4/5', live: { done: 11, total: 21, min: 38 } },
+  mv: { name: 'Marcos V.', ini: 'MV', plan: 'Superiores', week: '3/6', live: { done: 3, total: 21, min: 10 } },
+  jr: { name: 'Júlia R.', ini: 'JR', plan: 'Inferiores', week: '2/4' },
+  bt: { name: 'Bruno T.', ini: 'BT', plan: 'Full body', week: '3/3', doneAt: '07:40' },
+  rm: { name: 'Rafael M.', ini: 'RM', plan: 'Inferiores', week: '0/4' },
+  cs: { name: 'Carla S.', ini: 'CS', plan: 'Full body', week: '2/3' },
+};
+const freshAula = () => ({ i: 0, sets: AULA.map((e) => e.last.map((p, i) => { const q = p || e.last[i - 1]; return { load: q[0], reps: q[1], done: false }; })), tech: AULA.map(() => []), extra: AULA.map(() => []) });
+
+class Component extends DCLogic {
+  fichaRef = React.createRef();
+  state = this.initState();
+  initState() {
+    const t = this.props.telaInicial ?? 'alunos';
+    const map = { alunos: 'alunos', ficha: 'ficha', rendimento: 'rend', aula: 'aula', recados: 'recados', biblioteca: 'biblio', dados: 'dados', editar: 'editar' };
+    return { screen: map[t] || 'alunos', stack: [], stu: 'ab', foco: 'sup', aula: freshAula(), aulaStart: Date.now(), now: Date.now(), menu: false, toast: '', draft: '',
+      techOpen: false, techDraft: '', sec: 'semana', attn: ['ab', 'rm', 'cs'],
+      pvOpen: 1, bibTab: 'modelos', tplOpen: 0, bibQ: '', lib: LIB.slice(), dados: { goal: 'Hipertrofia', freq: 5, dur: 60 }, dSheet: null, dDraft: null,
+      ficha: FICHA0.map((e) => ({ ...e })), edSheet: null, swapI: null, addG: 'Ombros', addQ: '',
+      unread: { ab: true, mv: false, cs: false, rm: false },
+      threads: {
+        ab: [{ prof: true, text: 'Bom treino hoje. Controla a descida no desenvolvimento.', time: '07:15' }, { prof: false, link: 'REMADA CURVADA · SÉRIE 3 · 37,5 × 10', text: 'Senti dor. Fisgou na lombar no final.', time: '16:22' }],
+        mv: [{ prof: true, text: 'Hoje sobe 2,5 no supino.', time: '08:10' }, { prof: false, text: 'Valeu prof!', time: '08:31' }],
+        cs: [{ prof: true, text: 'Carla, bora marcar a reavaliação?', time: 'qua' }],
+        rm: [{ prof: false, text: 'Essa semana tá corrida, volto segunda.', time: '5 nov' }] } };
+  }
+  componentDidMount() { this.iv = setInterval(() => { if (this.state.screen === 'aula') this.setState({ now: Date.now() }); }, 1000); }
+  componentWillUnmount() { clearInterval(this.iv); clearTimeout(this.tt); }
+  componentDidUpdate(pp) { if (pp.telaInicial !== this.props.telaInicial && this.props.telaInicial) this.setState(this.initState()); }
+  flash(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 2200); }
+  push(screen, extra) { this.setState((s) => ({ stack: s.stack.concat([s.screen]), screen, menu: false, ...(extra || {}) })); }
+  tab(screen) { this.setState({ screen, stack: [], menu: false }); }
+  back() { this.setState((s) => { const st = s.stack.slice(); const prev = st.pop() || 'alunos'; return { screen: prev, stack: st }; }); }
+  openThread(id, draft) { this.setState((s) => ({ unread: { ...s.unread, [id]: false } })); this.push('thread', { stu: id, draft: draft || '' }); }
+  sendMsg(text) {
+    const v = (text || '').trim(); if (!v) return;
+    this.setState((s) => ({ draft: '', threads: { ...s.threads, [s.stu]: (s.threads[s.stu] || []).concat([{ prof: true, text: v, time: '16:30' }]) }, attn: s.attn.filter((a) => a !== s.stu) }));
+  }
+  curSet(a) { const i = a.sets[a.i].findIndex((x) => !x.done); return i; }
+  mutAula(fn) { this.setState((s) => { const a = { ...s.aula, sets: s.aula.sets.map((e) => e.map((x) => ({ ...x }))), tech: s.aula.tech.map((t) => t.slice()), extra: s.aula.extra.map((t) => t.slice()) }; fn(a); return { aula: a }; }); }
+  scrollTo(id) {
+    const c = this.fichaRef.current; const el = c && c.querySelector('#sec-' + id);
+    if (c && el) c.scrollTo({ top: Math.max(0, el.offsetTop - 60), behavior: 'smooth' });
+    this.setState({ sec: id });
+  }
+  _rv() {
+    const s = this.state, stu = STU[s.stu];
+    const a = s.aula, ae = AULA[a.i], ci = this.curSet(a);
+    const label = (e, i) => { const k = e.kinds[i]; return k === 'warmup' ? 'AQ' : k === 'recon' ? 'RC' : String(e.kinds.slice(0, i + 1).filter((x) => x === 'working').length); };
+    const labelLong = (e, i) => { const k = e.kinds[i]; return k === 'warmup' ? 'AQUECIMENTO' : k === 'recon' ? 'RECONHECIMENTO' : 'SÉRIE ' + label(e, i); };
+    const pill = (k, done) => done ? { bg: k === 'warmup' ? '#3A404C' : k === 'recon' ? '#7D8698' : PG, shadow: 'none' } : { bg: '#1A1D24', shadow: OFF };
+    const allDone = a.sets.every((e) => e.every((x) => x.done));
+    const exDone = ci < 0;
+    const live = Object.entries(STU).filter(([, v]) => v.live);
+    const chip = (on) => ({ bg: on ? '#F2F5FA' : 'transparent', color: on ? '#05060A' : '#F2F5FA', shadow: on ? 'none' : 'inset 0 0 0 1px #2E333D', weight: on ? '700' : '400' });
+    const f = ALL.find((r) => r.k === s.foco) || ALL[0];
+    const fmin = Math.floor(Math.min(...f.v) / 5) * 5, fmax0 = Math.ceil(Math.max(...f.v) / 5) * 5, fmax = fmax0 === fmin ? fmin + 5 : fmax0;
+    const fy = (v) => Math.round(14 + ((fmax - v) / (fmax - fmin)) * 96);
+    const unreadN = Object.values(s.unread).filter(Boolean).length;
+    const attnDefs = {
+      ab: { text: '"Senti dor" · remada, série 3', color: '#C6D2E4', action: 'Responder', act: () => this.openThread('ab') },
+      rm: { text: 'Sumido · 9 dias sem treinar', color: '#E8794B', action: 'Chamar', act: () => this.openThread('rm', 'Oi Rafael, tudo certo? Bora voltar segunda?') },
+      cs: { text: 'Reavaliação vencida há 4 dias', color: '#C6D2E4', action: 'Marcar', act: () => { this.setState({ attn: s.attn.filter((x) => x !== 'cs') }); this.flash('Reavaliação da Carla marcada pra terça'); } },
+    };
+    const tabActive = s.screen === 'biblio' ? 'biblio' : ['recados', 'thread'].includes(s.screen) && s.stack[0] !== 'alunos' ? 'recados' : 'alunos';
+    return {
+      isAlunos: s.screen === 'alunos', isVivo: s.screen === 'vivo', isFicha: s.screen === 'ficha', isRend: s.screen === 'rend', isFoco: s.screen === 'foco',
+      isAula: s.screen === 'aula', isRecados: s.screen === 'recados', isThread: s.screen === 'thread', isMenu: s.menu,
+      showTabs: s.screen === 'alunos' || s.screen === 'recados' || s.screen === 'biblio', toast: s.toast,
+      back: () => this.back(), stuName: stu.name, stuUpper: stu.name.toUpperCase(),
+      live: live.map(([id, v]) => ({ ini: v.ini, name: v.name, sub: v.live.done + '/' + v.live.total + ' · ' + v.live.min + ' min', off: String(Math.round(88 * (1 - v.live.done / v.live.total))), onClick: () => this.push('vivo', { stu: id }) })),
+      hasAttn: s.attn.length > 0, attnTitle: 'PRECISA DE ATENÇÃO · ' + s.attn.length,
+      attn: s.attn.map((id) => ({ ini: STU[id].ini, name: STU[id].name, ...attnDefs[id], open: () => this.push('ficha', { stu: id }) })),
+      today: ['ab', 'mv', 'jr', 'bt'].map((id) => { const v = STU[id]; return { name: v.name, plan: v.doneAt ? 'feito ' + v.doneAt : v.plan, week: v.week, tag: v.live ? 'NA PISTA' : '', icon: v.doneAt ? 'ph-bold ph-check' : '', color: v.doneAt ? '#7D8698' : '#F2F5FA', onClick: () => this.push(v.live ? 'vivo' : 'ficha', { stu: id }) }; }),
+      others: ['cs', 'rm'].map((id) => ({ name: STU[id].name, plan: STU[id].plan, week: STU[id].week, onClick: () => this.push('ficha', { stu: id }) })),
+      vivoMin: stu.live ? stu.live.min : 0, vivoDone: stu.live ? stu.live.done : 0, vivoTotal: 21, vivoPct: stu.live ? Math.round((stu.live.done / 21) * 100) + '%' : '0%',
+      vivoLast: s.stu === 'ab' ? 'Desenvolvimento · série 3 · 14 kg × 9' : 'Supino reto · reconhecimento · 35 kg × 5',
+      vivoEx: (() => { let left = stu.live ? stu.live.done : 0; return AULA.map((e, i) => { const d = Math.min(left, e.kinds.length); left -= d; const full = d === e.kinds.length;
+        return { idx: full ? '' : String(i + 1).padStart(2, '0'), icon: full ? 'ph-bold ph-check' : '', name: e.name, color: full ? '#7D8698' : '#F2F5FA', pills: e.kinds.map((k, j) => pill(k, j < d)) }; }); })(),
+      openThreadStu: () => this.openThread(s.stu), openFicha: () => this.push('ficha'),
+      openMenu: () => this.setState({ menu: true }), closeMenu: () => this.setState({ menu: false }),
+      menu: [['Editar ficha', 'ph ph-pencil-simple', '#F2F5FA'], ['Baixar série', 'ph ph-file-arrow-down', '#F2F5FA'], ['Dados e anamnese', 'ph ph-clipboard-text', '#F2F5FA'], ['Mandar recado', 'ph ph-chat-circle', '#F2F5FA']]
+        .map(([label, icon, color]) => ({ label, icon, color, onClick: label === 'Dados e anamnese' ? () => this.push('dados') : label === 'Editar ficha' ? () => this.push('editar', { edSheet: null }) : label === 'Mandar recado' ? () => { this.setState({ menu: false }); this.openThread(s.stu); } : () => { this.setState({ menu: false }); this.flash(label + ' abre em tela própria'); } })),
+      startAula: () => { this.push('aula', { aula: freshAula(), aulaStart: Date.now(), now: Date.now(), techOpen: false }); },
+      secChips: [['semana', 'Semana'], ['rend', 'Rendimento'], ['vol', 'Volume'], ['ficha', 'Ficha']].map(([k, l]) => ({ label: l, ...chip(s.sec === k), onClick: () => this.scrollTo(k) })),
+      fichaRef: this.fichaRef,
+      week: [['SEG', 'Inferiores', 'done'], ['QUA', 'Full body', 'done'], ['SEX', 'Inferiores', 'done'], ['SÁB', 'Superiores', s.stu === 'ab' ? 'live' : 'today']].map(([d, plan, st]) => ({ d, plan, weight: st === 'done' ? '400' : '700', dColor: st === 'done' ? '#7D8698' : '#F2F5FA', tag: st === 'live' ? 'NA PISTA · 11/21' : st === 'today' ? 'HOJE' : '', icon: st === 'done' ? 'ph-bold ph-check' : '' })),
+      openRend: () => this.push('rend'),
+      rendStats: [{ v: '+18%', l: 'Volume' }, { v: '92%', l: 'Frequência' }, { v: '9', l: 'Recordes' }],
+      vol: [['Pernas', 18], ['Costas', 16], ['Peito', 12], ['Braços', 9], ['Ombros', 6]].map(([l, n]) => ({ l, n, w: Math.round((n / 20) * 100) + '%' })),
+      editFicha: () => this.push('editar', { edSheet: null }),
+      isEditar: s.screen === 'editar',
+      volRows: (() => { const v = volOf(s.ficha), mx = Math.max(...GROUPS.map((g) => v[g] || 0), 1);
+        const touched = new Set(s.ficha.flatMap((e) => Object.keys(grpAct(e.id))));
+        return GROUPS.map((g) => { const d = Math.round(((v[g] || 0) - (VOL0[g] || 0)) * 10) / 10, on = touched.has(g); return { l: g, v: num(v[g] || 0), w: Math.round(((v[g] || 0) / mx) * 100) + '%', d: d ? (d > 0 ? '+' : '−') + num(Math.abs(d)) : '', dColor: d > 0 ? '#F2F5FA' : '#AEB7C6', lColor: on ? '#F2F5FA' : '#7D8698', bar: on ? '#C6D2E4' : '#3A404C' }; }); })(),
+      edRows: s.ficha.map((e, i) => ({ idx: String(i + 1).padStart(2, '0'), name: e.name, plan: e.sets + '×' + e.reps + ' · ' + e.rest, swap: () => this.setState({ edSheet: 'swap', swapI: i }) })),
+      openAdd: () => this.setState({ edSheet: 'add', addQ: '' }), closeEdSheet: () => this.setState({ edSheet: null }),
+      saveFicha: () => { this.back(); this.flash('Ficha salva. A ' + stu.name.split(' ')[0] + ' vê no próximo treino.'); },
+      edSheetOpen: !!s.edSheet, isAddSheet: s.edSheet === 'add', isSwapSheet: s.edSheet === 'swap', edSheetTop: s.edSheet === 'add' ? '120px' : '200px',
+      edSheetTitle: s.edSheet === 'add' ? 'ADICIONAR EXERCÍCIO' : s.swapI != null && s.ficha[s.swapI] ? 'TROCAR · ' + s.ficha[s.swapI].name.toUpperCase() : '',
+      addQ: s.addQ, onAddQ: (ev) => this.setState({ addQ: ev.target.value }),
+      addGroups: GROUPS.map((g) => ({ label: g, ...chip(s.addG === g && !s.addQ.trim()), onClick: () => this.setState({ addG: g, addQ: '' }) })),
+      ...(() => { const inF = new Set(s.ficha.map((e) => e.id)), q = s.addQ.trim().toLowerCase();
+        const pool = Object.keys(CAT).filter((id) => !inF.has(id) && (q ? (CAT[id].n.toLowerCase().includes(q) || (MYLIB[id] && MYLIB[id].name.toLowerCase().includes(q))) : CAT[id].g === s.addG));
+        const add = (id) => () => { const L = MYLIB[id]; this.setState({ ficha: s.ficha.concat([{ id, name: L ? L.name : CAT[id].n, sets: L ? L.sets : 3, reps: L ? L.reps : '12', rest: L ? L.rest : '1:00' }]), edSheet: null }); this.flash((L ? L.name : CAT[id].n) + ' entrou na ficha'); };
+        const lib = pool.filter((id) => MYLIB[id]).map((id) => ({ name: MYLIB[id].name, sub: 'da última vez: ' + MYLIB[id].sets + '×' + MYLIB[id].reps + ' · ' + MYLIB[id].rest + (MYLIB[id].vid ? ' · vídeo' : ''), add: add(id) }));
+        const cat = pool.filter((id) => !MYLIB[id]).map((id) => ({ name: CAT[id].n, sub: Object.entries(CAT[id].a).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m, v]) => (MNAME[m] || m.replace(/_/g, ' ')) + ' ' + v.toFixed(1).replace('.', ',')).join(' · '), add: add(id) }));
+        return { addLib: lib, addCat: cat, hasAddLib: lib.length > 0, hasAddCat: cat.length > 0, addEmpty: !lib.length && !cat.length }; })(),
+      ...(() => { const cur = s.swapI != null ? s.ficha[s.swapI] : null; if (!cur) return { swapIntro: '', swapOpts: [], removeEx: () => {} };
+        const c = CAT[cur.id], inF = new Set(s.ficha.map((e) => e.id)), ga = grpAct(cur.id);
+        const same = Object.keys(CAT).filter((id) => id !== cur.id && !inF.has(id) && CAT[id].c === c.c);
+        const near = Object.keys(CAT).filter((id) => id !== cur.id && !inF.has(id) && CAT[id].g === c.g && CAT[id].c !== c.c);
+        const ids = same.concat(near).slice(0, 4);
+        const diff = (id) => { const gb = grpAct(id), ks = Array.from(new Set(Object.keys(ga).concat(Object.keys(gb)))); const parts = ks.map((k) => { const d = Math.round(((gb[k] || 0) - (ga[k] || 0)) * cur.sets * 10) / 10; return d ? k + ' ' + (d > 0 ? '+' : '−') + num(Math.abs(d)) : null; }).filter(Boolean); return parts.length ? parts.join(' · ') + ' na semana' : 'volume igual'; };
+        return { swapIntro: same.length ? 'Primeiro os de mesmo padrão (' + c.c.toLowerCase() + '), depois os do mesmo grupo. Mostra quanto o volume muda com ' + cur.sets + ' séries.' : 'Exercícios do mesmo grupo.',
+          swapOpts: ids.map((id) => ({ name: MYLIB[id] ? MYLIB[id].name : CAT[id].n, diff: diff(id), pick: () => { const f = s.ficha.slice(); f[s.swapI] = { ...cur, id, name: MYLIB[id] ? MYLIB[id].name : CAT[id].n }; this.setState({ ficha: f, edSheet: null }); this.flash('Trocado por ' + f[s.swapI].name); } })),
+          removeEx: () => { this.setState({ ficha: s.ficha.filter((_, i) => i !== s.swapI), edSheet: null }); this.flash(cur.name + ' saiu da ficha'); } }; })(),
+      fichaEx: AULA.map((e, i) => { const w = e.kinds.filter((k) => k === 'working').length; const wl = e.last[e.kinds.indexOf('working')][0];
+        const extra = e.kinds.length - w; return { idx: String(i + 1).padStart(2, '0'), name: e.name, plan: e.target + (extra ? ' + ' + extra + ' prep.' : '') + ' · ' + kg(wl) + ' kg', restr: e.restr || '' }; }),
+      pvSummary: 'Última sessão · sáb 7 nov · ' + AULA.reduce((n, e) => n + e.last.filter(Boolean).length, 0) + ' de ' + AULA.reduce((n, e) => n + e.last.length, 0) + ' séries',
+      pvRows: AULA.map((e, i) => { const ws = e.kinds.map((k, j) => (k === 'working' ? j : -1)).filter((j) => j >= 0); const floor = parseInt(e.target.split('×')[1]);
+        const doneN = ws.filter((j) => e.last[j]).length, below = ws.filter((j) => e.last[j] && e.last[j][1] < floor).length, open = s.pvOpen === i;
+        const wl = e.last[ws[0]][0];
+        return { idx: String(i + 1).padStart(2, '0'), name: e.name, plan: e.target + ' · ' + kg(wl) + ' kg', restr: e.restr || '', open, pad: open ? '11px 0 8px' : '11px 0',
+          weight: open ? '700' : '400', idxColor: open ? '#F2F5FA' : '#7D8698', caret: open ? 'ph ph-caret-up' : '',
+          status: doneN < ws.length ? doneN + ' de ' + ws.length : below ? below + ' abaixo' : 'no alvo', stColor: doneN < ws.length ? '#7D8698' : below ? '#E8794B' : '#C6D2E4', stWeight: doneN < ws.length ? '400' : '700',
+          sets: ws.map((j, n) => { const p = e.last[j], bad = p && p[1] < floor; return { n: String(n + 1), v: p ? kg(p[0]) + '×' + p[1] : 'não fez', color: !p ? '#7D8698' : bad ? '#E8794B' : '#F2F5FA', lColor: bad ? '#E8794B' : '#7D8698', weight: bad ? '700' : '400' }; }),
+          toggle: () => this.setState({ pvOpen: open ? null : i }) }; }),
+      isBiblio: s.screen === 'biblio', isDados: s.screen === 'dados', stuFirst: stu.name.split(' ')[0],
+      bibTabs: [['modelos', 'Modelos · ' + TPLS.length], ['exercicios', 'Exercícios · ' + s.lib.length]].map(([k, l]) => ({ label: l, bg: s.bibTab === k ? '#F2F5FA' : 'transparent', color: s.bibTab === k ? '#05060A' : '#AEB7C6', onClick: () => this.setState({ bibTab: k }) })),
+      bibModelos: s.bibTab === 'modelos', bibExercicios: s.bibTab === 'exercicios',
+      tpls: TPLS.map((t, i) => { const open = s.tplOpen === i, rows = t.rows || AULA.map((e) => e.name);
+        return { open, title: open ? t.name.toUpperCase() : t.name, size: open ? '18px' : '15px', fw: open ? '900' : '700', stretch: open ? '125%' : '100%', bg: open ? '#0E1015' : 'transparent', shadow: open ? 'none' : 'inset 0 0 0 1px #1E222A',
+          sub: (open ? '' : t.n + ' exercícios · ') + (t.alunos ? (open ? 'em uso · ' : '') + t.alunos + ' alunos' : 'sem uso') + (open ? '' : ' ›'),
+          rows: rows.map((n, j) => ({ idx: String(j + 1).padStart(2, '0'), name: n, plan: t.rows ? '3×10' : AULA[j].target })),
+          toggle: () => this.setState({ tplOpen: open ? null : i }), apply: () => this.flash('Escolha o aluno e o dia da ficha'), edit: () => this.flash('Edição do modelo abre em tela própria') }; }),
+      newTpl: () => this.flash('Novo modelo abre em tela própria'),
+      bibQ: s.bibQ, onBibQ: (ev) => this.setState({ bibQ: ev.target.value }),
+      libRows: s.lib.filter((r) => r[0].toLowerCase().includes(s.bibQ.trim().toLowerCase())).map(([name, tag, vid, n]) => ({ name, color: n ? '#F2F5FA' : '#7D8698', sub: tag + ' · ' + (n ? 'em ' + n + (n === 1 ? ' ficha' : ' fichas') : 'sem uso') + (vid ? ' · vídeo' : '') })),
+      bibCreate: s.bibQ.trim() && !s.lib.some((r) => r[0].toLowerCase() === s.bibQ.trim().toLowerCase()) ? '+ Criar "' + s.bibQ.trim() + '" na biblioteca' : '',
+      createLib: () => { const q = s.bibQ.trim(); if (!q) return; this.setState({ lib: s.lib.concat([[q, 'Sem grupo', false, 0]]).sort((a, b) => a[0].localeCompare(b[0])), bibQ: '' }); this.flash('"' + q + '" criado na biblioteca'); },
+      onBibKey: (ev) => { if (ev.key === 'Enter') { const q = s.bibQ.trim(); if (q && !s.lib.some((r) => r[0].toLowerCase().includes(q.toLowerCase()))) { this.setState({ lib: s.lib.concat([[q, 'Sem grupo', false, 0]]).sort((a, b) => a[0].localeCompare(b[0])), bibQ: '' }); this.flash('"' + q + '" criado na biblioteca'); } } },
+      dCells: [['OBJETIVO', s.dados.goal, 'goal'], ['FREQUÊNCIA', s.dados.freq + 'x · ' + s.dados.dur + ' min', 'freq'], ['FICHA DESDE', '2 nov 2026', null], ['REAVALIAÇÃO', 'em 12 dias', null]]
+        .map(([l, v, k]) => ({ l, v, onClick: k ? () => this.setState({ dSheet: k, dDraft: { ...s.dados } }) : () => this.flash(l === 'REAVALIAÇÃO' ? 'Reavaliação abre em tela própria' : 'Data de início abre o calendário') })),
+      openFreq: () => this.setState({ dSheet: 'freq', dDraft: { ...s.dados } }), pdf: () => this.flash('PDF da ficha e anamnese salvo'),
+      dSheetOpen: !!s.dSheet, closeDSheet: () => this.setState({ dSheet: null }),
+      dSheetTitle: s.dSheet === 'goal' ? 'EDITAR · OBJETIVO' : 'EDITAR · FREQUÊNCIA',
+      dSheetRows: (() => { const d = s.dDraft || s.dados; const opt = (label, on, set, size) => ({ label, bg: on ? '#F2F5FA' : 'transparent', color: on ? '#05060A' : '#F2F5FA', shadow: on ? 'none' : 'inset 0 0 0 1px #2E333D', weight: on ? '700' : '400', size: size || '15px', onClick: () => this.setState({ dDraft: { ...d, ...set } }) });
+        return s.dSheet === 'goal'
+          ? [{ opts: ['Hipertrofia', 'Força'].map((g) => opt(g, d.goal === g, { goal: g }, '13px')) }, { opts: ['Emagrecimento', 'Condicionamento'].map((g) => opt(g, d.goal === g, { goal: g }, '13px')) }]
+          : [{ opts: [3, 4, 5, 6].map((n) => opt(n + 'x', d.freq === n, { freq: n })) }, { opts: [45, 60, 75, 90].map((n) => opt(n + ' min', d.dur === n, { dur: n })) }]; })(),
+      saveDSheet: () => { this.setState({ dados: s.dDraft || s.dados, dSheet: null }); this.flash('Salvo'); },
+      bars: [45, 50, 48, 60, 66, 62, 78, 88].map((h, i) => ({ h: h + '%', bg: i === 7 ? 'linear-gradient(180deg,#FFFFFF,#AEB9CB 55%,#6E7889)' : '#2E333D' })),
+      groups: REND.map((g) => ({ title: g.title, rows: g.rows.map((r) => { const mn = Math.min(...r.v), mx = Math.max(...r.v), rg = mx - mn || 1, st = stalled(r.v), d = r.v[7] - r.v[0];
+        return { name: r.name, sub: st ? kg(r.v[7]) + ' kg · parada há 3 sem' : kg(r.v[0]) + ' → ' + kg(r.v[7]) + ' kg', color: st ? '#7D8698' : '#F2F5FA', stroke: st ? '#7D8698' : '#C6D2E4', delta: '+' + kg(d),
+          spark: r.v.map((v, i) => Math.round(2 + (i * 92) / 7) + ',' + Math.round(3 + ((mx - v) / rg) * 25)).join(' '), onClick: () => this.push('foco', { foco: r.k }) }; }) })),
+      focoChips: ALL.map((r) => ({ label: r.chip, ...chip(r.k === s.foco), onClick: () => this.setState({ foco: r.k }) })),
+      fName: f.name, fNow: kg(f.v[7]) + ' kg', fDelta: stalled(f.v) ? 'parada há 3 semanas' : '+' + kg(f.v[7] - f.v[0]) + ' kg em 8 sem', fDeltaColor: stalled(f.v) ? '#E8794B' : '#C6D2E4', fStalled: stalled(f.v),
+      fLabels: [[24, 18, String(fmax), 'end'], [24, 66, kg((fmax + fmin) / 2), 'end'], [24, 114, String(fmin), 'end'], [42, Math.min(fy(f.v[0]) + 20, 128), kg(f.v[0]), 'middle'], [338, fy(f.v[7]) - 11, f.best, 'end', '#F2F5FA', '800']]
+        .map(([x, y, t, anchor, fill, fw], i) => React.createElement('text', { key: i, x, y, textAnchor: anchor, fill: fill || '#AEB7C6', fontWeight: fw || '400' }, t)), fStroke: stalled(f.v) ? '#7D8698' : '#C6D2E4',
+      fPoints: f.v.map((v, i) => Math.round(42 + (i * 292) / 7) + ',' + fy(v)).join(' '),
+      fFirstY: fy(f.v[0]), fLastY: fy(f.v[7]), fFirst: kg(f.v[0]), fFirstLabelY: Math.min(fy(f.v[0]) + 20, 128), fLastLabelY: fy(f.v[7]) + 4, fBest: f.best,
+      fStats: [{ l: 'MELHOR SÉRIE', v: f.best }, { l: 'VOLUME/SEM', v: f.vol }, { l: 'SESSÕES', v: '8 de 8' }],
+      aulaClock: mmss((s.now - s.aulaStart) / 1000), endAula: () => { this.back(); this.flash('Aula salva no histórico da ' + stu.name.split(' ')[0]); },
+      aulaPos: String(a.i + 1).padStart(2, '0') + ' / ' + String(AULA.length).padStart(2, '0'),
+      prevColor: a.i > 0 ? '#AEB7C6' : '#2E333D', nextColor: a.i < AULA.length - 1 ? '#AEB7C6' : '#2E333D',
+      prevEx: () => { if (a.i > 0) this.mutAula((x) => { x.i -= 1; }); this.setState({ techOpen: false }); },
+      nextEx: () => { if (a.i < AULA.length - 1) this.mutAula((x) => { x.i += 1; }); this.setState({ techOpen: false }); },
+      aulaDots: a.sets.map((e, i) => ({ bg: e.every((x) => x.done) ? '#C6D2E4' : i === a.i ? '#F2F5FA' : '#2E333D' })),
+      aName: ae.name.toUpperCase(), aTarget: ae.target, aRest: ae.rest, aRestr: ae.restr || '', aNote: ae.note || '',
+      aPast: ae.last.map((p, i) => { const on = i === ci; return { n: label(ae, i), v: p ? kg(p[0]) + ' × ' + p[1] : 'não fez', weight: on ? '700' : '400', lColor: on ? '#C6D2E4' : '#7D8698', color: on ? '#C6D2E4' : '#F2F5FA' }; }),
+      aSets: a.sets[a.i].map((x, i) => { const [ll, lr] = ae.last[i] || ae.last[i - 1]; const gain = x.done ? (x.load > ll ? '+' + kg(x.load - ll) : x.load === ll && x.reps > lr ? '+' + (x.reps - lr) + ' rep' : '') : '';
+        return { n: label(ae, i), nSize: ae.kinds[i] === 'working' ? '15px' : '11px', text: kg(x.load) + ' kg × ' + x.reps, color: i === ci ? '#F2F5FA' : '#7D8698', weight: i === ci ? '700' : '400', tag: i === ci ? 'AGORA ↓' : gain, icon: x.done ? 'ph-bold ph-check' : '' }; }),
+      aTech: ae.tech.concat(a.extra[a.i]).map((t) => { const on = a.tech[a.i].includes(t); return { label: t, ...chip(on), onClick: () => this.mutAula((x) => { x.tech[x.i] = on ? x.tech[x.i].filter((q) => q !== t) : x.tech[x.i].concat([t]); }) }; }),
+      techOpen: s.techOpen, techClosed: !s.techOpen, techDraft: s.techDraft,
+      openTech: () => this.setState({ techOpen: true, techDraft: '' }), onTechDraft: (ev) => this.setState({ techDraft: ev.target.value }),
+      onTechKey: (ev) => { if (ev.key === 'Enter' && s.techDraft.trim()) { const t = s.techDraft.trim(); this.mutAula((x) => { x.extra[x.i].push(t); x.tech[x.i].push(t); }); this.setState({ techOpen: false, techDraft: '' }); } if (ev.key === 'Escape') this.setState({ techOpen: false }); },
+      barReg: !exDone, barNext: exDone && !allDone, barEnd: allDone,
+      barLabel: !exDone ? labelLong(ae, ci) : '', barCount: !exDone ? (ci + 1) + ' DE ' + ae.kinds.length : '',
+      nextName: (() => { const n = a.sets.findIndex((e, i) => i > a.i && e.some((x) => !x.done)); const k = n >= 0 ? n : a.sets.findIndex((e) => e.some((x) => !x.done)); return k >= 0 ? 'DEPOIS: ' + AULA[k].name.toUpperCase() : ''; })(),
+      steppers: !exDone ? [{ v: kg(a.sets[a.i][ci].load), u: 'kg', minus: () => this.mutAula((x) => { const q = x.sets[x.i][ci]; q.load = Math.max(0, q.load - 2.5); }), plus: () => this.mutAula((x) => { x.sets[x.i][ci].load += 2.5; }) },
+        { v: String(a.sets[a.i][ci].reps), u: 'reps', minus: () => this.mutAula((x) => { const q = x.sets[x.i][ci]; q.reps = Math.max(1, q.reps - 1); }), plus: () => this.mutAula((x) => { x.sets[x.i][ci].reps += 1; }) }] : [],
+      doneSet: () => this.mutAula((x) => { x.sets[x.i][ci].done = true; }),
+      unreadText: unreadN ? unreadN + (unreadN === 1 ? ' NÃO LIDO' : ' NÃO LIDOS') : 'TUDO LIDO',
+      inbox: ['ab', 'mv', 'cs', 'rm'].map((id) => { const t = s.threads[id] || [], last = t[t.length - 1] || { text: '', time: '' }, un = s.unread[id];
+        return { ini: STU[id].ini, name: STU[id].name, time: last.time, preview: (last.prof ? 'Você: ' : '') + (last.link ? last.link.split(' · ').slice(0, 2).join(' · ').toLowerCase() + ' · ' : '') + last.text, unread: un, weight: un ? '700' : '500', color: un ? '#F2F5FA' : '#7D8698', onClick: () => this.openThread(id) }; }),
+      thread: (s.threads[s.stu] || []).map((m) => ({ text: m.text, time: m.time, link: m.link || '', align: m.prof ? 'flex-end' : 'flex-start', radius: m.prof ? '16px 16px 4px 16px' : '16px 16px 16px 4px', bg: m.prof ? '#F2F5FA' : '#0E1015', color: m.prof ? '#05060A' : '#F2F5FA' })),
+      threadEmpty: !(s.threads[s.stu] || []).length,
+      replies: ['Para e me chama', 'Tira 2,5 kg', 'Boa, segue assim'].map((q) => ({ label: q, onClick: () => this.sendMsg(q + '.') })),
+      draft: s.draft, onDraft: (ev) => this.setState({ draft: ev.target.value }), onDraftKey: (ev) => { if (ev.key === 'Enter') this.sendMsg(s.draft); }, send: () => this.sendMsg(s.draft),
+      sendBg: s.draft.trim() ? '#F2F5FA' : '#1E222A', sendColor: s.draft.trim() ? '#05060A' : '#7D8698',
+      tabs: [['alunos', 'Alunos', 'users-three'], ['recados', 'Recados', 'chat-circle'], ['biblio', 'Biblioteca', 'books']].map(([k, l, ic]) => { const act = tabActive === k;
+        return { aria: l, icon: (act ? 'ph-fill ph-' : 'ph ph-') + ic, label: act ? l : '', padX: act ? '16px' : '0', bg: act ? '#F2F5FA' : 'transparent', color: act ? '#05060A' : '#AEB7C6', dot: k === 'recados' && unreadN > 0 && !act,
+          onClick: () => this.tab(k) }; }),
+    };
+  }
+  renderVals() {
+    const v = this._rv(), add = (a) => a && a.forEach((r) => { if (r && r.sub != null) r.subP = PARTS(r.sub); });
+    add(v.addLib); add(v.addCat); add(v.libRows); (v.groups || []).forEach((g) => add(g.rows));
+    return v;
+  }
+}
+</script>
+</body>
+</html>
