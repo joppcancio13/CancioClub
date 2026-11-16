@@ -34,6 +34,7 @@ import { WorkoutV3 } from "./components/student/WorkoutV3";
 import { HojeV3 } from "./components/student/HojeV3";
 import { TabBarV3 } from "./components/student/TabBarV3";
 import { FimV3 } from "./components/student/FimV3";
+import { AlunosV3 } from "./components/professor/AlunosV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
@@ -187,6 +188,9 @@ function CancioClub() {
     } return { year, month }; });
     const [loadingRoster, setLoadingRoster] = useState(false);
     const [rosterLoaded, setRosterLoaded] = useState(false); // true = fetchAllStudentsAfterAuth já trouxe a lista da nuvem nesta abertura
+    // design v3 (fase 4a): aluno "ao vivo" aberto pelo professor, e o relógio que atualiza os minutos e o "na pista"
+    const [liveStudentId, setLiveStudentId] = useState(null);
+    const [liveNow, setLiveNow] = useState(() => Date.now());
     const cloudSynced = useDataStore((s) => s.cloudSynced); // true = última gravação chegou na nuvem; false = só ficou salva localmente por enquanto
     const setCloudSynced = useDataStore((s) => s.setCloudSynced);
     const localFull = useDataStore((s) => s.localFull); // true = localStorage estourou a cota (ver saveLocal) — rede de segurança offline caiu
@@ -909,8 +913,8 @@ function CancioClub() {
     const logout = () => { setAlunoId(null); setExpanded(null); setAlunoTab("hoje"); setProfileOpen(false); };
     // AUTENTICAÇÃO REAL DO SUPABASE — a senha é verificada de verdade pelo Supabase Auth (nunca
     // gravada no código; só o e-mail da conta única de professor é fixo).
-    const fetchAllStudentsAfterAuth = async () => {
-        setLoadingRoster(true);
+    const fetchAllStudentsAfterAuth = async (quiet) => {
+        if (!quiet) setLoadingRoster(true); // quiet: a atualização de 30 s do "na pista" não mostra carregando
         try {
             // a linha "global" (biblioteca, modelos...) vem junto: num aparelho que só tinha os dados de
             // exemplo, é ela que substitui a biblioteca/modelos de exemplo (ver `local` logo abaixo)
@@ -983,6 +987,18 @@ function CancioClub() {
             setLoadingRoster(false);
         }
     };
+    // "Na pista" a cada 30 s (DECISOES.md · 2): com o professor na tela de Alunos (ou Ao vivo) e o app
+    // visível, busca os alunos de novo em silêncio; parado em segundo plano. Só leitura na nuvem.
+    const fetchRosterRef = React.useRef(null);
+    fetchRosterRef.current = fetchAllStudentsAfterAuth;
+    useEffect(() => {
+        if (role !== "prof" || !profUnlocked || !rosterLoaded || profTab !== "alunos" || profView !== "home") return;
+        const tick = () => { if (document.visibilityState !== "visible") return; setLiveNow(Date.now()); fetchRosterRef.current && fetchRosterRef.current(true); };
+        const id = setInterval(tick, 30000);
+        const onVis = () => { if (document.visibilityState === "visible") tick(); };
+        document.addEventListener("visibilitychange", onVis);
+        return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+    }, [role, profUnlocked, rosterLoaded, profTab, profView]);
     const unlockProf = async () => {
         if (!sb)
             return;
@@ -1258,31 +1274,12 @@ function CancioClub() {
                             const open = (s) => { setActive(s.id); setProfView("aluno"); setFichaTab("treino"); setRendEx(null); setExpanded(null); setFichaOpen(false); setHistOpen(false); };
                             const alerts = rows.filter((r) => r.alert);
                             const list = rows.filter((r) => r.s.name.toLowerCase().includes(q)).sort((a, b) => a.order - b.order || a.s.name.localeCompare(b.s.name));
-                            return React.createElement("section", { style: { marginBottom: 26 } },
-                                alerts.length > 0 && React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 10 } }, "Precisa de aten\u00E7\u00E3o hoje \u00B7 " + alerts.length),
-                                alerts.length > 0 && React.createElement("div", { style: { display: "flex", gap: 8, overflowX: "auto", margin: "0 -20px 18px", padding: "0 20px", scrollbarWidth: "none" } }, alerts.map((r) => React.createElement("button", { key: r.s.id, className: "cc-tap", onClick: () => { if (r.alert.k === "RECADO") { setInboxFocus(r.s.id); setProfTab("recados"); markThreadRead(r.s.id); } else open(r.s); }, style: { minHeight: 44, flex: "none", width: 200, textAlign: "left", padding: 14, borderRadius: 16, border: "none", cursor: "pointer", background: C.panel, boxShadow: ["RECADO", "ANAMNESE", "REAVALIA\u00C7\u00C3O"].includes(r.alert.k) ? `inset 0 0 0 1px ${C.line2}` : "inset 0 0 0 1px rgba(232,121,75,.35)", color: C.text } },
-                                    React.createElement("span", { style: { display: "block", ...tiny, color: ["RECADO", "ANAMNESE", "REAVALIA\u00C7\u00C3O"].includes(r.alert.k) ? C.silver : C.warn } }, r.alert.k + (r.alert.more ? "  +" + r.alert.more : "")),
-                                    React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 700, fontSize: 15, marginTop: 6 } }, r.s.name),
-                                    React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 13, lineHeight: 1.35, color: C.muted, marginTop: 3 } }, r.alert.t)))),
-                                React.createElement("div", { style: { display: "flex", gap: 8 } },
-                                    React.createElement("input", { value: studentSearch, onChange: (e) => setStudentSearch(e.target.value), placeholder: "Buscar aluno", style: { flex: 1, minWidth: 0, boxSizing: "border-box", fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "12px 14px", outline: "none" } }),
-                                    React.createElement("button", { className: "cc-tap", onClick: () => setAddStudentOpen(true), "aria-label": "Novo aluno", style: { flexShrink: 0, width: 44, height: 44, fontFamily: F.display, fontWeight: 700, fontSize: 18, color: C.text, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, border: "none", borderRadius: 10, cursor: "pointer" } }, "+")),
-                                (() => {
-                                    const trainToday = list.filter((r) => r.done || r.wait);
-                                    const others = list.filter((r) => !r.done && !r.wait);
-                                    const row = (r) => React.createElement("button", { key: r.s.id, onClick: () => open(r.s), style: { minHeight: 44, width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 0", border: "none", borderBottom: "1px solid #171B22", background: "none", textAlign: "left", cursor: "pointer", color: C.text } },
-                                        React.createElement("span", { style: { flex: 1, minWidth: 0 } },
-                                            React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 600, fontSize: 15 } }, r.s.name),
-                                            React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: F.body, fontSize: 13, marginTop: 2, color: r.wait ? C.silver : C.muted } }, r.done && React.createElement("span", { style: { color: C.silver } }, "\u2713"), r.wait && React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.silver } }), r.sub)),
-                                        React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontSize: 18, fontVariantNumeric: "tabular-nums" } }, Math.min(r.st.week, 99), React.createElement("span", { style: { color: "#3A404C" } }, "/" + (r.planned || "\u2013"))));
-                                    return React.createElement(React.Fragment, null,
-                                        trainToday.length > 0 && React.createElement(React.Fragment, null,
-                                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", padding: "16px 0 4px", ...tiny, color: "#7D8698" } }, React.createElement("span", null, "TREINAM HOJE \u00B7 " + trainToday.length), React.createElement("span", null, "SEMANA")),
-                                            trainToday.map(row)),
-                                        others.length > 0 && React.createElement(React.Fragment, null,
-                                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", padding: "16px 0 4px", ...tiny, color: "#7D8698" } }, React.createElement("span", null, "OUTROS \u00B7 " + others.length), React.createElement("span", null, "SEMANA")),
-                                            others.map(row)));
-                                })(),
+                            // design v3 (fase 4a): AlunosV3 — na pista, precisa de atenção com ação na linha, treinam hoje, outros e Ao vivo
+                            return React.createElement(React.Fragment, null,
+                                React.createElement(AlunosV3, { rows, data, now: liveNow, search: studentSearch, onSearch: setStudentSearch, onAdd: () => setAddStudentOpen(true), onOpen: (s) => { setLiveStudentId(null); open(s); },
+                                    onAttn: (r) => { if (r.alert.k === "RECADO" || r.alert.k === "SUMIDO") { setInboxFocus(r.s.id); setProfTab("recados"); markThreadRead(r.s.id); } else open(r.s); },
+                                    liveId: liveStudentId, onLive: (id) => { setLiveStudentId(id); window.scrollTo(0, 0); },
+                                    onMessage: (s) => { setLiveStudentId(null); setInboxFocus(s.id); setProfTab("recados"); markThreadRead(s.id); } }),
                                 addStudentOpen && React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 110, background: "rgba(5,6,10,.8)" }, onClick: () => setAddStudentOpen(false) },
                                     React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "cc-sheet-in", style: { position: "absolute", left: 10, right: 10, bottom: "calc(16px + env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto", borderRadius: 24, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}`, padding: "20px 18px 18px" } },
                                         React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontSize: 11, letterSpacing: "0.2em", color: C.muted } }, "NOVO ALUNO"),
