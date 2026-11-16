@@ -4,3 +4,4 @@ dist/
 referencia/
 deploy/
 .claude/
+.netlify/

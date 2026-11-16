@@ -34,6 +34,7 @@ import { TabBarV3 } from "./components/student/TabBarV3";
 import { FimV3 } from "./components/student/FimV3";
 import { AlunosV3 } from "./components/professor/AlunosV3";
 import { FichaV3, EditVolumeBlock } from "./components/professor/FichaV3";
+import { ExerciseSheet } from "./components/professor/ExerciseSheet";
 import { rendSummary } from "./utils/rendimento";
 import { RendimentoV3 } from "./components/professor/RendimentoV3";
 import { AulaV3 } from "./components/professor/AulaV3";
@@ -94,6 +95,7 @@ function CancioClub() {
     const [expanded, setExpanded] = useState(null);
     const toggleExpanded = React.useCallback((id) => setExpanded((p) => (p === id ? null : id)), []);
     const [adding, setAdding] = useState(false);
+    const [exSheet, setExSheet] = useState(null); // design v3 · gavetas do Editar ficha: { mode: "add" } | { mode: "swap", ex }
     // swipe horizontal troca o dia — só dispara se o gesto for bem mais horizontal que vertical,
     // pra não atrapalhar a rolagem normal da lista
     const swipeStart = React.useRef(null);
@@ -560,6 +562,13 @@ function CancioClub() {
             return next;
         });
     }, [focusId, day, syncStudentToCloud]);
+    // gavetas do Editar ficha (design v3): pôr da biblioteca/catálogo, trocar mantendo a prescrição e
+    // tirar — o exercício que sai com histórico vai pras fases arquivadas, pra não perder os registros
+    const archiveRetired = (p, sid, exDay, old, label) => (old.history || []).length ? { ...(p.archives || {}), [sid]: [...(((p.archives || {})[sid]) || []), { id: uid(), label, date: new Date().toISOString(), week: { [exDay]: [JSON.parse(JSON.stringify(old))] } }] } : p.archives;
+    const addExerciseFrom = (o) => { if (!focusId) return; const ex = { id: uid(), name: o.name, sets: parseInt(o.sets) || 3, reps: o.reps || "10", rest: o.rest, url: o.url, catalogId: o.catalogId, setPlan: (o.setPlan && o.setPlan.length ? o.setPlan : defaultSetPlan(o.sets || 3, o.reps || "10")).map((x) => ({ ...x, id: uidShort() })), history: [] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = [...(w[day] || []), ex]; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); setExSheet(null); };
+    const swapExercise = (old, entry) => { if (!focusId) return; const lib = (data.library || []).find((l) => l.name.trim().toLowerCase() === entry.nome.trim().toLowerCase()); const nu = { id: uid(), name: entry.nome, sets: old.sets, reps: old.reps, rest: old.rest, catalogId: entry.id, url: lib && lib.url ? lib.url : undefined, setPlan: (old.setPlan || []).map((x) => ({ ...x, id: uidShort() })), history: [] }; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = (w[day] || []).map((e) => (e.id === old.id ? nu : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w }, archives: archiveRetired(p, focusId, day, old, "Trocado: " + old.name + " → " + entry.nome) }; syncStudentToCloud(next, focusId); return next; }); setExSheet(null); setExpanded(null); };
+    const retireExercise = (old) => { if (!focusId) return; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; w[day] = (w[day] || []).filter((e) => e.id !== old.id); const next = { ...p, workouts: { ...p.workouts, [focusId]: w }, archives: archiveRetired(p, focusId, day, old, "Saiu da ficha: " + old.name) }; syncStudentToCloud(next, focusId); return next; }); setExSheet(null); setExpanded(null); };
+    const openSwap = React.useCallback((ex) => setExSheet({ mode: "swap", ex }), []);
     const removeExercise = React.useCallback((exId) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].filter((e) => e.id !== exId); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
     const updateExercise = React.useCallback((exId, patch) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, ...patch } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
     // vínculo em lote da aba Volume (redesign estético 4, item 9): mexe num exercício de QUALQUER
@@ -1452,7 +1461,7 @@ function CancioClub() {
                             list.length === 0 && !adding && React.createElement(PremiumEmptyState, { icon: "dumbbell", title: `Nenhum treino em ${dayFull} \u2014 a ficha t\u00E1 em branco.`, sub: "Monte um exerc\u00EDcio do zero ou aplique um modelo salvo." }),
                             list.map((ex, i) => profViewMode === "aula"
                                 ? React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })
-                                : React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "prof", idx: i + 1, expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExercise, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint, dayDate: dayDate }))),
+                                : React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "prof", idx: i + 1, expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExercise, onSwap: openSwap, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint, dayDate: dayDate }))),
                         profViewMode === "edit" && (React.createElement(React.Fragment, null,
                             React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 } },
                                 templates.length > 0 && React.createElement("button", { onClick: () => { setPickTpl((v) => !v); setSavingTpl(false); }, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "10px 14px", cursor: "pointer" } }, "Aplicar modelo"),
@@ -1490,7 +1499,10 @@ function CancioClub() {
                                     React.createElement(Field, { label: "Link do v\u00EDdeo (opcional)", type: "text", placeholder: "cole o link", value: form.url, onChange: (e) => setForm({ ...form, url: e.target.value }) })),
                                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14 } },
                                     React.createElement("button", { onClick: addExercise, style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "12px", cursor: "pointer" } }, "Adicionar exerc\u00EDcio"),
-                                    React.createElement("button", { onClick: () => { setAdding(false); setPickLib(false); }, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "12px 16px", cursor: "pointer" } }, "Cancelar")))) : React.createElement(AddButton, { onClick: () => setAdding(true), label: `+ Adicionar exercício em ${DAYS.find((d) => d.key === day).short}` }))),
+                                    React.createElement("button", { onClick: () => { setAdding(false); setPickLib(false); }, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "12px 16px", cursor: "pointer" } }, "Cancelar")))) : React.createElement(AddButton, { onClick: () => setExSheet({ mode: "add" }), label: `+ Adicionar exercício em ${DAYS.find((d) => d.key === day).short}` }),
+                            exSheet && profStudent && React.createElement(ExerciseSheet, { key: exSheet.mode + (exSheet.ex ? exSheet.ex.id : ""), mode: exSheet.mode, swapEx: exSheet.ex, dayList: list, week, library, dayLabel: dayFull,
+                                onAdd: addExerciseFrom, onSwap: (entry) => swapExercise(exSheet.ex, entry), onRemove: () => retireExercise(exSheet.ex),
+                                onManual: (q) => { setForm((f) => ({ ...f, name: q || "" })); setAdding(true); setExSheet(null); }, onClose: () => setExSheet(null) }))),
                         profViewMode === "aula" && profStudent && (React.createElement(React.Fragment, null,
                             todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar resumo da semana")),
                             React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),

@@ -24,7 +24,7 @@ const br = (v) => (v == null || v === "" ? v : String(v).replace(".", ","));
 const ProgressChart = React.lazy(() => import("./ProgressChart").then((m) => ({ default: m.ProgressChart })));
 const chartFallback = React.createElement("div", { style: { height: 170, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 11, color: C.muted } }, "carregando gráfico…");
 
-function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onUpdate, onDeleteRecord, onMove, isFirst, isLast, sessionDone, onToggleDone, tint, onNote, isNextUp, dayDate, idx, restriction }) {
+function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onSwap, onUpdate, onDeleteRecord, onMove, isFirst, isLast, sessionDone, onToggleDone, tint, onNote, isNextUp, dayDate, idx, restriction }) {
     const [date, setDate] = useState(dayDate || todayISO());
     // se a aba do dia mudar enquanto o card já está montado, realinha a data-alvo do auto-save —
     // sem isso, um toque na aba de Segunda numa Terça gravaria o treino como se fosse de terça
@@ -469,7 +469,8 @@ const formatLoad = (v) => (Number.isInteger(v) ? String(v) : String(Math.round(v
                         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" } },
                             React.createElement("button", { onClick: () => onMove(ex.id, -1), disabled: isFirst, style: { fontFamily: F.mono, fontSize: 13, color: isFirst ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isFirst ? "default" : "pointer" } }, "\u2191 Subir"),
                             React.createElement("button", { onClick: () => onMove(ex.id, 1), disabled: isLast, style: { fontFamily: F.mono, fontSize: 13, color: isLast ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isLast ? "default" : "pointer" } }, "\u2193 Descer"),
-                            React.createElement("button", { onClick: () => onRemove(ex.id), style: { marginLeft: "auto", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Remover")))))))));
+                            onSwap && React.createElement("button", { onClick: () => onSwap(ex), style: { marginLeft: "auto", fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Trocar"),
+                            React.createElement("button", { onClick: () => onRemove(ex.id), style: { marginLeft: onSwap ? 0 : "auto", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Remover")))))))));
 }
 ExerciseCard = React.memo(ExerciseCard);
 export { ExerciseCard };
