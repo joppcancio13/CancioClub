@@ -71,6 +71,14 @@ function describe(ex, dayDate) {
 function IconCheck({ size = 14 }) {
     return <svg width={size} height={size} viewBox="0 0 256 256" aria-hidden="true" style={{ display: "block" }}><path d="M40 144l56 56L216 80" fill="none" stroke="currentColor" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
+// notas de técnica que o professor marcou no Modo aula (design v3 · AulaV3): a mais recente até hoje
+function lastTech(ex, dayDate) {
+    const h = (ex.history || []).filter((x) => x.date <= dayDate && Array.isArray(x.techNotes) && x.techNotes.length).sort((x, y) => (x.date < y.date ? 1 : -1))[0];
+    if (!h) return null;
+    const when = h.date === dayDate ? "Hoje na aula" : "Na aula de " + new Date(h.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(/\./g, "");
+    return { when, notes: h.techNotes };
+}
+
 function IconPin() {
     return <svg width="14" height="14" viewBox="0 0 256 256" aria-hidden="true" style={{ flex: "none", marginTop: 2 }}><path fill="currentColor" d="M235.33 104l-53.47 53.65c4.56 18.57 1.61 39.73-12.23 58.63a8 8 0 0 1-12 .87L101.72 161.25l-45.06 45.07a8 8 0 0 1-11.32-11.32l45.07-45.06L35.06 94.53a8 8 0 0 1 .87-12c19.07-13.94 40.13-16.81 58.6-12.27L148 16.69a16 16 0 0 1 22.63 0L235.31 81.4a16 16 0 0 1 0 22.6Z" /></svg>;
 }
@@ -241,6 +249,12 @@ function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFi
                             {isOpen && (
                                 <div style={{ padding: "0 0 18px 36px", display: "flex", flexDirection: "column", gap: 14 }}>
                                     {r.ex.note && <div style={{ padding: "10px 12px", borderRadius: 10, background: C.panel, display: "flex", gap: 8, fontSize: 13, lineHeight: 1.4, color: C.text2 }}><IconPin /><span>Prof.: {r.ex.note}</span></div>}
+                                    {(() => { const t = lastTech(r.ex, dayDate); return t && (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                            <span style={colLabel}>{t.when.toUpperCase() + " · TÉCNICA"}</span>
+                                            <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{t.notes.map((n) => <span key={n} style={{ padding: "5px 10px", borderRadius: 999, boxShadow: "inset 0 0 0 1px " + (n === "Ótima execução" ? C.outline : C.accentLine), color: n === "Ótima execução" ? C.text2 : C.text, fontSize: 13 }}>{n}</span>)}</span>
+                                        </div>
+                                    ); })()}
                                     {restr && <div style={{ fontSize: 13, color: C.accent }}>● {restr.text}</div>}
                                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
                                         {[["ALVO", r.alvo], ["ÚLTIMA", r.ultima], ["DESCANSO", mmss(r.rest)]].map(([l, v]) => (

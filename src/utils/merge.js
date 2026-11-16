@@ -111,6 +111,10 @@ function mergeHistoryDay(localH, cloudH) {
     const note = localH.studentNote !== undefined ? localH.studentNote : cloudH.studentNote;
     if (note !== undefined)
         merged.studentNote = note;
+    // notas de técnica do Modo aula: só o professor escreve -> vale a da nuvem; sem ela, a local
+    const tech = cloudH.techNotes !== undefined ? cloudH.techNotes : localH.techNotes;
+    if (tech !== undefined)
+        merged.techNotes = tech;
     return merged;
 }
 function mergeHistoryArrays(localHist, cloudHist) {

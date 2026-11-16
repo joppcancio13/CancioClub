@@ -51,6 +51,8 @@ function mergeHistoryDay(cloudH, incH) {
     else out = { ...cloudH, ...incH };
     const note = has(incH, "studentNote") ? incH.studentNote : cloudH.studentNote;
     if (note !== undefined) out.studentNote = note;
+    // notas de técnica do Modo aula são do professor: a cópia do aluno (que pode estar velha) não manda
+    if (has(cloudH, "techNotes")) out.techNotes = cloudH.techNotes; else delete out.techNotes;
     return out;
 }
 
