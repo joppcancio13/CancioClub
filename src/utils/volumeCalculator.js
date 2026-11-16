@@ -18,7 +18,8 @@ const MUSCLE_TO_GROUP = {
     gluteo_maximo: "Glúteos", gluteo_medio: "Glúteos", gluteo_minimo: "Glúteos",
     adutores: "Adutores",
     gastrocnemio: "Panturrilha", soleo: "Panturrilha",
-    reto_abdominal: "Abdômen", transverso: "Abdômen", obliquos: "Abdômen", core: "Abdômen", eretores_espinha: "Abdômen",
+    reto_abdominal: "Abdômen", transverso: "Abdômen", obliquos: "Abdômen", core: "Abdômen",
+    // eretores_espinha: fora de propósito — não entram em nenhum grupo (design/v3/DECISOES.md · 1)
 };
 
 // ordem de exibição de desempate — a lista final é sempre reordenada do maior pro menor total
@@ -75,6 +76,29 @@ function countLoggedWorkingSetsInRange(ex, startISO, endISO) {
 //   um agachamento ativa vasto lateral + medial + intermédio + reto femoral juntos, mas é uma
 //   série só de Quadríceps, não quatro. Sem isso o total do grupo multiplicava pelo nº de cabeças
 //   que o exercício lista, inflando o volume e tornando o contador inútil pra esse fim.
+// ativação de cada GRUPO num exercício do catálogo = a maior entre os músculos daquele grupo
+// (eretores e qualquer músculo sem grupo ficam de fora)
+function groupActivation(entry) {
+    const g = {};
+    Object.entries((entry && entry.ativacao) || {}).forEach(([m, a]) => { const k = MUSCLE_TO_GROUP[m]; if (k) g[k] = Math.max(g[k] || 0, a); });
+    return g;
+}
+// séries de trabalho PRESCRITAS de um exercício (plano), sem aquecimento/reconhecimento
+const plannedWorkingSets = (ex) => (Array.isArray(ex.setPlan) && ex.setPlan.length ? ex.setPlan.filter((s) => !NON_COUNTING_KINDS.has(s.kind)).length : (parseInt(ex.sets) || 0));
+// volume PLANEJADO da semana por grupo (todas as fichas): Σ ativação do grupo × séries prescritas.
+// É o bloco "SÉRIES NA SEMANA" da ficha e da edição (design v3 · 28a).
+function plannedGroupVolume(week, catalog = exerciseCatalog) {
+    const values = {}; let unmatched = 0;
+    Object.values(week || {}).forEach((list) => (Array.isArray(list) ? list : []).forEach((ex) => {
+        const entry = ex && ex.catalogId ? catalog[ex.catalogId] : null;
+        if (!entry) { if (ex && ex.name && !ex.excludeFromVolume && plannedWorkingSets(ex) > 0) unmatched += 1; return; }
+        const n = plannedWorkingSets(ex), ga = groupActivation(entry);
+        Object.keys(ga).forEach((k) => { values[k] = (values[k] || 0) + ga[k] * n; });
+    }));
+    Object.keys(values).forEach((k) => { values[k] = Math.round(values[k] * 10) / 10; });
+    return { values, unmatched };
+}
+const fmtVol = (v) => String(Math.round((v || 0) * 10) / 10).replace(".", ",");
 function calculateWeeklyVolume(allExercises, weekOffset = 0, catalog = exerciseCatalog) {
     const { startISO, endISO } = getWeekRange(weekOffset);
     const totals = {}; // músculo fino -> nº de pastilhas (toques)
@@ -91,10 +115,11 @@ function calculateWeeklyVolume(allExercises, weekOffset = 0, catalog = exerciseC
         }
         const sets = countLoggedWorkingSetsInRange(ex, startISO, endISO);
         if (!sets) return;
-        const musculos = Object.keys(entry.ativacao || {});
-        musculos.forEach((musculo) => { totals[musculo] = (totals[musculo] || 0) + sets; });
-        const gruposDoExercicio = new Set(musculos.map((m) => MUSCLE_TO_GROUP[m] || "Outros"));
-        gruposDoExercicio.forEach((g) => { groupTotals[g] = (groupTotals[g] || 0) + sets; });
+        // design v3 (DECISOES.md · 1): volume PELA ATIVAÇÃO — cada série soma a fração de ativação
+        // (músculo fino: a do próprio músculo; grupo: a maior entre os músculos daquele grupo)
+        Object.entries(entry.ativacao || {}).forEach(([musculo, a]) => { if (MUSCLE_TO_GROUP[musculo]) totals[musculo] = (totals[musculo] || 0) + sets * a; });
+        const ga = groupActivation(entry);
+        Object.keys(ga).forEach((g) => { groupTotals[g] = (groupTotals[g] || 0) + sets * ga[g]; });
     });
 
     return { totals, groupTotals, unmatched, startISO, endISO };
@@ -107,7 +132,8 @@ function calculateWeeklyVolume(allExercises, weekOffset = 0, catalog = exerciseC
 // Grupos do maior total pro menor.
 function buildWeeklyVolumeReport(allExercises, weekOffset = 0, catalog = exerciseCatalog) {
     const { totals, groupTotals, unmatched, startISO, endISO } = calculateWeeklyVolume(allExercises, weekOffset, catalog);
-    const muscleRows = Object.keys(totals).map((musculo) => ({ musculo, total: totals[musculo] }));
+    const r1 = (v) => Math.round((v || 0) * 10) / 10; // ativação deixa frações: uma casa
+    const muscleRows = Object.keys(totals).map((musculo) => ({ musculo, total: r1(totals[musculo]) }));
 
     const byGroup = {};
     muscleRows.forEach((r) => {
@@ -119,7 +145,7 @@ function buildWeeklyVolumeReport(allExercises, weekOffset = 0, catalog = exercis
     const groups = orderedLabels
         .map((label) => {
             const rows = byGroup[label].slice().sort((a, b) => b.total - a.total);
-            return { label, total: groupTotals[label] || 0, rows };
+            return { label, total: r1(groupTotals[label]), rows };
         })
         .sort((a, b) => b.total - a.total);
 
@@ -130,4 +156,4 @@ function buildWeeklyVolumeReport(allExercises, weekOffset = 0, catalog = exercis
     return { groups, unmatched, totalSets, startISO, endISO };
 }
 
-export { calculateWeeklyVolume, buildWeeklyVolumeReport, countLoggedWorkingSetsInRange, getWeekRange, MUSCLE_TO_GROUP, GROUP_ORDER };
+export { calculateWeeklyVolume, buildWeeklyVolumeReport, countLoggedWorkingSetsInRange, getWeekRange, MUSCLE_TO_GROUP, GROUP_ORDER, groupActivation, plannedGroupVolume, plannedWorkingSets, fmtVol };

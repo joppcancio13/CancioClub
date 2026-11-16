@@ -35,6 +35,8 @@ import { HojeV3 } from "./components/student/HojeV3";
 import { TabBarV3 } from "./components/student/TabBarV3";
 import { FimV3 } from "./components/student/FimV3";
 import { AlunosV3 } from "./components/professor/AlunosV3";
+import { FichaV3, EditVolumeBlock } from "./components/professor/FichaV3";
+import { rendSummary } from "./utils/rendimento";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
@@ -59,7 +61,7 @@ import { genCode, greeting, haptic, noop, pickDailyPhrase, uid, uidShort } from 
 import { seed } from "./utils/seedData";
 import { computeStreak, lastCheckinLabel, streakTier, trainingWds } from "./utils/streak";
 import { buildDiary, computeRecords, daySummary, defaultSetPlan, emptyWeek, sortedHistory, workingProgress } from "./utils/workout";
-import { buildWeeklyVolumeReport } from "./utils/volumeCalculator";
+import { buildWeeklyVolumeReport, plannedGroupVolume } from "./utils/volumeCalculator";
 
 // 652 linhas de desenho em canvas, só usadas quando o aluno termina um treino e vê a tela de
 // compartilhar — React.lazy adia esse download pro momento real de uso, não pro boot do app.
@@ -191,6 +193,8 @@ function CancioClub() {
     // design v3 (fase 4a): aluno "ao vivo" aberto pelo professor, e o relógio que atualiza os minutos e o "na pista"
     const [liveStudentId, setLiveStudentId] = useState(null);
     const [liveNow, setLiveNow] = useState(() => Date.now());
+    // volume planejado no momento em que a edição da ficha abriu — base do "+3 / −0,6" no bloco de volume
+    const editBaselineRef = React.useRef(null);
     const cloudSynced = useDataStore((s) => s.cloudSynced); // true = última gravação chegou na nuvem; false = só ficou salva localmente por enquanto
     const setCloudSynced = useDataStore((s) => s.setCloudSynced);
     const localFull = useDataStore((s) => s.localFull); // true = localStorage estourou a cota (ver saveLocal) — rede de segurança offline caiu
@@ -247,6 +251,8 @@ function CancioClub() {
     const library = data?.library || [];
     const soundOn = data ? data.soundOn !== false : true;
     const profId = data?.activeStudentId;
+    // ao entrar na edição da ficha (ou trocar de aluno), guarda o volume planejado como base do "+3 / −0,6"
+    useEffect(() => { editBaselineRef.current = fichaTab === "treino" && data && profId ? plannedGroupVolume((data.workouts && data.workouts[profId]) || {}).values : null; }, [fichaTab, profId]);
     // salvamento agora é imperativo e granular — cada função avisa explicitamente o que mudou,
     // em vez de um efeito genérico observar `data` inteiro e decidir sozinho o que sincronizar
     // useCallback aqui não é só micro-otimização: são a base de que addLoad/updateExercise/etc.
@@ -1271,7 +1277,7 @@ function CancioClub() {
                                 const alert = reasons[0] ? { ...reasons[0], more: reasons.length - 1 } : null;
                                 return { s, st, planned, sub, done: r && r.done, wait: r && !r.done, alert, order: r ? (r.done ? 1 : 0) : 2 };
                             });
-                            const open = (s) => { setActive(s.id); setProfView("aluno"); setFichaTab("treino"); setRendEx(null); setExpanded(null); setFichaOpen(false); setHistOpen(false); };
+                            const open = (s) => { setActive(s.id); setProfView("aluno"); setFichaTab("resumo"); setRendEx(null); setExpanded(null); setFichaOpen(false); setHistOpen(false); };
                             const alerts = rows.filter((r) => r.alert);
                             const list = rows.filter((r) => r.s.name.toLowerCase().includes(q)).sort((a, b) => a.order - b.order || a.s.name.localeCompare(b.s.name));
                             // design v3 (fase 4a): AlunosV3 — na pista, precisa de atenção com ação na linha, treinam hoje, outros e Ao vivo
@@ -1293,7 +1299,7 @@ function CancioClub() {
                         const header = React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } },
                             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
                                 React.createElement("button", { className: "cc-tap", onClick: () => { setProfView("home"); setRendEx(null); setExpanded(null); }, style: { minHeight: 44, padding: "0 10px 0 0", fontFamily: F.body, fontSize: 15, color: C.silver, background: "none", border: "none", cursor: "pointer" } }, "\u2039 Alunos"),
-                                React.createElement("button", { className: "cc-tap", onClick: () => setFichaTab("ficha"), style: { minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Editar")),
+                                React.createElement("button", { className: "cc-tap", onClick: () => { setFichaTab("ficha"); window.scrollTo(0, 0); }, style: { minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Dados")),
                             React.createElement("div", { style: { position: "relative", overflow: "hidden", borderRadius: 16, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, padding: 16, display: "flex", gap: 14, alignItems: "center" } },
                                 React.createElement("img", { src: SIL_URL, alt: "", "aria-hidden": "true", style: { position: "absolute", right: -30, top: -30, width: 130, height: 130, opacity: 0.12, pointerEvents: "none" } }),
                                 React.createElement("div", { style: { width: 68, height: 68, borderRadius: "50%", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: ps.photo ? C.panel : "repeating-linear-gradient(135deg,#171B22 0 6px,#0E1015 6px 12px)", boxShadow: ps.photo ? "none" : `inset 0 0 0 1.5px ${C.line2}` } },
@@ -1308,11 +1314,26 @@ function CancioClub() {
                                 React.createElement("span", { style: { color: "#7D8698" } }, "\u203A")));
                         const statB = (v, l) => React.createElement("span", null, React.createElement("b", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 15, color: C.text } }, v), " " + l);
                         const chips = [lastEffortFor(profId) === "destruidor" && "Fadiga \u00B7 \u00FAltimo treino Destruidor", !ps.ackAt && "Termo pendente"].filter(Boolean);
-                        const tabs = React.createElement("div", { style: { display: "flex", gap: 4, marginTop: 14, padding: 4, borderRadius: 10, background: C.panel } }, [["treino", "Treino"], ["rend", "Rendimento"], ["volume", "Volume"], ["ficha", "Ficha"]].map(([k, l]) => React.createElement("button", { key: k, onClick: () => { setFichaTab(k); setRendEx(null); }, style: { minHeight: 44, flex: 1, padding: 9, borderRadius: 10, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, fontWeight: fichaTab === k ? 700 : 500, background: fichaTab === k ? "#1E222A" : "transparent", color: fichaTab === k ? C.text : C.muted } }, l)));
+                        // design v3 (4b): a ficha é uma página única (FichaV3); as telas completas (Editar, Rendimento,
+                        // Volume, Dados) ganham só um "‹ Resumo" em vez da fileira de abas
+                        const TAB_TITLE = { treino: "Editar ficha", rend: "Rendimento", volume: "Volume feito", ficha: "Dados e anamnese" };
+                        const tabs = fichaTab === "resumo" ? null : React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 14 } },
+                            React.createElement("button", { className: "cc-tap", onClick: () => { setFichaTab("resumo"); setRendEx(null); setProfViewMode("edit"); window.scrollTo(0, 0); }, style: { minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "‹ Resumo"),
+                            React.createElement("span", { style: { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase", color: C.text4 } }, TAB_TITLE[fichaTab] || ""));
                         let body = null;
                         const wkP = (data.workouts && data.workouts[profId]) || emptyWeek();
                         const allEx = []; DAYS.forEach((d) => (wkP[d.key] || []).forEach((e) => allEx.push({ ...e, _day: d.key })));
-                        if (fichaTab === "rend" && rendEx) {
+                        if (fichaTab === "resumo") {
+                            body = React.createElement(FichaV3, {
+                                student: ps, week: wkP, dayNames: (data.dayNames && data.dayNames[profId]) || {}, sessions: profSessions, todayKey,
+                                rend: rendSummary({ exercises: allEx, checkins: (data.checkins && data.checkins[profId]) || [], startDate: ps.startDate, week: wkP, cardio: data.cardio && data.cardio[profId] }),
+                                onAula: () => { setDay(todayKey); setExpanded(null); setProfViewMode("aula"); setFichaTab("treino"); window.scrollTo(0, 0); },
+                                onEdit: (k) => { setDay(k); setExpanded(null); setProfViewMode("edit"); setFichaTab("treino"); window.scrollTo(0, 0); },
+                                onOpenRend: () => { setRendEx(null); setFichaTab("rend"); window.scrollTo(0, 0); },
+                                onOpenVol: () => { setFichaTab("volume"); window.scrollTo(0, 0); },
+                            });
+                        }
+                        else if (fichaTab === "rend" && rendEx) {
                             const ex = allEx.find((e) => e.id === rendEx);
                             if (ex) {
                                 const hs = sortedHistory(ex.history || []).map((x) => ({ date: x.date, raw: x, ...daySummary(x) })).filter((x) => x.load > 0).slice(-12);
@@ -1432,6 +1453,8 @@ function CancioClub() {
                     })(),
                     (profView === "home" && students.length > 0) || (profView === "aluno" && fichaTab !== "treino") ? null : students.length === 0 && loadingRoster ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, [0, 1, 2].map((i) => React.createElement(SkeletonCard, { key: i }))) : students.length === 0 ? React.createElement(PremiumEmptyState, { icon: "personPlus", compact: false, title: "Nenhum aluno na casa ainda.", sub: "Cadastre o primeiro e a pista come\u00E7a a girar." }) : (React.createElement(React.Fragment, null,
                         profStudent && profStudent.obs && obsChip(profStudent.obs),
+                        // design v3 (4b · 28a): volume planejado da semana pela ativação, com a mudança desde que a edição abriu
+                        profStudent && profViewMode === "edit" && React.createElement(EditVolumeBlock, { week: (data.workouts && data.workouts[profId]) || emptyWeek(), baseline: editBaselineRef.current }),
                         profStudent && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } },
                             React.createElement("button", { onClick: () => setProfViewMode("edit"), style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: profViewMode === "edit" ? C.ink : C.muted, background: profViewMode === "edit" ? C.silver : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo edi\u00E7\u00E3o"),
                             React.createElement("button", { onClick: () => setProfViewMode("aula"), style: { minHeight: 44, flex: 1, fontFamily: F.mono, fontSize: 13, letterSpacing: "0.04em", color: profViewMode === "aula" ? C.ink : C.muted, background: profViewMode === "aula" ? C.amber : C.panel2, border: "none", borderRadius: 10, padding: "10px", cursor: "pointer" } }, "Modo aula"),

@@ -1,6 +1,6 @@
 import React from "react";
 import { C, F, PILL_ON, flatPanel } from "../../styles/tokens";
-import { buildWeeklyVolumeReport, countLoggedWorkingSetsInRange } from "../../utils/volumeCalculator";
+import { buildWeeklyVolumeReport, countLoggedWorkingSetsInRange, fmtVol } from "../../utils/volumeCalculator";
 
 function Pills({ count, size }) {
     return React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 2.5 } },
@@ -13,6 +13,11 @@ function Pills({ count, size }) {
 // próprio de dado, acompanha sozinho qualquer mudança (vincular um catalogId, registrar uma
 // série nova). Cada pastilha = 1 série de trabalho que tocou aquele músculo; sem limite, sem
 // separar direto de indireto — é só a contagem.
+// design v3: volume pela ativação tem frações ("12,4"), então a pastilha por série virou barra
+function VolBar({ value, max, h }) {
+    return React.createElement("span", { style: { display: "block", height: h, borderRadius: h / 2, background: C.raised, overflow: "hidden" } },
+        React.createElement("span", { style: { display: "block", width: Math.max(2, Math.min(100, (value / (max || 1)) * 100)) + "%", height: "100%", background: C.text2, borderRadius: h / 2 } }));
+}
 function VolumeDashboard({ allEx, onOpenBulkLink }) {
     const [weekOffset, setWeekOffset] = React.useState(0);
     const [weekMenuOpen, setWeekMenuOpen] = React.useState(false);
@@ -25,6 +30,7 @@ function VolumeDashboard({ allEx, onOpenBulkLink }) {
     // ela trabalha (supino = peito + tríceps) — certo por grupo, mas não como "séries na semana".
     const totalSets = React.useMemo(() => (allEx || []).reduce((n, ex) => n + (ex ? countLoggedWorkingSetsInRange(ex, startISO, endISO) : 0), 0), [allEx, startISO, endISO]);
     const weekLabel = weekOffset === 0 ? "esta semana" : "semana passada";
+    const maxGroup = Math.max(1, ...groups.map((g) => g.total));
 
     const weekSelector = React.createElement("div", { style: { position: "relative", display: "inline-block" } },
         React.createElement("button", { className: "cc-tap", onClick: () => setWeekMenuOpen((v) => !v), style: { minHeight: 44, fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.silver, background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 } },
@@ -49,15 +55,15 @@ function VolumeDashboard({ allEx, onOpenBulkLink }) {
                     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 } },
                         React.createElement("span", { style: { fontFamily: F.body, fontSize: 15, fontWeight: 700, color: C.text } }, g.label),
                         React.createElement("span", { style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 8 } },
-                            React.createElement("span", { style: { fontFamily: F.mono, fontSize: 13, color: C.silver } }, g.total),
+                            React.createElement("span", { style: { fontFamily: F.mono, fontSize: 13, color: C.silver, fontVariantNumeric: "tabular-nums" } }, fmtVol(g.total)),
                             React.createElement("span", { style: { color: C.muted, fontFamily: F.mono, fontSize: 13, transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .2s" } }, "›"))),
-                    React.createElement(Pills, { count: g.total, size: 12 })),
+                    React.createElement(VolBar, { value: g.total, max: maxGroup, h: 8 })),
                 isOpen && React.createElement("div", { style: { padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 11 } },
                     g.rows.map((r) => React.createElement("div", { key: r.musculo },
                         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 5 } },
                             React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, fontWeight: 600, color: C.silver, textTransform: "capitalize" } }, r.musculo.replace(/_/g, " ")),
-                            React.createElement("span", { style: { flexShrink: 0, fontFamily: F.mono, fontSize: 11, color: C.muted } }, r.total)),
-                        React.createElement(Pills, { count: r.total, size: 8 })))));
+                            React.createElement("span", { style: { flexShrink: 0, fontFamily: F.mono, fontSize: 11, color: C.muted, fontVariantNumeric: "tabular-nums" } }, fmtVol(r.total))),
+                        React.createElement(VolBar, { value: r.total, max: g.total || 1, h: 4 })))));
         }),
         unmatched.length > 0 && React.createElement("button", { className: "cc-tap", onClick: onOpenBulkLink, style: { minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", fontFamily: F.body, fontSize: 13, color: C.text, background: "none", boxShadow: `inset 0 0 0 1px ${C.line2}`, border: "none", borderRadius: 16, padding: "13px 16px", cursor: "pointer", marginTop: 4 } },
             React.createElement("span", null, unmatched.length + " exercício" + (unmatched.length > 1 ? "s" : "") + " fora da conta"),
