@@ -37,6 +37,7 @@ import { FimV3 } from "./components/student/FimV3";
 import { AlunosV3 } from "./components/professor/AlunosV3";
 import { FichaV3, EditVolumeBlock } from "./components/professor/FichaV3";
 import { rendSummary } from "./utils/rendimento";
+import { RendimentoV3 } from "./components/professor/RendimentoV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
@@ -1342,89 +1343,14 @@ function CancioClub() {
                                 onOpenVol: () => { setFichaTab("volume"); window.scrollTo(0, 0); },
                             });
                         }
-                        else if (fichaTab === "rend" && rendEx) {
-                            const ex = allEx.find((e) => e.id === rendEx);
-                            if (ex) {
-                                const hs = sortedHistory(ex.history || []).map((x) => ({ date: x.date, raw: x, ...daySummary(x) })).filter((x) => x.load > 0).slice(-12);
-                                const mn = Math.min(...hs.map((x) => x.load)) - 2, mx = Math.max(...hs.map((x) => x.load)) + 2;
-                                const pts = hs.map((x, i) => [hs.length > 1 ? (i / (hs.length - 1)) * 300 : 150, 150 - ((x.load - mn) / (mx - mn || 1)) * 140]);
-                                const first = hs[0], last = hs[hs.length - 1];
-                                const setsTxt = (x) => { const es = Array.isArray(x.raw.entries) ? x.raw.entries.filter((e) => !NON_COUNTING_KINDS.has(e.kind) && typeof e.load === "number") : []; return es.length ? fmtK(Math.max(...es.map((e) => e.load))) + " \u00D7 " + es.map((e) => e.reps).join(" \u00B7 ") : fmtK(x.load) + (x.reps ? " \u00D7 " + x.reps : ""); };
-                                const saveNote = (val) => setData((p) => { const w = { ...p.workouts[profId] }; w[ex._day] = (w[ex._day] || []).map((e) => (e.id === ex.id ? { ...e, profNote: val } : e)); const next = { ...p, workouts: { ...p.workouts, [profId]: w } }; syncStudentToCloud(next, profId); return next; });
-                                body = React.createElement("div", { className: "cc-view", style: { marginTop: 16 } },
-                                    React.createElement("button", { onClick: () => setRendEx(null), style: { minHeight: 44, fontFamily: F.body, fontSize: 15, fontWeight: 500, color: C.silver, background: "none", border: "none", padding: 0, cursor: "pointer" } }, "\u2039 Rendimento"),
-                                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1.05, textTransform: "uppercase", marginTop: 14 } }, ex.name),
-                                    last && React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 10, marginTop: 14 } },
-                                        React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 48, lineHeight: 1 } }, fmtK(last.load), React.createElement("span", { style: { fontSize: 18, color: C.muted } }, " kg")),
-                                        first && hs.length > 1 && React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, (last.load > first.load ? "+" + fmtK(last.load - first.load) + " kg desde " + fmtDate(first.date) : last.load === first.load ? "est\u00E1vel desde " + fmtDate(first.date) : fmtK(last.load - first.load) + " kg desde " + fmtDate(first.date)))),
-                                    hs.length > 1 ? React.createElement("svg", { viewBox: "0 0 300 160", style: { width: "100%", height: 170, marginTop: 18, overflow: "visible" } },
-                                        [10, 80, 150].map((y) => React.createElement("line", { key: y, x1: 0, x2: 300, y1: y, y2: y, stroke: "#1E222A", strokeDasharray: "3 4" })),
-                                        React.createElement("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: C.silver, strokeWidth: 2, strokeLinejoin: "round" }),
-                                        pts.map((p, i) => React.createElement("circle", { key: i, cx: p[0], cy: p[1], r: i === pts.length - 1 ? 6 : 3, fill: i === pts.length - 1 ? C.text : C.ink, stroke: C.silver, strokeWidth: 1.5 }))) : React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 18 } }, "Ainda sem hist\u00F3rico suficiente pra um gr\u00E1fico."),
-                                    React.createElement("div", { style: { ...tiny, marginTop: 20 } }, "\u00DALTIMAS SESS\u00D5ES \u00B7 S\u00C9RIES DE TRABALHO"),
-                                    [...hs].reverse().slice(0, 5).map((x) => React.createElement("div", { key: x.date, style: { display: "flex", gap: 10, alignItems: "baseline", padding: "11px 0", borderBottom: "1px solid #171B22" } },
-                                        React.createElement("span", { style: { width: 52, fontFamily: F.body, fontSize: 13, color: C.muted } }, fmtDate(x.date)),
-                                        React.createElement("span", { style: { flex: 1, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 15 } }, setsTxt(x)))),
-                                    React.createElement("div", { style: { marginTop: 14, padding: "12px 14px", borderRadius: 10, background: C.panel, boxShadow: "inset 0 0 0 1px #1E222A" } },
-                                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 8 } }, React.createElement("span", { style: tiny }, "NOTA DO PROFESSOR"), React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: "#7D8698" } }, "opcional \u00B7 aluno v\u00EA no exerc\u00EDcio")),
-                                        React.createElement("textarea", { value: noteDraft, onChange: (e) => setNoteDraft(e.target.value), onBlur: () => saveNote(noteDraft.trim()), placeholder: "Escreva uma orienta\u00E7\u00E3o pra pr\u00F3xima vez\u2026", style: { width: "100%", boxSizing: "border-box", minHeight: 56, background: "none", border: "none", outline: "none", resize: "none", padding: 0, fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: C.text } })));
-                            }
-                        }
                         else if (fichaTab === "rend") {
-                            const now = new Date(); now.setHours(0, 0, 0, 0);
-                            const weekIdx = (iso) => Math.floor((now - new Date(iso + "T00:00:00")) / (7 * 86400000));
-                            const vols = Array(8).fill(0);
-                            allEx.forEach((e) => (e.history || []).forEach((x) => { const w = weekIdx(x.date); if (w >= 0 && w < 8) vols[7 - w] += daySummary(x).volume || 0; }));
-                            const vmax = Math.max(1, ...vols);
-                            const firstV = vols.find((v) => v > 0) || 0, lastV = vols[7] || vols[6] || 0;
-                            const volDelta = firstV && lastV ? Math.round(((lastV - firstV) / firstV) * 100) : null;
-                            // janela da frequência: 8 semanas, ou menos se o aluno começou depois disso (início da
-                            // ficha ou 1º check-in, o que vier antes). Antes contava sempre 8 semanas inteiras, e
-                            // quem tinha começado há 2 semanas aparecia com ~20% mesmo treinando todo dia.
-                            const chP = (data.checkins && data.checkins[profId]) || [];
-                            const firstDay = [profStudent && profStudent.startDate, ...chP].filter(Boolean).sort()[0];
-                            const freqWeeks = firstDay ? Math.max(1, Math.min(8, weekIdx(String(firstDay).slice(0, 10)) + 1)) : 8;
-                            const planned = trainingWds(wkP, data.cardio && data.cardio[profId]).size * freqWeeks;
-                            const ch8 = chP.filter((d) => weekIdx(d) >= 0 && weekIdx(d) < freqWeeks).length;
-                            const freqPct = planned ? Math.min(100, Math.round((ch8 / planned) * 100)) : null;
-                            const progs = allEx.map((e) => {
-                                const hs = sortedHistory(e.history || []).map((x) => ({ date: x.date, ...daySummary(x) })).filter((x) => x.load > 0);
-                                if (hs.length < 2) return null;
-                                let best = hs[0].load, prs = 0; hs.slice(1).forEach((x) => { if (x.load > best) { prs++; best = x.load; } });
-                                const tail = hs.slice(-8), a = tail[0].load, b = tail[tail.length - 1].load, lo = Math.min(...tail.map((x) => x.load)), hi = Math.max(...tail.map((x) => x.load));
-                                return { e, prs, a, b, pts: tail.map((x, i) => `${(i / (tail.length - 1)) * 100},${26 - ((x.load - lo) / (hi - lo || 1)) * 24}`).join(" "), delta: b === a ? "est\u00E1vel" : (b > a ? "+" : "") + Math.round(((b - a) / a) * 100) + "%" };
-                            }).filter(Boolean);
-                            const prTotal = progs.reduce((n, p) => n + p.prs, 0);
-                            const eff = { facil: 0, medida: 0, destruidor: 0 }; profSessions.forEach((x) => { if (eff[x.effort] != null) eff[x.effort]++; });
-                            const effN = eff.facil + eff.medida + eff.destruidor;
-                            const num = (v, l, first) => React.createElement("div", { style: { padding: first ? "12px 0" : "12px 0 12px 12px", borderLeft: first ? "none" : "1px solid #1E222A" } }, React.createElement("div", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24, lineHeight: 1 } }, v), React.createElement("div", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 } }, l));
-                            body = React.createElement("div", { className: "cc-view", style: { marginTop: 16 } },
-                                React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", borderTop: "1px solid #1E222A", borderBottom: "1px solid #1E222A" } }, num(freqPct != null ? freqPct + "%" : "\u2013", "frequ\u00EAncia \u00B7 " + freqWeeks + " sem", true), num(volDelta != null ? (volDelta > 0 ? "+" : "") + volDelta + "%" : "\u2013", "volume semanal"), num(prTotal + " \u2605", "recordes")),
-                                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 18 } }, React.createElement("span", { style: tiny }, "VOLUME POR SEMANA"), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 13 } }, fmtVolume(vols[7]))),
-                                React.createElement("div", { style: { height: 74, display: "flex", alignItems: "flex-end", gap: 5, marginTop: 10 } }, vols.map((v, i) => React.createElement("div", { key: i, style: { flex: 1, height: Math.max(2, (v / vmax) * 74), borderRadius: 3, background: i === 7 ? "linear-gradient(180deg,#FFFFFF,#AEB9CB)" : v ? "#2E333D" : "#1A1D24" } }))),
-                                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 11, color: "#7D8698", marginTop: 5 } }, React.createElement("span", null, "8 semanas atr\u00E1s"), React.createElement("span", null, "esta semana")),
-                                React.createElement("div", { style: { ...tiny, marginTop: 18 } }, "CARGA POR EXERC\u00CDCIO \u00B7 TOQUE PRA ABRIR"),
-                                progs.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, padding: "12px 0" } }, "Os gr\u00E1ficos aparecem depois de 2 treinos registrados."),
-                                progs.map((p) => React.createElement("button", { key: p.e.id, onClick: () => { setRendEx(p.e.id); setNoteDraft(p.e.profNote || ""); }, style: { minHeight: 44, width: "100%", display: "grid", gridTemplateColumns: "1fr 70px 56px", gap: 10, alignItems: "center", padding: "10px 0", border: "none", borderBottom: "1px solid #171B22", background: "none", textAlign: "left", cursor: "pointer", color: C.text } },
-                                    React.createElement("span", { style: { minWidth: 0 } }, React.createElement("span", { style: { display: "block", fontFamily: F.body, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, p.e.name + (p.prs ? " \u2605" : "")), React.createElement("span", { style: { display: "block", fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 } }, p.a === p.b ? fmtK(p.b) + " kg" : fmtK(p.a) + " \u2192 " + fmtK(p.b) + " kg")),
-                                    React.createElement("svg", { viewBox: "0 0 100 28", preserveAspectRatio: "none", style: { width: 70, height: 24, overflow: "visible" } }, React.createElement("polyline", { points: p.pts, fill: "none", stroke: C.silver, strokeWidth: 1.6, strokeLinejoin: "round", vectorEffect: "non-scaling-stroke" })),
-                                    React.createElement("span", { style: { fontFamily: F.display, fontWeight: 800, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 15, textAlign: "right" } }, p.delta))),
-                                effN > 0 && React.createElement(React.Fragment, null,
-                                    React.createElement("div", { style: { ...tiny, marginTop: 18 } }, "ESFOR\u00C7O RELATADO \u00B7 " + effN + " TREINOS"),
-                                    React.createElement("div", { style: { display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 2, marginTop: 10 } }, eff.facil > 0 && React.createElement("span", { style: { flex: eff.facil, background: "#3A404C" } }), eff.medida > 0 && React.createElement("span", { style: { flex: eff.medida, background: "#8D97A9" } }), eff.destruidor > 0 && React.createElement("span", { style: { flex: eff.destruidor, background: C.warn } })),
-                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 6 } }, React.createElement("span", null, "f\u00E1cil " + eff.facil), React.createElement("span", null, "na medida " + eff.medida), React.createElement("span", { style: { color: C.warn } }, "destruidor " + eff.destruidor))),
-                                React.createElement("div", { style: { ...tiny, marginTop: 20 } }, "SESS\u00D5ES (" + profSessions.length + ")"),
-                                profSessions.length === 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, padding: "12px 0" } }, "Nenhuma sess\u00E3o registrada ainda."),
-                                [...profSessions].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 12).map((x) => React.createElement("div", { key: x.id, style: { padding: "11px 0", borderBottom: "1px solid #171B22" } },
-                                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, fontFamily: F.body, fontSize: 13 } }, React.createElement("span", null, (() => {
-                                        // dia da semana REAL da data + de qual ficha era, quando for outra (o aluno pode fazer o
-                                        // treino de s\u00E1bado numa sexta). Antes aparecia s\u00F3 o dia da ficha, como se fosse o da data.
-                                        const realKey = JS2KEY[new Date(x.date + "T00:00:00").getDay()];
-                                        const real = DAYS.find((d) => d.key === realKey) || {};
-                                        const ficha = DAYS.find((d) => d.key === x.day);
-                                        return fmtDate(x.date) + " \u00B7 " + (real.short || "") + (ficha && x.day !== realKey ? " \u00B7 ficha de " + ficha.full : "");
-                                    })()), React.createElement("span", { style: { color: C.muted } }, [x.durationSec ? fmtDur(x.durationSec) : "", x.effort ? ({ facil: "f\u00E1cil", medida: "na medida", destruidor: "destruidor", descanso: "recupera\u00E7\u00E3o" }[x.effort] || x.effort) : ""].filter(Boolean).join(" \u00B7 "))),
-                                    x.feedback && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.4, color: "#C9D0DC", marginTop: 4 } }, "\u201C" + x.feedback + "\u201D"))));
+                            // design v3 (4c · 18a/18b): RendimentoV3 — lista por dia de treino e gráfico do exercício (rendEx)
+                            body = React.createElement(RendimentoV3, { allEx, week: wkP, dayNames: (data.dayNames && data.dayNames[profId]) || {}, sessions: profSessions,
+                                rend: rendSummary({ exercises: allEx, checkins: (data.checkins && data.checkins[profId]) || [], startDate: ps.startDate, week: wkP, cardio: data.cardio && data.cardio[profId] }),
+                                exId: rendEx, onOpenEx: (id) => { setRendEx(id); window.scrollTo(0, 0); },
+                                onEditDay: (k) => { setRendEx(null); setDay(k); setExpanded(null); setProfViewMode("edit"); setFichaTab("treino"); window.scrollTo(0, 0); },
+                                onSaveNote: (ex, val) => setData((p) => { const w = { ...p.workouts[profId] }; w[ex._day] = (w[ex._day] || []).map((e) => (e.id === ex.id ? { ...e, profNote: val } : e)); const next = { ...p, workouts: { ...p.workouts, [profId]: w } }; syncStudentToCloud(next, profId); return next; }),
+                            });
                         }
                         else if (fichaTab === "volume") {
                             const unmatched = buildWeeklyVolumeReport(allEx, 0).unmatched;
