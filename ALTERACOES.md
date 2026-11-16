@@ -124,3 +124,10 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Mês e semana no fuso do aparelho:** Salva-Vidas, frequência do mês no perfil, evolução de 8 semanas e semana do volume usavam UTC e viravam o mês às 21h do último dia. (`App.jsx`, `StudentProfile.jsx`, `EvolutionSummary.jsx`, `utils/volumeCalculator.js`)
 - **Restaurar backup** apaga da nuvem os alunos que não estão no backup (a confirmação mostra quantos). Antes eles voltavam no próximo login do professor. (`App.jsx`)
 - Cache v52.
+
+## v53 — design v3, fases 1 e 2 (aluno)
+- **Tela de treino nova** (`components/student/WorkoutV3.jsx`): lista corrida, exercício aberto com nota do professor e ALVO / ÚLTIMA / DESCANSO; registro só na barra de baixo; "Feito" vira descanso; corrigir série; recado com contexto da série; pular exercício.
+- **Tela Hoje** (`components/student/HojeV3.jsx`) e **abas** Hoje / Treino / Recados / Perfil (`components/student/TabBarV3.jsx`). Recados ganhou aba própria; Diário fica em Hoje. Abas somem com o treino em andamento e voltam ao rolar pra cima.
+- Tokens v3 em `styles/tokens.js`. Decisões em `design/v3/DECISOES.md`.
+- Saíram da tela do aluno: anotação por exercício, gráfico no exercício, troca por alternativa, editar séries do plano, vídeo embutido (virou link).
+- Professor: sem mudança. Cache v53.
