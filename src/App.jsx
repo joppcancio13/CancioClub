@@ -31,6 +31,8 @@ import { DayTabs } from "./components/student/DayTabs";
 import { DiaryCalendar } from "./components/student/DiaryCalendar";
 import { ExerciseCard } from "./components/student/ExerciseCard";
 import { WorkoutV3 } from "./components/student/WorkoutV3";
+import { HojeV3 } from "./components/student/HojeV3";
+import { TabBarV3 } from "./components/student/TabBarV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
@@ -162,7 +164,15 @@ function CancioClub() {
     }, [data && data.messages, role, alunoId]);
     const notifButton = notifPerm === "default" && React.createElement("button", { onClick: async () => setNotifPerm(await askNotify()), style: { minHeight: 44, width: "100%", marginBottom: 12, borderRadius: 10, border: "none", background: C.panel2, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Ativar avisos de recado no celular");
     const [assessmentJustDone, setAssessmentJustDone] = useState(false);
-    const [alunoTab, setAlunoTab] = useState("treino");
+    const [alunoTab, setAlunoTab] = useState("hoje"); // design v3: "hoje" | "treino" | "recados" | "diario" (Perfil abre o StudentProfile)
+    // abas escondidas com o treino em andamento (DECISOES.md · 4); voltam ao rolar pra cima
+    const [tabsPeek, setTabsPeek] = useState(false);
+    useEffect(() => {
+        let last = window.scrollY;
+        const onScroll = () => { const y = window.scrollY; if (y < last - 24) { setTabsPeek(true); last = y; } else if (y > last + 24) { setTabsPeek(false); last = y; } };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
     const [dayEntryOpen, setDayEntryOpen] = useState(false);
     const [diaryMonth, setDiaryMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
     const changeDiaryMonth = (dir) => setDiaryMonth((m) => { let month = m.month + dir, year = m.year; if (month < 0) {
@@ -416,6 +426,8 @@ function CancioClub() {
     const dayRecovery = focusRecoveryLog[dayDate] || { hydration: false, sleep: false, mobility: false };
     const hasRecoveryOnDay = !!(dayRecovery.hydration || dayRecovery.sleep || dayRecovery.mobility);
     const hasLoggedSomething = hasSetOnDay || hasCardioOnDay || hasRecoveryOnDay;
+    // treino em andamento na aba Treino -> abas escondidas, a não ser que o aluno role pra cima (tabsPeek)
+    const tabsHidden = role === "aluno" && alunoTab === "treino" && list.length > 0 && hasSetOnDay && !dayDone && !tabsPeek;
     const isRestDay = list.length === 0 && !hasCardioOnDay && hasRecoveryOnDay;
     const buildWeeklySummary = () => {
         let weeklyVolume = 0;
@@ -890,7 +902,7 @@ function CancioClub() {
         else
             setCodeErr(true);
     };
-    const logout = () => { setAlunoId(null); setExpanded(null); };
+    const logout = () => { setAlunoId(null); setExpanded(null); setAlunoTab("hoje"); setProfileOpen(false); };
     // AUTENTICAÇÃO REAL DO SUPABASE — a senha é verificada de verdade pelo Supabase Auth (nunca
     // gravada no código; só o e-mail da conta única de professor é fixo).
     const fetchAllStudentsAfterAuth = async () => {
@@ -1050,27 +1062,18 @@ function CancioClub() {
     // tela cheia de entrada do dia (redesign estético 4, item 3): mostra sozinha na primeira
     // abertura do app no dia, uma vez por aluno por dia — depois disso só reaparece por ação
     // explícita ("trocar treino ›"). Só pro aluno já com o termo aceito e a ficha inicial feita.
-    useEffect(() => {
-        if (role !== "aluno" || !alunoStudent || !alunoStudent.ackAt || !alunoStudent.assessmentAt)
-            return;
-        const flagKey = `cancio:dayEntrySeen:${alunoId}:${todayISO()}`;
-        if (((data && data.sessions && data.sessions[alunoId]) || []).some((x) => x.date === todayISO())) return; // já treinou hoje: abre no perfil (efeito abaixo)
-        try {
-            if (localStorage.getItem(flagKey)) return;
-            localStorage.setItem(flagKey, "1");
-        } catch (e) { }
-        setDayEntryOpen(true);
-    }, [role, alunoId, alunoStudent && alunoStudent.ackAt, alunoStudent && alunoStudent.assessmentAt]);
-    // já treinou hoje -> ao abrir o app (ou logar), cai no perfil em vez do treino. Uma vez por abertura.
+    // design v3: a tela "Hoje" substituiu as duas aberturas automáticas que existiam aqui (a tela
+    // cheia de entrada do dia e o perfil quando já treinou). A entrada do dia continua no "Trocar treino".
     const todaySessionAluno = role === "aluno" && alunoId ? ((data && data.sessions && data.sessions[alunoId]) || []).filter((x) => x.date === todayISO()).slice(-1)[0] : null;
-    const openedProfileRef = React.useRef(null);
-    useEffect(() => {
-        if (role !== "aluno" || !alunoStudent || !alunoStudent.ackAt || !alunoStudent.assessmentAt || !todaySessionAluno) return;
-        if (openedProfileRef.current === alunoId) return;
-        openedProfileRef.current = alunoId;
-        setDayEntryOpen(false);
-        setProfileOpen(true);
-    }, [role, alunoId, !!todaySessionAluno, alunoStudent && alunoStudent.assessmentAt]);
+    // compartilhar o treino feito hoje a partir da tela Hoje (mesmo card do fim do treino)
+    const shareTodaySession = () => {
+        const s = todaySessionAluno; if (!s || !alunoStudent) return;
+        const wk = (data.workouts && data.workouts[alunoId]) || {}; const lst = wk[s.day] || [];
+        const dn = ((data.dayNames || {})[alunoId] || {})[s.day] || (DAYS.find((d) => d.key === s.day) || {}).full || "Treino";
+        setShareCard({ name: alunoStudent.name, workoutName: dn, durationLabel: s.durationSec ? fmtDur(s.durationSec) : "—", dateLabel: fmtDate(s.date), targetDate: s.date, streak, tint: tier.tint, isRestDay: s.effort === "descanso", exercises: lst.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
+    };
+    // abrir a aba Recados conta como ler os recados do professor
+    useEffect(() => { if (role === "aluno" && alunoId && alunoTab === "recados") markProfRead(alunoId); }, [role, alunoId, alunoTab]);
     const focusStudent = students.find((s) => s.id === focusId);
     // meta semanal (do campo "Frequência semanal" da ficha) no lugar da sequência de dias seguidos
     const weeklyTarget = parseWeeklyTarget(focusStudent && focusStudent.freqWeekly);
@@ -1150,7 +1153,7 @@ function CancioClub() {
                 setShareCard(sd); }, onSkip: () => { const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); } }),
         shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 13, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
-        role === "aluno" && alunoStudent && profileOpen && React.createElement(StudentProfile, { student: alunoStudent, week: (data.workouts || {})[alunoId] || emptyWeek(), checkins: (data.checkins || {})[alunoId] || [], freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify: async () => setNotifPerm(await askNotify()), onUpdate: (patch) => updateStudent(alunoId, patch), onOpenCard: () => setMemberCardOpen(true), onOpenSelo: () => setLogoCard(true), onOpenMyData: () => setMyDataOpen(true), onOpenReassess: () => setReassessOpen(true), onMessage: () => { setProfileOpen(false); setAlunoTab("treino"); setTimeout(() => { const el = document.getElementById("cc-chat"); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: "smooth" }); }, 80); }, onLogout: () => { setProfileOpen(false); logout(); }, onClose: () => setProfileOpen(false),
+        role === "aluno" && alunoStudent && profileOpen && React.createElement(StudentProfile, { student: alunoStudent, week: (data.workouts || {})[alunoId] || emptyWeek(), checkins: (data.checkins || {})[alunoId] || [], freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify: async () => setNotifPerm(await askNotify()), onUpdate: (patch) => updateStudent(alunoId, patch), onOpenCard: () => setMemberCardOpen(true), onOpenSelo: () => setLogoCard(true), onOpenMyData: () => setMyDataOpen(true), onOpenReassess: () => setReassessOpen(true), onMessage: () => { setProfileOpen(false); setAlunoTab("recados"); window.scrollTo(0, 0); }, onLogout: () => { setProfileOpen(false); logout(); }, onClose: () => setProfileOpen(false),
             todayDone: todaySessionAluno ? { name: ((data.dayNames || {})[alunoId] || {})[todaySessionAluno.day] || "Treino", onView: () => { setDay(todaySessionAluno.day); setAlunoTab("treino"); setProfileOpen(false); window.scrollTo(0, 0); } } : null }),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         role === "aluno" && alunoStudent && memberCardOpen && React.createElement(MemberCard, { student: alunoStudent, trainedDays: memberTrainedDays, onClose: () => setMemberCardOpen(false) }),
@@ -1164,7 +1167,7 @@ function CancioClub() {
                         setAssessmentJustDone(true);
                         updateStudent(alunoId, mapAnamneseToFicha(formData, alunoStudent));
                     } })))),
-        role === "aluno" && alunoStudent && dayEntryOpen && React.createElement(DayEntryScreen, { week: week, todayKey: todayKey, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, cardio: cardioFocus, onBegin: () => { setDay(todayKey); setExpanded(null); setDayEntryOpen(false); }, onPickOther: (k) => { setDay(k); setExpanded(null); setDayEntryOpen(false); }, onClose: () => setDayEntryOpen(false) }),
+        role === "aluno" && alunoStudent && dayEntryOpen && React.createElement(DayEntryScreen, { week: week, todayKey: todayKey, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, cardio: cardioFocus, onBegin: () => { setDay(todayKey); setExpanded(null); setDayEntryOpen(false); setAlunoTab("treino"); }, onPickOther: (k) => { setDay(k); setExpanded(null); setDayEntryOpen(false); setAlunoTab("treino"); }, onClose: () => setDayEntryOpen(false) }),
         role === "aluno" && !isStandalone && (React.createElement("div", { style: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 10, background: C.panel2, padding: "9px 16px" } },
             React.createElement("span", { style: { flex: 1, fontFamily: F.mono, fontSize: 11, color: C.silver, lineHeight: 1.5 } }, "Para experi\u00EAncia VIP em tela cheia, adicione o Cancio Club \u00E0 sua Tela de In\u00EDcio (Compartilhar \u2192 Adicionar \u00E0 Tela de In\u00EDcio)"),
             React.createElement("button", { onClick: () => { setIsStandalone(true); try { localStorage.setItem("cancio:installHintSeen", "1"); } catch (e) { } }, "aria-label": "Dispensar", style: { minHeight: 44, flexShrink: 0, fontFamily: F.mono, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px" } }, "\u00D7"))),
@@ -1550,54 +1553,49 @@ function CancioClub() {
             })(),
             // esqueleto do que está prestes a aparecer (resumo + treino), em vez de deixar a tela
             // parada enquanto a Edge Function busca o aluno pelo código
+            // ===== aluno · design v3 (fase 2): abas Hoje / Treino / Recados / Perfil (TabBarV3) =====
             role === "aluno" && alunoStudent && (React.createElement(React.Fragment, null,
-                (() => {
-                    const prog = workingProgress(list, dayDate);
-                    const parts = String(dayName || dayFull || "Treino").split("\u00B7").map((s) => s.trim()).filter(Boolean);
-                    const title = (parts[0] || "Treino").toUpperCase();
-                    const sub = list.length ? [parts.slice(1).join(" \u00B7 "), prog.done + " de " + prog.total + " s\u00E9ries"].filter(Boolean).join(" \u00B7 ") : "Dia de recupera\u00E7\u00E3o";
-                    const tiny = { fontFamily: F.body, fontSize: 13, fontWeight: 500, color: "#7D8698", background: "none", border: "none", padding: 4, cursor: "pointer" };
-                    const sairPill = { flexShrink: 0, height: 44, padding: "0 18px", fontFamily: F.body, fontSize: 13, fontWeight: 600, color: C.text, background: "none", boxShadow: `inset 0 0 0 1px ${C.line2}`, borderRadius: 999, border: "none", cursor: "pointer" };
-                    const optBtn = { minHeight: 48, padding: "0 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderRadius: 16, border: "none", cursor: "pointer", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}`, fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" };
-                    const opt = (label, onClick, strong) => React.createElement("button", { className: "cc-tap", onClick, style: strong ? { ...optBtn, background: C.text, color: C.ink, boxShadow: "none", fontWeight: 700 } : optBtn }, React.createElement("span", null, label), React.createElement("span", { "aria-hidden": "true", style: { fontSize: 18, lineHeight: 1, opacity: 0.6 } }, "\u203A"));
-                    return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 } },
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 18 } },
-                        React.createElement(MirrorGlobe, { size: 108, tile: 9, mask: `linear-gradient(0deg,#000 ${prog.pct}%,transparent ${prog.pct}%)` }),
-                        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
-                                React.createElement("button", { className: "cc-tap", onClick: () => setProfileOpen(true), style: { minHeight: 44, padding: 0, border: "none", background: "none", cursor: "pointer", textAlign: "left", fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, minWidth: 0 } }, React.createElement("span", { style: { color: C.text, fontWeight: 700 } }, String(alunoStudent.name || "").split(" ")[0]), " \u00B7 " + weeklyLine),
-                                React.createElement("button", { className: "cc-tap", onClick: () => setProfileOpen(true), "aria-label": "Abrir perfil", style: { flexShrink: 0, width: 44, height: 44, padding: 0, border: "none", background: "none", cursor: "pointer", borderRadius: "50%" } }, React.createElement(Avatar, { src: alunoStudent.photo, name: alunoStudent.name, size: 44 }))),
-                            React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: String(title).length > 9 ? "100%" : "125%", fontSize: String(title).length > 14 ? 22 : 28, lineHeight: 0.95, marginTop: 6, color: "#FFFFFF", overflowWrap: "anywhere", textWrap: "balance" } }, title),
-                            React.createElement("div", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.silver, marginTop: 5 } }, sub),
-                            weeklyBehind && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 6 } }, `Faltam ${weeklyTarget - freqWeek} treino${weeklyTarget - freqWeek > 1 ? "s" : ""} pra bater a meta dessa semana.`),
-                            null)),
-                    alunoTab === "treino" && React.createElement("button", { className: "cc-tap", onClick: () => setDayEntryOpen(true), style: { alignSelf: "flex-start", minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Trocar treino \u203A"));
-                })(),
-                reassessDue(alunoStudent) && !messages.some((m) => m.studentId === alunoId && m.fromProf && !m.read) && React.createElement("button", { className: "cc-tap", onClick: () => setReassessOpen(true), style: { width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginBottom: 14, borderRadius: 16, border: "none", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.text, cursor: "pointer" } },
-                    React.createElement("div", { style: { flex: 1 } },
-                        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15 } }, "Hora da reavalia\u00E7\u00E3o"),
-                        React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 2 } }, "Peso e medidas, 2 minutos. Seu professor compara com o in\u00EDcio.")),
-                    React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, "Fazer \u203A")),
-                // o aluno vê só a observação do professor: os trechos que a anamnese acrescenta em `obs`
-                // ("... (relatado pelo aluno): ...") são anotação pro professor, escrita na 3ª pessoa
-                alunoObs && obsChip(alunoObs),
-                (() => { const fresh = messages.filter((m) => m.studentId === alunoId && m.fromProf && !m.read); if (!fresh.length) return null; const last = fresh[fresh.length - 1];
-                    return React.createElement("button", { className: "cc-tap", onClick: () => { setAlunoTab("treino"); markProfRead(alunoId); setTimeout(() => { const el = document.getElementById("cc-chat"); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: "smooth" }); }, 60); }, style: { width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginBottom: 14, borderRadius: 16, border: "none", background: C.text, color: C.ink, cursor: "pointer" } },
-                        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-                            React.createElement("div", { style: { fontFamily: F.body, fontWeight: 800, fontSize: 13 } }, fresh.length > 1 ? fresh.length + " recados novos do professor" : "Recado novo do professor"),
-                            React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, last.text)),
-                        React.createElement("span", { style: { fontFamily: F.body, fontWeight: 800, fontSize: 13, flexShrink: 0 } }, "Ver \u203A")); })(),
-                React.createElement("div", { style: { display: "flex", gap: 7, marginBottom: 14 } },
-                    React.createElement(Pill, { active: alunoTab === "treino", onClick: () => setAlunoTab("treino") }, "Treino"),
-                    React.createElement(Pill, { active: alunoTab === "diario", onClick: () => setAlunoTab("diario") }, "Di\u00E1rio")),
+                alunoTab === "hoje" && React.createElement(HojeV3, {
+                    student: alunoStudent, greetWord, weekLine: weeklyLine, streak, todayKey, dayDate: todayISO(),
+                    week, dayNames: (data.dayNames || {})[alunoId] || {}, cardio: cardioFocus,
+                    dayDone: !!todaySessionAluno,
+                    inProgress: (week[todayKey] || []).some((ex) => (ex.history || []).some((h) => h.date === todayISO() && Array.isArray(h.entries) && h.entries.length)),
+                    lastProfMsg: messages.filter((m) => m.studentId === alunoId && m.fromProf).slice(-1)[0] || null,
+                    unreadFromProf: messages.some((m) => m.studentId === alunoId && m.fromProf && !m.read),
+                    onStart: () => { setDay(todayKey); setExpanded(null); setAlunoTab("treino"); window.scrollTo(0, 0); },
+                    onShare: shareTodaySession,
+                    onPickDay: (k) => { if (!k) { setDayEntryOpen(true); return; } setDay(k); setExpanded(null); setAlunoTab("treino"); window.scrollTo(0, 0); },
+                    onOpenRecados: () => setAlunoTab("recados"),
+                    onOpenDiary: () => { setAlunoTab("diario"); window.scrollTo(0, 0); },
+                    banners: React.createElement(React.Fragment, null,
+                        reassessDue(alunoStudent) && React.createElement("button", { className: "cc-tap", onClick: () => setReassessOpen(true), style: { position: "relative", width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginTop: 20, borderRadius: 16, border: "none", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.text, cursor: "pointer" } },
+                            React.createElement("div", { style: { flex: 1 } },
+                                React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15 } }, "Hora da reavaliação"),
+                                React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 2 } }, "Peso e medidas, 2 minutos. Seu professor compara com o início.")),
+                            React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, "Fazer ›")),
+                        // o aluno vê só a observação do professor: os trechos que a anamnese acrescenta em `obs`
+                        // ("... (relatado pelo aluno): ...") são anotação pro professor, escrita na 3ª pessoa
+                        alunoObs && React.createElement("div", { style: { position: "relative", marginTop: 20 } }, obsChip(alunoObs))),
+                }),
+                alunoTab === "diario" && React.createElement("div", { style: { paddingBottom: 110 } },
+                    React.createElement("button", { className: "cc-tap", onClick: () => setAlunoTab("hoje"), style: { minHeight: 44, padding: 0, marginBottom: 8, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "‹ Hoje"),
+                    React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth })),
+                alunoTab === "recados" && React.createElement("div", { id: "cc-chat", style: { paddingBottom: 110 } },
+                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, marginBottom: 6 } }, "RECADOS"),
+                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.text3, marginBottom: 16 } }, "Conversa com o seu professor."),
+                    notifButton,
+                    React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
-                        list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema \u2014 registre seu cardio abaixo, se fez." }),
+                        list.length === 0 && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1 } }, "TREINO"),
+                        list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema — registre seu cardio abaixo, se fez." }),
                         // treino v3 (design/v3): lista corrida + registro só na barra de baixo
                         list.length > 0 && React.createElement(WorkoutV3, {
                             key: day + "|" + dayDate, list, dayDate, title: String(dayName || dayFull || "Treino").split("·")[0].trim().toUpperCase(),
                             workoutStart, offline: !cloudSynced, dayDone, canFinalize: hasLoggedSomething || dayDone,
+                            bottomOffset: tabsHidden ? 0 : 84,
+                            onPickDay: () => setDayEntryOpen(true),
                             onAddLoad: addLoad, onMessage: (t) => { markProfRead(alunoId); sendMessage(t); },
                             restrictionOf: (name) => restrictionFor(name, alunoStudent, "aluno"),
                             onFinalize: () => {
@@ -1611,13 +1609,14 @@ function CancioClub() {
                 todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar resumo da semana")),
                 React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                 list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
-                // dia sem exercício (cardio/recuperação) continua com a barra antiga; com exercício, a barra é a do WorkoutV3
+                // dia sem exercício (cardio/recuperação) continua com a barra antiga, erguida acima das abas
                 list.length === 0 && React.createElement(BottomActionBar, {
                     progress: workingProgress(list, dayDate),
                     label: dayDone ? "Compartilhar treino" : isRestDay ? "Salvar recuperação" : "Finalizar treino",
                     canFinalize: hasLoggedSomething || dayDone,
                     promote: hasLoggedSomething || dayDone,
                     hidden: typingActive,
+                    lift: !tabsHidden,
                     onFinalize: () => {
                         flushAllPendingSaves();
                         if (dayDone) {
@@ -1632,15 +1631,15 @@ function CancioClub() {
                             setPseModal(true);
                     },
                 }),
-                !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.body, fontSize: 13, color: C.muted, marginBottom: 100 } }, "Registre ao menos 1 s\u00E9rie ou o cardio pra finalizar."),
-                hasLoggedSomething && !dayDone && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontFamily: F.body, fontSize: 13, color: C.amber, marginBottom: 100, opacity: 0.9 } },
-                    React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.amber, flexShrink: 0} }),
-                    "n\u00e3o esque\u00e7a de finalizar o treino pra guardar seu resumo e a sequ\u00eancia"),
-                React.createElement("div", { id: "cc-chat", style: { marginTop: 22 } },
-                    React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 12 } }, "Conversa com o professor"),
-                    notifButton,
-                    React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })))),
-                alunoTab === "diario" && React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }))),
+                list.length === 0 && !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.body, fontSize: 13, color: C.muted, marginBottom: 180 } }, "Registre o cardio ou a recuperação pra finalizar."),
+                list.length > 0 && React.createElement("div", { style: { height: 200 } }))),
+                // abas: só depois do termo e da anamnese (senão ficariam por cima dessas telas)
+                alunoStudent.ackAt && alunoStudent.consentAt && alunoStudent.assessmentAt && !assessmentJustDone && React.createElement(TabBarV3, {
+                    active: profileOpen ? "perfil" : alunoTab === "diario" ? "hoje" : alunoTab,
+                    hidden: tabsHidden && !profileOpen,
+                    badge: messages.filter((m) => m.studentId === alunoId && m.fromProf && !m.read).length,
+                    onChange: (k) => { if (k === "perfil") { setProfileOpen(true); return; } setProfileOpen(false); setAlunoTab(k); window.scrollTo(0, 0); },
+                }))),
             null)));
 }
 export { CancioClub };

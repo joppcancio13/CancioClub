@@ -107,7 +107,7 @@ function Stepper({ value, unit, onMinus, onPlus, onType, label }) {
     );
 }
 
-function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFinalize, onFinalize, onAddLoad, onMessage, restrictionOf }) {
+function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFinalize, onFinalize, onAddLoad, onMessage, restrictionOf, bottomOffset = 0, onPickDay }) {
     const rows = useMemo(() => list.map((ex) => describe(ex, dayDate)), [list, dayDate]);
     const [openId, setOpenId] = useState(() => { const r = rows.find((x) => !x.allDone); return r ? r.ex.id : null; });
     const [skipped, setSkipped] = useState(() => new Set());
@@ -206,6 +206,10 @@ function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFi
                     {canFinalize && <button type="button" onClick={onFinalize} style={{ ...btnText, minHeight: 32, fontWeight: 700, color: C.text2 }}>{dayDone ? "Compartilhar" : "Finalizar"}</button>}
                 </span>
             </div>
+            <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12 }}>
+                <span style={{ fontFamily: F.display, fontSize: String(title).length > 14 ? 26 : 34, fontWeight: 900, fontStretch: "125%", lineHeight: 1, overflowWrap: "anywhere" }}>{title}</span>
+                {onPickDay && <button type="button" onClick={onPickDay} style={{ ...btnText, flex: "none", color: C.text3 }}>Trocar ›</button>}
+            </div>
             {offline && <div style={{ marginTop: 10, alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 999, boxShadow: `inset 0 0 0 1px ${C.outline}`, fontSize: 13, color: C.text2 }}>Salvo neste aparelho</div>}
 
             <div style={{ marginTop: 12, display: "flex", flexDirection: "column" }}>
@@ -291,7 +295,8 @@ function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFi
             )}
 
             <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-                <div style={{ pointerEvents: "auto", width: "100%", maxWidth: 660, background: C.panel, borderRadius: "24px 24px 0 0", padding: "14px 12px calc(14px + env(safe-area-inset-bottom, 0px))", display: "flex", flexDirection: "column", gap: 10, boxShadow: `inset 0 1px 0 ${C.line}` }}>
+                {/* bottomOffset: com as abas à mostra, a barra ganha esse espaço embaixo pra elas caberem por cima (DECISOES.md · 4) */}
+                <div style={{ pointerEvents: "auto", width: "100%", maxWidth: 660, background: C.panel, borderRadius: "24px 24px 0 0", padding: `14px 12px calc(${14 + bottomOffset}px + env(safe-area-inset-bottom, 0px))`, transition: "padding .25s ease", display: "flex", flexDirection: "column", gap: 10, boxShadow: `inset 0 1px 0 ${C.line}` }}>
                     {rest ? (
                         <>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "0 4px" }}>

@@ -11,7 +11,7 @@ import { repsCeiling } from "../../utils/workout";
 //   parado      -> progresso da sessão + botão Finalizar (secundário, ou principal quando já deu pra finalizar)
 //   série aberta -> carga/reps da série pendente, com atalho pro teclado numérico
 //   descanso    -> +15s e Pular descanso (a contagem regressiva em si mora no card, não aqui)
-function BottomActionBar({ progress, label, onFinalize, canFinalize, promote, hidden }) {
+function BottomActionBar({ progress, label, onFinalize, canFinalize, promote, hidden, lift }) {
     const a = useActiveSet();
     const resting = useActiveRest();
     const [mode, setMode] = useState(null); // null | "panel" | "keypad"
@@ -24,7 +24,8 @@ function BottomActionBar({ progress, label, onFinalize, canFinalize, promote, hi
         setDraft({ load: l, reps: r });
     }, [a && a.exId, a && a.setLabel]);
 
-    const wrap = { position: "fixed", left: 12, right: 12, bottom: "calc(16px + env(safe-area-inset-bottom))", zIndex: 91, maxWidth: 636, margin: "0 auto", pointerEvents: hidden ? "none" : "auto", opacity: hidden ? 0 : 1, transform: hidden ? "translateY(12px)" : "translateY(0)", transition: "opacity .2s ease, transform .2s ease" };
+    const wrap = { position: "fixed", left: 12, right: 12, bottom: lift ? "calc(88px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))", // lift: acima da barra de abas v3
+        zIndex: 91, maxWidth: 636, margin: "0 auto", pointerEvents: hidden ? "none" : "auto", opacity: hidden ? 0 : 1, transform: hidden ? "translateY(12px)" : "translateY(0)", transition: "opacity .2s ease, transform .2s ease" };
 
     // --- estado "descanso": +15s e Pular descanso, grandes ---
     // Prioridade sobre a série aberta de propósito: assim que uma série é salva, o ExerciseCard já
