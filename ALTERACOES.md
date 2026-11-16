@@ -151,3 +151,9 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Biblioteca** (`components/professor/BibliotecaV3.jsx`): a aba "Modelos" virou "Biblioteca", com Modelos (aplicar escolhendo aluno e dia, editar, apagar) e Exercícios (busca que cria, quantas fichas usam). Saiu do "Mais".
 - **Dados do aluno** (`components/professor/DadosV3.jsx`): resumo de leitura com o alerta clínico privado no topo e gavetas com escolhas prontas; pedido de exclusão (LGPD) só quando o aluno pede. Substitui o FichaEditor.
 - Cache v56.
+
+## v57 — Editar ficha e notas de técnica
+- **Gavetas no Editar ficha** (`components/professor/ExerciseSheet.jsx`): "+ Adicionar exercício" abre busca + grupos, com a biblioteca (prescrição da última vez) e o catálogo; "+ Pôr" entra direto e já conta no volume. "Criar do zero" abre o formulário antigo. Cada exercício ganhou "Trocar": alternativas de mesmo padrão e mesmo grupo com a mudança de volume da semana; séries, reps e descanso ficam. O exercício trocado ou tirado com registros vai pras fases arquivadas.
+- **Notas de técnica pro aluno** (`components/student/WorkoutV3.jsx`): o exercício aberto mostra as notas da última aula ("Na aula de 12 nov · Técnica").
+- **Mescla** (`utils/merge.js` e Edge Function `student` v7): as notas de técnica não somem mais ao juntar os dados e a cópia do aluno nunca sobrescreve a do professor.
+- Cache v57.
