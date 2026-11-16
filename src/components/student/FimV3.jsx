@@ -16,7 +16,7 @@ function FimV3({ title, durationLabel, validSets, volume, records, onBack, onDon
     const done = (share) => { if (busy) return; setBusy(true); haptic("confirm"); onDone(effort, share); };
     const stats = [[durationLabel || "—", "TEMPO"], [String(validSets), "SÉRIES VÁLIDAS"], [volume > 0 ? Math.round(volume).toLocaleString("pt-BR") : "—", "KG LEVANTADOS"]];
     return (
-        <div role="dialog" aria-modal="true" aria-label="Treino feito" style={{ position: "fixed", inset: 0, zIndex: 99, background: C.bg, overflowY: "auto" }}>
+        <div role="dialog" aria-modal="true" aria-label="Treino feito" style={{ position: "fixed", inset: 0, zIndex: 99, background: C.bg, color: C.text, fontFamily: F.body, overflowY: "auto" }}>
             <div style={{ maxWidth: 620, margin: "0 auto", minHeight: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", paddingTop: "calc(16px + env(safe-area-inset-top, 0px))", paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))", paddingLeft: "max(20px, env(safe-area-inset-left, 0px))", paddingRight: "max(20px, env(safe-area-inset-right, 0px))" }}>
                 <button type="button" onClick={onBack} disabled={busy} style={{ alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text4, fontFamily: F.body, fontSize: 15, cursor: "pointer" }}>‹ Voltar ao treino</button>
                 <span style={{ marginTop: 12, fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", color: C.text2 }}>TREINO DE HOJE FEITO</span>

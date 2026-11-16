@@ -38,6 +38,7 @@ import { AlunosV3 } from "./components/professor/AlunosV3";
 import { FichaV3, EditVolumeBlock } from "./components/professor/FichaV3";
 import { rendSummary } from "./utils/rendimento";
 import { RendimentoV3 } from "./components/professor/RendimentoV3";
+import { AulaV3 } from "./components/professor/AulaV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
@@ -536,6 +537,24 @@ function CancioClub() {
                     hist[idx] = { ...hist[idx], studentNote: note };
                 else
                     hist.push({ date: dateStr, entries: [], studentNote: note });
+                return { ...e, history: sortedHistory(hist) };
+            });
+            const next = { ...p, workouts: { ...p.workouts, [focusId]: w } };
+            syncStudentToCloud(next, focusId);
+            return next;
+        });
+    }, [focusId, day, syncStudentToCloud]);
+    // Modo aula (design v3): anotações de técnica do professor no dia do exercício — vão pro histórico
+    // do aluno (campo techNotes, separado da nota do próprio aluno)
+    const updateTechNotes = React.useCallback((exId, dateStr, notes) => {
+        setData((p) => {
+            const w = { ...p.workouts[focusId] };
+            w[day] = (w[day] || []).map((e) => {
+                if (e.id !== exId) return e;
+                const hist = (e.history || []).map((h) => ({ ...h }));
+                const idx = hist.findIndex((h) => h.date === dateStr && Array.isArray(h.entries));
+                if (idx >= 0) hist[idx] = { ...hist[idx], techNotes: notes };
+                else hist.push({ date: dateStr, entries: [], techNotes: notes });
                 return { ...e, history: sortedHistory(hist) };
             });
             const next = { ...p, workouts: { ...p.workouts, [focusId]: w } };
@@ -1184,6 +1203,14 @@ function CancioClub() {
         recordCel && React.createElement(RecordCelebration, { records: recordCel.records, sound: recordCel.sound, onShare: () => { const s = recordCel.shareData; setRecordCel(null); setShareCard(s); }, onClose: () => setRecordCel(null) }),
         celebration && React.createElement(Celebration, { ...celebration, onClose: () => setCelebration(null), onDone: () => { const t = celebration.then; setCelebration(null); if (t)
                 t(); } }),
+        // Modo aula (design v3 · 4c): tela cheia, um exercício por vez, sobre a ficha do professor
+        role === "prof" && profUnlocked && profView === "aluno" && fichaTab === "treino" && profViewMode === "aula" && profStudent && list.length > 0 && React.createElement(AulaV3, {
+            key: profId + "|" + day, list, dayDate, studentName: profStudent.name,
+            restrictionOf: (n) => restrictionFor(n, profStudent, "prof"),
+            onAddLoad: addLoad, onTech: updateTechNotes, onStart: markWorkoutStarted,
+            onEnd: () => { finalizeWorkout(null, { silent: true }); setProfViewMode("edit"); setFichaTab("resumo"); window.scrollTo(0, 0); },
+            onExit: () => setProfViewMode("edit"),
+        }),
         role === "aluno" && alunoStudent && fimOpen && (() => {
             // mesmas contas do finalizeWorkout (séries válidas e kg levantados no dia que está sendo finalizado)
             // por exercício, o registro do dia COM séries (entries); só cai no formato antigo se não houver
