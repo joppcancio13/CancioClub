@@ -6,6 +6,21 @@ import React from "react";
 const C = {
     ink: "#05060A", panel: "#0E1015", panel2: "#171B22", line: "#1E222A", line2: "#2E333D",
     text: "#F2F5FA", muted: "#7D8698", silver: "#C6D2E4", amber: "#DCE4F0", amberDim: "#2A303B", warn: "#E8794B",
+    // ---- v3 (design/v3/README.md · tokens). Nomes novos; os de cima continuam valendo pras telas
+    // ainda não redesenhadas. `amber` é um prata (nome antigo) — nas telas v3 use text2/text3/text4.
+    bg: "#05060A", raised: "#171B22", pending: "#1A1D24", border: "#2A2E37", outline: "#2E333D", dim: "#3A404C",
+    text2: "#C6D2E4", text3: "#AEB7C6", text4: "#7D8698",
+    accent: "#E8794B", accentLine: "rgba(232,121,75,.35)", // laranja: SÓ alerta (restrição, erro, alerta clínico, "senti dor")
+};
+// gradientes v3: prata da conquista (série válida feita, código digitado) e barra de progresso
+const SILVER = "linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)";
+const PROGRESS = "linear-gradient(90deg,#6E7889,#AEB9CB 55%,#FFFFFF)";
+// pastilha por série: o tom sobe com o esforço (aquecimento < reconhecimento < válida); não feita = vazia com fio
+const PILL_V3 = {
+    warmup: { background: "#3A404C", boxShadow: "none" },
+    recon: { background: "#7D8698", boxShadow: "none" },
+    working: { backgroundImage: SILVER, boxShadow: "none" },
+    off: { background: "#1A1D24", boxShadow: "inset 0 0 0 1px #2A2E37" },
 };
 // 12a · chapado prata: sem sombra nem vidro. Raios: 10 botão/campo/chip · 16 card · 24 sheet. Texto: 11 · 13 · 15 · 18 · 24.
 const R = { field: 10, row: 16, card: 16, sheet: 24, btn: 10 };
@@ -163,4 +178,4 @@ const ASSESSMENT_CSS = `
 .cc-assess-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(10,10,12,0.35); border-top-color:#0A0A0C; animation: cc-boot-spin .7s linear infinite; flex-shrink:0; }
 `;
 const ASSESSMENT_TEMPO_SESSAO_LABELS = { "45min": "45 min", "60min": "60 min", "90min": "+1 hora" };
-export { SIL_URL, SIL_SMALL_URL, C, R, cardShadow, glassPanel, flatPanel, PILL_ON, PILL_OFF_SHADOW, F, EASE, DAYS, JS2KEY, MILESTONES, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, TRAIN_PHRASES, REST_PHRASES, SHARE_PHRASES, GREET_MANHA, GREET_TARDE, GREET_NOITE, SESS_KEY, FEEDBACK_QUESTIONS, BALL_URL, SPARKLE_SPOTS, MIRROR_GRID, SELO_URL, SELO_FALLBACK_URL, SEAL_MARK_URL, DIARY_EFFORT_LABELS, CALENDAR_WEEKDAY_SHORT, EMPTY_ICON_PATHS, ASSESSMENT_TEMPO_TREINO_OPTIONS, ASSESSMENT_OBJETIVO_OPTIONS, ASSESSMENT_DIAS_OPTIONS, ASSESSMENT_TEMPO_SESSAO_OPTIONS, ASSESSMENT_ESTRESSE_OPTIONS, assessmentLabelStyle, ASSESSMENT_CSS, ASSESSMENT_TEMPO_SESSAO_LABELS };
+export { SILVER, PROGRESS, PILL_V3, SIL_URL, SIL_SMALL_URL, C, R, cardShadow, glassPanel, flatPanel, PILL_ON, PILL_OFF_SHADOW, F, EASE, DAYS, JS2KEY, MILESTONES, KIND_CYCLE, KIND_LABELS, NON_COUNTING_KINDS, TRAIN_PHRASES, REST_PHRASES, SHARE_PHRASES, GREET_MANHA, GREET_TARDE, GREET_NOITE, SESS_KEY, FEEDBACK_QUESTIONS, BALL_URL, SPARKLE_SPOTS, MIRROR_GRID, SELO_URL, SELO_FALLBACK_URL, SEAL_MARK_URL, DIARY_EFFORT_LABELS, CALENDAR_WEEKDAY_SHORT, EMPTY_ICON_PATHS, ASSESSMENT_TEMPO_TREINO_OPTIONS, ASSESSMENT_OBJETIVO_OPTIONS, ASSESSMENT_DIAS_OPTIONS, ASSESSMENT_TEMPO_SESSAO_OPTIONS, ASSESSMENT_ESTRESSE_OPTIONS, assessmentLabelStyle, ASSESSMENT_CSS, ASSESSMENT_TEMPO_SESSAO_LABELS };

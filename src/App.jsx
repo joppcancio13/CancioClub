@@ -30,6 +30,7 @@ import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
 import { DiaryCalendar } from "./components/student/DiaryCalendar";
 import { ExerciseCard } from "./components/student/ExerciseCard";
+import { WorkoutV3 } from "./components/student/WorkoutV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
@@ -1593,11 +1594,25 @@ function CancioClub() {
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
                         list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema \u2014 registre seu cardio abaixo, se fez." }),
-                        list.map((ex) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, alunoStudent, "aluno"), role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, isNextUp: !hasLoggedSomething && ex.id === list[0].id, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })))),
+                        // treino v3 (design/v3): lista corrida + registro só na barra de baixo
+                        list.length > 0 && React.createElement(WorkoutV3, {
+                            key: day + "|" + dayDate, list, dayDate, title: String(dayName || dayFull || "Treino").split("·")[0].trim().toUpperCase(),
+                            workoutStart, offline: !cloudSynced, dayDone, canFinalize: hasLoggedSomething || dayDone,
+                            onAddLoad: addLoad, onMessage: (t) => { markProfRead(alunoId); sendMessage(t); },
+                            restrictionOf: (name) => restrictionFor(name, alunoStudent, "aluno"),
+                            onFinalize: () => {
+                                if (dayDone) {
+                                    setShareCard({ name: focusStudent.name, workoutName: dayName || dayFull, durationLabel: daySession && daySession.durationSec ? fmtDur(daySession.durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak, tint: tier.tint, isRestDay, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
+                                    return;
+                                }
+                                if (hasLoggedSomething) setPseModal(true);
+                            },
+                        }))),
                 todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar resumo da semana")),
                 React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
                 list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
-                React.createElement(BottomActionBar, {
+                // dia sem exercício (cardio/recuperação) continua com a barra antiga; com exercício, a barra é a do WorkoutV3
+                list.length === 0 && React.createElement(BottomActionBar, {
                     progress: workingProgress(list, dayDate),
                     label: dayDone ? "Compartilhar treino" : isRestDay ? "Salvar recuperação" : "Finalizar treino",
                     canFinalize: hasLoggedSomething || dayDone,
