@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AssessmentInicial } from "./components/assessment/AssessmentInicial";
 import { CardioSection } from "./components/professor/CardioSection";
-import { FichaEditor } from "./components/professor/FichaEditor";
+import { DadosV3 } from "./components/professor/DadosV3";
 import { PSEModal } from "./components/professor/PSEModal";
 import { RecoverySection } from "./components/professor/RecoverySection";
 import { BibliotecaV3 } from "./components/professor/BibliotecaV3";
@@ -1352,7 +1352,7 @@ function CancioClub() {
                         const chips = [lastEffortFor(profId) === "destruidor" && "Fadiga \u00B7 \u00FAltimo treino Destruidor", !ps.ackAt && "Termo pendente"].filter(Boolean);
                         // design v3 (4b): a ficha é uma página única (FichaV3); as telas completas (Editar, Rendimento,
                         // Volume, Dados) ganham só um "‹ Resumo" em vez da fileira de abas
-                        const TAB_TITLE = { treino: "Editar ficha", rend: "Rendimento", volume: "Volume feito", ficha: "Dados e anamnese" };
+                        const TAB_TITLE = { treino: "Editar ficha", rend: "Rendimento", volume: "Volume feito", ficha: "Dados do aluno" };
                         const tabs = fichaTab === "resumo" ? null : React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 14 } },
                             React.createElement("button", { className: "cc-tap", onClick: () => { setFichaTab("resumo"); setRendEx(null); setProfViewMode("edit"); window.scrollTo(0, 0); }, style: { minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "‹ Resumo"),
                             React.createElement("span", { style: { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase", color: C.text4 } }, TAB_TITLE[fichaTab] || ""));
@@ -1392,7 +1392,7 @@ function CancioClub() {
                         }
                         else if (fichaTab === "ficha") {
                             body = React.createElement("div", { className: "cc-view", style: { marginTop: 6 } },
-                                React.createElement(FichaEditor, { student: ps, onSave: (patch) => updateStudent(profId, patch), onPrint: () => printStudent({ student: ps, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, includePrivate: true }), onDelete: () => { removeStudent(profId); setProfView("home"); } }),
+                                React.createElement(DadosV3, { student: ps, onSave: (patch) => updateStudent(profId, patch), onPrint: () => printStudent({ student: ps, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, includePrivate: true }), onDelete: () => { removeStudent(profId); setProfView("home"); } }),
                                 React.createElement("div", { style: { ...tiny, marginTop: 24 } }, "FASES ARQUIVADAS"),
                                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
                                     React.createElement("input", { value: archLabel, onChange: (e) => setArchLabel(e.target.value), placeholder: "R\u00F3tulo (ex.: Fase 1 \u00B7 Adapta\u00E7\u00E3o)", style: { flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 13, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "11px 12px", outline: "none" } }),
