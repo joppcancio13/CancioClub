@@ -87,7 +87,7 @@ function buildDiary(data, studentId) {
         const dayInfo = DAYS.find((d) => d.key === s.day);
         const dayLabel = (dayNames && dayNames[s.day]) || (dayInfo ? dayInfo.full : s.day);
         const exercises = (workouts[s.day] || []).map((ex) => {
-            const h = (ex.history || []).find((hh) => hh.date === s.date);
+            const h = dayEntry(ex.history, s.date);
             if (!h)
                 return null;
             const { load, reps } = daySummary(h);
@@ -120,10 +120,17 @@ function workingProgress(list, dayDate) {
     let total = 0, done = 0;
     (list || []).forEach((ex) => {
         const planned = Array.isArray(ex.setPlan) && ex.setPlan.length ? ex.setPlan.filter((p) => !NON_COUNTING_KINDS.has(p.kind)).length : (parseInt(ex.sets) || 0);
-        const h = (ex.history || []).find((x) => x.date === dayDate);
+        const h = dayEntry(ex.history, dayDate);
         const d = h ? (Array.isArray(h.entries) && h.entries.length ? h.entries.filter((e) => !NON_COUNTING_KINDS.has(e.kind) && typeof e.load === "number").length : (typeof h.load === "number" ? 1 : 0)) : 0;
         total += Math.max(planned, d); done += d;
     });
     return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 export { sortedHistory, defaultSetPlan, planSummary, repsCeiling, parseReps, daySummary, computeRecords, buildDiary, currentLoad, lastReps, emptyWeek, workingProgress };
+// registro de UM dia no histórico de um exercício: o que tem séries (entries) ganha do formato antigo
+// achatado — podem existir os dois na mesma data, e `find(date)` pegava o antigo (sem séries)
+function dayEntry(history, date) {
+    const items = (history || []).filter((h) => h && h.date === date);
+    return items.find((h) => Array.isArray(h.entries) && h.entries.length) || items[0];
+}
+export { dayEntry };

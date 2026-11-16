@@ -14,14 +14,16 @@ const thousands = (v) => Math.round(v).toLocaleString("pt-BR");
 const WD = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"], MO = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const dateTag = (iso) => { if (!iso) return ""; const [y, m, d] = iso.split("-").map(Number); return `${WD[new Date(y, m - 1, d).getDay()]} · ${d} ${MO[m - 1]}`; };
 
-function summarize(data) {
+function summarize(data, showMissing = true) {
     const date = data.targetDate;
     const recs = data.records || computeDayRecords(data.exercises || [], date);
     const recIds = new Set(recs.map((r) => r.id));
     let sets = 0, volume = 0;
     const rows = [];
     (data.exercises || []).forEach((ex) => {
-        const h = (ex.history || []).find((x) => x.date === date);
+        // o registro do dia COM séries; dois registros na mesma data (um antigo, achatado) pegavam o errado
+        const dayItems = (ex.history || []).filter((x) => x.date === date);
+        const h = dayItems.find((x) => Array.isArray(x.entries) && x.entries.length) || dayItems[0];
         const es = h && h.entries ? h.entries.filter((e) => !NON_COUNTING_KINDS.has(e.kind)) : [];
         const planPlan = Array.isArray(ex.setPlan) ? ex.setPlan.filter((x) => !NON_COUNTING_KINDS.has(x.kind)).length : 0;
         const planned = Math.max(es.length, planPlan || Number(ex.sets) || 0, 1);
@@ -30,7 +32,11 @@ function summarize(data) {
         sets += es.length;
         rows.push({ id: ex.id, name: ex.name, load: best, sets: es.length, planned, reps: ex.reps, pr: recIds.has(ex.id) });
     });
-    return { rows, sets, volume, records: recs.length, title: (data.workoutName || "Treino").toUpperCase(), duration: data.durationLabel && data.durationLabel !== "—" ? data.durationLabel : null, date: dateTag(data.targetDate) };
+    // design v3 (24c): o que não foi feito fica FORA do card por padrão — exercício sem série some e as
+    // pastilhas apagadas das séries que faltaram também. A chave "Mostrar o que ficou de fora" devolve tudo.
+    const missing = { exercises: rows.filter((r) => r.sets === 0).length, sets: rows.reduce((n, r) => n + Math.max(0, r.planned - r.sets), 0) };
+    const shown = showMissing ? rows : rows.filter((r) => r.sets > 0).map((r) => ({ ...r, planned: r.sets }));
+    return { rows: shown, missing, sets, volume, records: recs.length, title: (data.workoutName || "Treino").toUpperCase(), duration: data.durationLabel && data.durationLabel !== "—" ? data.durationLabel : null, date: dateTag(data.targetDate) };
 }
 // áreas que o Instagram cobre nos stories (nome/progresso no topo, campo de resposta embaixo)
 const SAFE_T = 250, SAFE_B = 1640;
@@ -176,15 +182,19 @@ function drawPhoto(ctx, img) {
 
 const MODES = [["card", "Card"], ["numeros", "Números"], ["pastilhas", "Pastilhas"]];
 
+// Tela de compartilhar — design v3 (README · "Compartilhar", 22b + 24c): abas em texto e deslizar entre
+// os 3 cards; o que não foi feito fica fora por padrão ("Mostrar o que ficou de fora"); foto só nos
+// cards transparentes; baixar como ícone + "Compartilhar" como botão principal. Desenho do PNG inalterado.
 function ShareStudio({ data, onClose }) {
-    const canvasRef = useRef(null), ballRef = useRef(null);
+    const canvasRef = useRef(null), ballRef = useRef(null), swipe = useRef(null);
     const [mode, setMode] = useState("card");
     const [photo, setPhoto] = useState(null);
     const [ready, setReady] = useState(false);
     const [busy, setBusy] = useState(false);
     const [toast, setToast] = useState(null);
+    const [showMissing, setShowMissing] = useState(false);
     const [phrase] = useState(() => SHARE_PHRASES[Math.floor(Math.random() * SHARE_PHRASES.length)]);
-    const s = React.useMemo(() => summarize(data), [data]);
+    const s = React.useMemo(() => summarize(data, showMissing), [data, showMissing]);
     useEffect(() => { let off = false; (async () => { try { if (document.fonts) { await document.fonts.load("900 40px Archivo"); await document.fonts.ready; } } catch (e) { } const [big, small] = await Promise.all([loadImg(SIL_URL), loadImg(SIL_SMALL_URL)]); ballRef.current = { big: big || small || null, small: small || big || null }; if (!off) setReady(true); })(); return () => { off = true; }; }, []);
     useEffect(() => {
         if (!ready || !canvasRef.current) return;
@@ -201,27 +211,72 @@ function ShareStudio({ data, onClose }) {
     const download = async () => { setBusy(true); try { const b = await blob(); const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); flash("PNG salvo"); } finally { setBusy(false); } };
     const share = async () => { setBusy(true); try { const b = await blob(); const file = new File([b], fname(), { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); } catch (e) { if (e && e.name !== "AbortError") throw e; } } else { await download(); } } catch (e) { flash("Não deu pra compartilhar. Tente baixar."); } finally { setBusy(false); } };
     const pickPhoto = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const url = URL.createObjectURL(f); loadImg(url).then((img) => { setPhoto(img); if (mode === "card") setMode("numeros"); }); e.target.value = ""; };
+
+    const workout = !data.isRestDay && !data.isWeeklySummary;
+    const idx = MODES.findIndex(([k]) => k === mode);
+    const go = (d) => { const n = idx + d; if (n >= 0 && n < MODES.length) setMode(MODES[n][0]); };
+    const onTouchStart = (e) => { swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+    const onTouchEnd = (e) => {
+        if (!swipe.current || !workout) return;
+        const dx = e.changedTouches[0].clientX - swipe.current.x, dy = e.changedTouches[0].clientY - swipe.current.y;
+        swipe.current = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.4) go(dx < 0 ? 1 : -1);
+    };
     const transparent = mode !== "card" && !photo;
     const checker = "repeating-conic-gradient(#2A2E37 0 25%, #1A1D24 0 50%) 0 0 / 16px 16px";
-    const thumbBox = (on) => ({ width: 60, height: 106, borderRadius: 8, overflow: "hidden", boxShadow: on ? `0 0 0 2px ${INK}, 0 0 0 3.5px ${TEXT}` : "inset 0 0 0 1px #2A2E37", display: "flex", alignItems: "center", justifyContent: "center" });
-    return React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 100, background: INK, display: "flex", flexDirection: "column", animation: "cc-fade .25s ease" } },
-        React.createElement("div", { style: { padding: "calc(env(safe-area-inset-top) + 20px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" } },
-            React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 18, color: TEXT } }, "COMPARTILHAR"),
-            React.createElement("button", { className: "cc-tap", onClick: onClose, style: { minHeight: 44, padding: "0 4px 0 12px", border: "none", background: "transparent", color: MUTED, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "Fechar")),
-        React.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "14px 20px" } },
-            React.createElement("canvas", { ref: canvasRef, width: W, height: H, style: { height: "100%", maxHeight: "100%", maxWidth: "100%", aspectRatio: "9 / 16", borderRadius: 16, background: transparent ? checker : INK, boxShadow: `inset 0 0 0 1px ${LINE}` } })),
-        React.createElement("div", { style: { padding: "14px 20px calc(env(safe-area-inset-bottom) + 18px)", borderTop: `1px solid ${LINE}`, display: "flex", flexDirection: "column", gap: 14 } },
-            !data.isRestDay && !data.isWeeklySummary && React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                MODES.map(([k, l]) => React.createElement("button", { key: k, className: "cc-tap", onClick: () => setMode(k), style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, border: "none", background: "transparent", cursor: "pointer", padding: 0 } },
-                    React.createElement("span", { style: { ...thumbBox(mode === k), background: k === "card" ? INK : photo ? "#3B3530" : checker } }, React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontSize: 11, letterSpacing: "0.1em", color: TEXT } }, k === "card" ? "▮▮▮" : k === "numeros" ? "123" : "▪▪▪")),
-                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: mode === k ? TEXT : MUTED, fontWeight: mode === k ? 700 : 400 } }, l))),
-                React.createElement("label", { className: "cc-tap", style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" } },
-                    React.createElement("span", { style: { ...thumbBox(!!photo), color: MUTED, fontSize: 18, background: "transparent" } }, photo ? "✓" : "＋"),
-                    React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: photo ? TEXT : MUTED } }, photo ? "Trocar foto" : "Sua foto"),
-                    React.createElement("input", { type: "file", accept: "image/*", onChange: pickPhoto, style: { display: "none" } }))),
-            React.createElement("div", { style: { display: "flex", gap: 8 } },
-                React.createElement("button", { className: "cc-tap", disabled: busy || !ready, onClick: download, style: { flex: 1, height: 52, borderRadius: 16, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", color: "#C6D2E4", fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "Baixar PNG"),
-                React.createElement("button", { className: "cc-tap", disabled: busy || !ready, onClick: share, style: { flex: 2, height: 52, borderRadius: 16, border: "none", background: TEXT, color: INK, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: busy ? 0.7 : 1 } }, busy ? "Gerando…" : "Compartilhar")),
-            React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: "#7D8698", textAlign: "center" } }, toast || (mode === "card" ? "Card em fundo preto, pronto pro story." : photo ? "Figurinha aplicada sobre a sua foto." : "PNG transparente: cole como figurinha sobre a sua foto no Instagram."))));
+    const m = s.missing;
+    const missingText = !m.exercises && !m.sets ? "Você fez tudo o que estava na ficha."
+        : [m.exercises ? m.exercises + (m.exercises === 1 ? " exercício" : " exercícios") : "", m.sets ? m.sets + (m.sets === 1 ? " série" : " séries") : ""].filter(Boolean).join(" e ") + (m.exercises + m.sets === 1 ? " ficou de fora." : " ficaram de fora.");
+    const hint = toast || (mode === "card" ? "Card em fundo preto, pronto pro story." : photo ? "Aplicado sobre a sua foto." : "PNG transparente: cole como figurinha sobre a sua foto.");
+
+    return (
+        <div role="dialog" aria-modal="true" aria-label="Compartilhar" style={{ position: "fixed", inset: 0, zIndex: 100, background: INK, display: "flex", flexDirection: "column", animation: "cc-fade .25s ease" }}>
+            <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 18, color: TEXT }}>COMPARTILHAR</span>
+                <button type="button" onClick={onClose} style={{ minHeight: 44, padding: "0 4px 0 12px", border: "none", background: "transparent", color: MUTED, fontFamily: F.body, fontSize: 15, cursor: "pointer" }}>Fechar</button>
+            </div>
+            {workout && (
+                <div role="tablist" style={{ marginTop: 6, display: "flex", justifyContent: "center", gap: 20 }}>
+                    {MODES.map(([k, l]) => (
+                        <button key={k} type="button" role="tab" aria-selected={mode === k} onClick={() => setMode(k)}
+                            style={{ background: "none", border: "none", padding: "6px 0", minHeight: 36, fontFamily: F.body, fontSize: 13, fontWeight: mode === k ? 700 : 400, color: mode === k ? TEXT : MUTED, boxShadow: mode === k ? `inset 0 -2px 0 ${TEXT}` : "none", cursor: "pointer" }}>{l}</button>
+                    ))}
+                </div>
+            )}
+            <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 20px" }}>
+                <canvas ref={canvasRef} width={W} height={H} aria-label={"Prévia do card " + (MODES[idx] ? MODES[idx][1] : "")}
+                    style={{ height: "100%", maxHeight: "100%", maxWidth: "100%", aspectRatio: "9 / 16", borderRadius: 16, background: transparent ? checker : INK, boxShadow: "inset 0 0 0 1px #2A2E37" }} />
+            </div>
+            <div style={{ padding: "4px 20px calc(env(safe-area-inset-bottom) + 18px)", display: "flex", flexDirection: "column", gap: 8 }}>
+                {workout && (
+                    <button type="button" role="switch" aria-checked={showMissing} onClick={() => setShowMissing((v) => !v)}
+                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 16, border: "none", background: C.panel, textAlign: "left", cursor: "pointer", color: TEXT }}>
+                        <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{ fontFamily: F.body, fontSize: 15 }}>Mostrar o que ficou de fora</span>
+                            <span style={{ fontFamily: F.body, fontSize: 13, color: MUTED }}>{missingText}</span>
+                        </span>
+                        <span aria-hidden="true" style={{ width: 44, height: 26, flex: "none", borderRadius: 999, background: showMissing ? TEXT : C.raised, position: "relative", transition: "background .15s" }}>
+                            <span style={{ position: "absolute", top: 3, left: showMissing ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: showMissing ? INK : MUTED, transition: "left .15s" }} />
+                        </span>
+                    </button>
+                )}
+                {workout && mode !== "card" && (
+                    <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 16, background: C.panel, cursor: "pointer" }}>
+                        <span style={{ flex: 1, fontFamily: F.body, fontSize: 13, color: C.text3 }}>{photo ? "Aplicado sobre a sua foto" : "Números e Pastilhas vão sobre a sua foto"}</span>
+                        <span style={{ fontFamily: F.body, fontSize: 13, fontWeight: 700, color: TEXT }}>{photo ? "Trocar foto" : "Escolher foto"}</span>
+                        <input type="file" accept="image/*" onChange={pickPhoto} style={{ display: "none" }} />
+                    </label>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" aria-label="Baixar PNG" disabled={busy || !ready} onClick={download}
+                        style={{ width: 52, height: 52, flex: "none", borderRadius: 16, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", color: "#C6D2E4", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="22" height="22" viewBox="0 0 256 256" aria-hidden="true"><path fill="none" stroke="currentColor" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" d="M128 40v128M80 120l48 48 48-48M40 208h176" /></svg>
+                    </button>
+                    <button type="button" disabled={busy || !ready} onClick={share} style={{ flex: 1, height: 52, borderRadius: 16, border: "none", background: TEXT, color: INK, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: busy ? 0.7 : 1 }}>{busy ? "Gerando…" : "Compartilhar"}</button>
+                </div>
+                <span style={{ fontFamily: F.body, fontSize: 11, color: MUTED, textAlign: "center" }}>{hint}</span>
+            </div>
+        </div>
+    );
 }
 export { ShareStudio };

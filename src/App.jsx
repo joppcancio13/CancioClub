@@ -33,6 +33,7 @@ import { ExerciseCard } from "./components/student/ExerciseCard";
 import { WorkoutV3 } from "./components/student/WorkoutV3";
 import { HojeV3 } from "./components/student/HojeV3";
 import { TabBarV3 } from "./components/student/TabBarV3";
+import { FimV3 } from "./components/student/FimV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue } from "./components/student/Reassessment";
@@ -139,6 +140,7 @@ function CancioClub() {
     const deletedStudentIdsRef = React.useRef(new Set());
     const [workoutStart, setWorkoutStart] = useState(null); // marcado sozinho na 1ª série do dia — sem botão, sem cronômetro visível
     const [pseModal, setPseModal] = useState(null);
+    const [fimOpen, setFimOpen] = useState(false); // tela Fim do treino (FimV3), só pro aluno
     const [cardioForm, setCardioForm] = useState({ activity: "", minutes: "" });
     const [feedbackModal, setFeedbackModal] = useState(null);
     const [shareCard, setShareCard] = useState(null);
@@ -630,7 +632,7 @@ function CancioClub() {
             return next;
         });
     };
-    const finalizeWorkout = (effort) => {
+    const finalizeWorkout = (effort, opts = {}) => {
         try { Object.keys(sessionStorage).filter((k) => k.indexOf("cancio:rt:") === 0).forEach((k) => sessionStorage.removeItem(k)); } catch (e) { }
         setActiveSet(null);
         const sid = uid();
@@ -669,6 +671,8 @@ function CancioClub() {
         catch (e) { }
         setPseModal(null);
         const shareData = { name: focusStudent.name, workoutName: sWorkoutName, durationLabel: durationSec ? fmtDur(durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak: sStreak, tint: tier.tint, isRestDay: isRest, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) };
+        // design v3: a tela Fim (FimV3) já mostrou o resumo — salva e devolve os dados do card, sem comemoração
+        if (opts.silent) return shareData;
         if (isRest) {
             setCelebration({ title: "PISTA FECHADA", subtitle: "DIA DE RECUPERAÇÃO", stats: [[String(freqWeek + 1), "treinos na semana"], [String(sStreak || 0), "dias seguidos"]], weekDone: Math.min(freqWeek + 1, weeklyTargetF || 0), weekTarget: weeklyTargetF || 0, sound: soundOn ? playFinishChime : null, then: () => setShareCard(shareData) });
         }
@@ -1148,6 +1152,21 @@ function CancioClub() {
         recordCel && React.createElement(RecordCelebration, { records: recordCel.records, sound: recordCel.sound, onShare: () => { const s = recordCel.shareData; setRecordCel(null); setShareCard(s); }, onClose: () => setRecordCel(null) }),
         celebration && React.createElement(Celebration, { ...celebration, onClose: () => setCelebration(null), onDone: () => { const t = celebration.then; setCelebration(null); if (t)
                 t(); } }),
+        role === "aluno" && alunoStudent && fimOpen && (() => {
+            // mesmas contas do finalizeWorkout (séries válidas e kg levantados no dia que está sendo finalizado)
+            // por exercício, o registro do dia COM séries (entries); só cai no formato antigo se não houver
+            const hs = list.map((e) => { const day = (e.history || []).filter((h) => h.date === dayDate); return day.find((h) => Array.isArray(h.entries) && h.entries.length) || day[0]; }).filter(Boolean);
+            const validSets = hs.reduce((n, h) => n + (h.entries ? h.entries.filter((en) => !NON_COUNTING_KINDS.has(en.kind)).length : 0), 0);
+            const volume = hs.reduce((n, h) => n + daySummary(h).volume, 0);
+            const t0 = workoutStart && workoutStart.studentId === alunoId && workoutStart.date === todayISO() ? workoutStart.startedAt : null;
+            return React.createElement(FimV3, {
+                title: String(dayName || dayFull || "Treino").split("·")[0].trim().toUpperCase(),
+                durationLabel: t0 ? fmtDur(Math.max(1, Math.round((Date.now() - t0) / 1000))) : null,
+                validSets, volume, records: computeDayRecords(list, dayDate),
+                onBack: () => setFimOpen(false),
+                onDone: (effort, share) => { const sd = finalizeWorkout(effort, { silent: true }); setFimOpen(false); setAlunoTab("hoje"); window.scrollTo(0, 0); if (share && sd) setShareCard(sd); },
+            });
+        })(),
         pseModal && React.createElement(PSEModal, { summary: [dayName || dayFull, (() => { const t0 = typeof workoutStart === "number" ? workoutStart : workoutStart && workoutStart.startedAt; return Number.isFinite(t0) ? fmtDur(Math.max(1, Math.round((Date.now() - t0) / 1000))) : null; })()].filter(Boolean).join(" · "), onSelect: (effort) => finalizeWorkout(effort), onCancel: () => setPseModal(false) }),
         feedbackModal && React.createElement(FeedbackModal, { question: feedbackModal.question, onSend: (txt) => { submitFeedback(feedbackModal.sessionId, txt); const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); }, onSkip: () => { const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
@@ -1603,7 +1622,7 @@ function CancioClub() {
                                     setShareCard({ name: focusStudent.name, workoutName: dayName || dayFull, durationLabel: daySession && daySession.durationSec ? fmtDur(daySession.durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak, tint: tier.tint, isRestDay, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
                                     return;
                                 }
-                                if (hasLoggedSomething) setPseModal(true);
+                                if (hasLoggedSomething) setFimOpen(true); // design v3: resumo do fim (FimV3) no lugar da janela de esforço
                             },
                         }))),
                 todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar resumo da semana")),

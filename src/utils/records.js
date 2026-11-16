@@ -1,3 +1,4 @@
+import { dayEntry } from "./workout";
 import { NON_COUNTING_KINDS } from "../styles/tokens";
 
 // 9b/9c — recorde só é decidido ao FINALIZAR o treino, comparando a melhor série de trabalho do dia
@@ -12,7 +13,7 @@ export function computeDayRecords(exercises, dayDate) {
     const out = [];
     (exercises || []).forEach((ex) => {
         const hist = ex.history || [];
-        const today = best(workEntries(hist.find((h) => h.date === dayDate)));
+        const today = best(workEntries(dayEntry(hist, dayDate)));
         if (!today) return;
         const prior = best(hist.filter((h) => h.date < dayDate).flatMap(workEntries));
         if (!prior) return; // primeira vez não é recorde
