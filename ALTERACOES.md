@@ -131,3 +131,9 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - Tokens v3 em `styles/tokens.js`. Decisões em `design/v3/DECISOES.md`.
 - Saíram da tela do aluno: anotação por exercício, gráfico no exercício, troca por alternativa, editar séries do plano, vídeo embutido (virou link).
 - Professor: sem mudança. Cache v53.
+
+## v54 — design v3, fase 3 (fim do treino e compartilhar)
+- **Tela Fim do treino** (`components/student/FimV3.jsx`): resumo primeiro (tempo, séries válidas, kg levantados, recordes do dia) e "Como foi o treino de hoje?". "Compartilhar treino" salva e abre os cards; "Fechar" salva e volta pra Hoje; "Voltar ao treino" não salva. Substitui, pro aluno, a janela de esforço e a comemoração.
+- **Compartilhar** (`components/share/ShareStudio.jsx`): abas Card / Números / Pastilhas e deslizar entre elas; o que não foi feito fica fora do card por padrão ("Mostrar o que ficou de fora"); foto só nos cards transparentes; baixar como ícone.
+- Registro do dia com séries ganha do registro antigo na mesma data (`utils/workout.js · dayEntry`): o card podia sair com "0 séries" e o recorde do dia não aparecer.
+- Cache v54.
