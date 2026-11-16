@@ -137,3 +137,9 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Compartilhar** (`components/share/ShareStudio.jsx`): abas Card / Números / Pastilhas e deslizar entre elas; o que não foi feito fica fora do card por padrão ("Mostrar o que ficou de fora"); foto só nos cards transparentes; baixar como ícone.
 - Registro do dia com séries ganha do registro antigo na mesma data (`utils/workout.js · dayEntry`): o card podia sair com "0 séries" e o recorde do dia não aparecer.
 - Cache v54.
+
+## v55 — design v3, fases 4a e 4b (professor)
+- **Início "Alunos"** (`components/professor/AlunosV3.jsx`): "Na pista" com anel de progresso (atualiza a cada 30 s com a tela aberta), "Precisa de atenção" em lista com a ação na linha (Responder, Chamar, Revisar, Ver), "Treinam hoje" e "Outros". Tela **Ao vivo** com o treino que o aluno está fazendo agora.
+- **Ficha em página única** (`components/professor/FichaV3.jsx`): Aula hoje + Modo aula, semana, resumo do rendimento, volume planejado e ficha do dia com prescrito × feito (no alvo, abaixo, no teto, X de Y, não fez). Telas completas com "‹ Resumo"; o botão do cabeçalho virou "Dados".
+- **Volume pela ativação** (`utils/volumeCalculator.js`): cada série soma a ativação do exercício em cada grupo (11 grupos, uma casa decimal); eretores da espinha fora. Na edição, bloco "Séries na semana" com a mudança desde que abriu. Na tela Volume, barras no lugar das pastilhas.
+- Cache v55.
