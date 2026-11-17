@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght,wdth@100..900,62.5..125&display=swap">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:#171B22;color:#F2F5FA;font-family:'Archivo',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,textarea{font-family:inherit;color:inherit}
+button:focus-visible,input:focus-visible{outline:2px solid #C6D2E4;outline-offset:2px}
+input::placeholder{color:#7D8698}
+*::-webkit-scrollbar{display:none}
+a{color:#C6D2E4}a:hover{color:#F2F5FA}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 16px">
+<div data-screen-label="Phone" style="position:relative;width:390px;height:844px;flex:none;border-radius:48px;overflow:hidden;background:#05060A;box-shadow:0 0 0 1px #2E333D, 0 30px 80px rgba(0,0,0,.6)">
+
+<div style="position:absolute;top:0;left:0;right:0;height:47px;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 34px;z-index:60;font-size:15px;font-weight:600;background:{{ statusBg }}"><span>16:30</span><div style="display:flex;gap:6px;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph ph-wifi-high"></i><i class="ph-fill ph-battery-full"></i></div></div>
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Login" style="position:absolute;inset:47px 0 0 0;display:flex;flex-direction:column;align-items:center;text-align:center;padding:36px 28px 36px;background:radial-gradient(70% 40% at 50% 24%,#171B22,#05060A 70%)">
+<img src="public/selo-silhueta.png" alt="" style="margin-top:12px;width:150px;height:150px"></img>
+<span style="margin-top:22px;font-size:34px;font-weight:900;font-stretch:125%;line-height:0.92">CANCIO<br><span style="color:#7D8698">CLUB</span></span>
+<span style="margin-top:14px;font-size:15px;color:{{ loginMsgColor }}">{{ loginMsg }}</span>
+<div style="margin-top:22px;display:flex;gap:12px">
+<sc-for list="{{ codePills }}" as="p" hint-placeholder-count="4"><span style="width:48px;height:20px;border-radius:5px;background:{{ p.bg }};box-shadow:{{ p.shadow }};transition:background .15s"></span></sc-for>
+</div>
+<button onClick="{{ openEsqueci }}" style="margin-top:14px;min-height:44px;padding:0 12px;border:none;background:none;font-size:15px;font-weight:700;color:#F2F5FA;cursor:pointer">Esqueci o código</button>
+<div style="margin-top:auto;align-self:stretch;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+<sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+<button onClick="{{ k.onClick }}" aria-label="{{ k.aria }}" style="height:60px;border:none;border-radius:16px;background:transparent;font-size:{{ k.size }};font-weight:{{ k.weight }};color:{{ k.color }};cursor:pointer;display:flex;align-items:center;justify-content:center" style-active="background:#0E1015">{{ k.label }}<i class="{{ k.icon }}"></i></button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHoje }}">
+<div data-screen-label="Hoje" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:20px 20px 180px;background:radial-gradient(80% 45% at 70% 0%,#171B22,#05060A 70%)">
+<span style="position:absolute;left:30px;top:40px;width:10px;height:10px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.5;box-shadow:0 0 20px rgba(198,210,228,0.5);pointer-events:none"></span><span style="position:absolute;left:70px;top:22px;width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.35;box-shadow:0 0 12px rgba(198,210,228,0.35);pointer-events:none"></span><span style="position:absolute;left:310px;top:60px;width:12px;height:12px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.45;box-shadow:0 0 24px rgba(198,210,228,0.45);pointer-events:none"></span><span style="position:absolute;left:250px;top:30px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.3;box-shadow:0 0 10px rgba(198,210,228,0.3);pointer-events:none"></span><span style="position:absolute;left:340px;top:140px;width:7px;height:7px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.35;box-shadow:0 0 14px rgba(198,210,228,0.35);pointer-events:none"></span><span style="position:absolute;left:120px;top:110px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.25;box-shadow:0 0 10px rgba(198,210,228,0.25);pointer-events:none"></span><span style="position:absolute;left:200px;top:90px;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.3;box-shadow:0 0 18px rgba(198,210,228,0.3);pointer-events:none"></span><span style="position:absolute;left:290px;top:200px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.25;box-shadow:0 0 10px rgba(198,210,228,0.25);pointer-events:none"></span><span style="position:absolute;left:40px;top:300px;width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.2;box-shadow:0 0 12px rgba(198,210,228,0.2);pointer-events:none"></span><span style="position:absolute;left:350px;top:330px;width:10px;height:10px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.25;box-shadow:0 0 20px rgba(198,210,228,0.25);pointer-events:none"></span><span style="position:absolute;left:180px;top:440px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.18;box-shadow:0 0 10px rgba(198,210,228,0.18);pointer-events:none"></span><span style="position:absolute;left:60px;top:520px;width:8px;height:8px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.18;box-shadow:0 0 16px rgba(198,210,228,0.18);pointer-events:none"></span><span style="position:absolute;left:320px;top:480px;width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.2;box-shadow:0 0 12px rgba(198,210,228,0.2);pointer-events:none"></span><span style="position:absolute;left:230px;top:560px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.15;box-shadow:0 0 10px rgba(198,210,228,0.15);pointer-events:none"></span><span style="position:absolute;left:130px;top:610px;width:7px;height:7px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.15;box-shadow:0 0 14px rgba(198,210,228,0.15);pointer-events:none"></span>
+<span style="position:relative;display:block;font-size:15px;color:#AEB7C6">{{ greeting }}</span>
+<span style="position:relative;display:block;margin-top:2px;font-size:30px;font-weight:900;font-stretch:125%;line-height:1">ANA BIA</span>
+<div style="position:relative;margin-top:14px;display:flex;gap:6px;align-items:center;font-size:13px;color:#C6D2E4"><span>{{ weekText }}</span><span style="color:#3A404C">·</span><span>{{ streakText }}</span></div>
+<sc-if value="{{ showDomingo }}"><button onClick="{{ openSemana }}" style="position:relative;margin-top:18px;width:100%;padding:12px 14px;border-radius:20px;border:none;background:rgba(46,51,61,0.82);display:flex;gap:12px;align-items:flex-start;text-align:left;cursor:pointer"><span style="flex:none;width:38px;height:38px;border-radius:10px;background:#05060A;display:flex;align-items:center;justify-content:center"><img src="public/selo-silhueta.png" alt="" style="width:30px;height:30px"></img></span><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="display:flex;justify-content:space-between"><span style="font-size:15px;font-weight:700">Sua semana fechou</span><span style="font-size:13px;color:#AEB7C6">18:00</span></span><span style="font-size:15px;color:#E3E8F0">4 de 5 treinos e 2 recordes. Veja o resumo.</span></span></button></sc-if>
+<div style="position:relative;margin-top:28px;padding:18px 16px;border-radius:24px;background:#0E1015;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:{{ hojeKickerColor }}">{{ hojeKicker }}</span><sc-if value="{{ hojeShowCheck }}"><i class="ph-bold ph-check" style="color:#C6D2E4"></i></sc-if></div>
+<span style="font-size:36px;font-weight:900;font-stretch:125%;line-height:1">{{ hojeTitle }}</span>
+<sc-if value="{{ hojeIsRest }}"><span style="font-size:15px;line-height:1.45;color:#C6D2E4">Dia de descanso ativo. Marque o que fez.</span>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ recItems }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.onClick }}" style="display:flex;align-items:center;gap:14px;min-height:60px;border:none;background:none;padding:0;text-align:left;box-shadow:inset 0 -1px 0 #1E222A;cursor:pointer"><span style="flex:none;width:28px;height:28px;border-radius:8px;background:{{ r.boxBg }};box-shadow:{{ r.boxShadow }};color:#05060A;display:flex;align-items:center;justify-content:center"><i class="{{ r.icon }}" style="font-size:16px"></i></span><span style="flex:1;font-size:16px;font-weight:700;font-stretch:110%;color:{{ r.color }}">{{ r.t }}</span><span style="font-size:15px;font-weight:600;font-stretch:75%;color:#AEB7C6">{{ r.d }}</span></button></sc-for>
+</div></sc-if>
+<sc-if value="{{ hojeHasCols }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ hojeCols }}" as="c" hint-placeholder-count="3">
+<button onClick="{{ c.onClick }}" style="display:flex;flex-direction:column;gap:2px;background:none;border:none;padding:0;text-align:left;cursor:{{ c.cursor }}"><span style="font-size:11px;font-weight:800;font-stretch:110%;letter-spacing:0.06em;color:#AEB7C6;white-space:nowrap">{{ c.l }}</span><span style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:4px">{{ c.v }}<i class="{{ c.icon }}" style="font-size:13px;color:#7D8698"></i></span></button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ showList }}">
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ hojeList }}" as="r" hint-placeholder-count="6"><div style="display:flex;gap:12px;padding:9px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat top/100% 1px"><span style="width:20px;font-size:13px;color:#7D8698">{{ r.idx }}</span><span style="flex:1;font-size:16px;font-weight:700;font-stretch:110%">{{ r.name }}</span><span style="font-size:15px;font-weight:600;font-stretch:75%;color:#AEB7C6;font-variant-numeric:tabular-nums">{{ r.plan }}</span></div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ hojeRecord }}"><div style="display:flex;align-items:center;gap:10px;padding-top:12px;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat top/100% 1px"><span>★</span><span style="flex:1;font-size:15px">{{ hojeRecordName }}</span><span style="font-size:15px;font-weight:800">{{ hojeRecordVal }}</span></div></sc-if>
+<sc-if value="{{ hojeNext }}"><div style="display:flex;flex-direction:column;gap:2px;padding-top:12px;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat top/100% 1px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">PRÓXIMO TREINO</span><span style="font-size:15px">{{ hojeNext }}</span></div></sc-if>
+</div>
+<sc-if value="{{ hojeShowMsg }}">
+<button onClick="{{ goRecados }}" style="margin-top:12px;width:100%;padding:12px 14px;border-radius:16px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #1E222A;display:flex;gap:12px;text-align:left;cursor:pointer"><span style="width:32px;height:32px;border-radius:50%;background:#171B22;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none">JP</span><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">Prof. Cancio · 07:15</span><span style="font-size:15px;line-height:1.35;color:#C6D2E4">Bom treino hoje. Controla a descida no desenvolvimento.</span></span></button>
+</sc-if>
+<sc-if value="{{ hojeIsRest }}">
+<div style="margin-top:20px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">TREINAR MESMO ASSIM</div>
+<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px"><button onClick="{{ begin }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;cursor:pointer">Superiores</button><button onClick="{{ begin }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;cursor:pointer">Inferiores</button><button onClick="{{ begin }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;cursor:pointer">Full body</button></div>
+</sc-if>
+</div>
+<sc-if value="{{ hojeCta }}">
+<div style="position:absolute;left:12px;right:12px;bottom:96px;z-index:15;display:flex;gap:8px">
+<sc-if value="{{ hojeCanSwap }}"><button onClick="{{ openTrocar }}" style="flex:none;width:120px;height:56px;border-radius:16px;border:none;background:#05060A;box-shadow:inset 0 0 0 1px #3A404C;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer"><i class="ph ph-arrows-clockwise" style="font-size:18px"></i>Trocar</button></sc-if>
+<button onClick="{{ hojeCtaAction }}" style="flex:1;height:56px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><i class="{{ hojeCtaIcon }}"></i>{{ hojeCta }}</button>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ isTreino }}">
+<div data-screen-label="Treino" onScroll="{{ onTreinoScroll }}" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:16px 20px 330px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">{{ treinoKicker }}</span><span style="display:flex;gap:14px;align-items:baseline"><span style="font-size:13px;color:#AEB7C6;font-variant-numeric:tabular-nums">{{ clock }}</span><button onClick="{{ finish }}" style="background:none;border:none;padding:0;font-size:13px;font-weight:700;color:#C6D2E4;cursor:pointer;min-height:32px">Finalizar</button></span></div>
+<div style="margin-top:6px;font-size:34px;font-weight:900;font-stretch:125%;line-height:1">{{ dayTitle }}</div>
+<div style="margin-top:12px;display:flex;flex-direction:column">
+<sc-for list="{{ exList }}" as="e" hint-placeholder-count="6">
+<div style="background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px">
+<div onClick="{{ e.toggle }}" style="display:flex;align-items:center;gap:14px;padding:{{ e.pad }};cursor:pointer;min-height:48px">
+<span style="width:22px;font-size:13px;font-weight:700;color:{{ e.idxColor }}">{{ e.idx }}<i class="{{ e.idxIcon }}"></i></span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font-size:{{ e.nameSize }};font-weight:{{ e.nameWeight }};font-stretch:{{ e.nameStretch }};color:{{ e.nameColor }}">{{ e.name }}</span>
+<sc-if value="{{ e.showPlan }}"><span style="font-size:15px;font-weight:600;font-stretch:75%;color:#AEB7C6;font-variant-numeric:tabular-nums">{{ e.plan }}<sc-if value="{{ e.restr }}"><span style="margin-left:8px;color:#E8794B;font-size:13px;font-weight:700;font-stretch:100%">● {{ e.restr }}</span></sc-if></span></sc-if>
+</div>
+<sc-if value="{{ e.isOpen }}"><span style="font-size:13px;color:#C6D2E4">{{ e.count }}</span></sc-if>
+<sc-if value="{{ e.showPills }}"><div style="display:flex;gap:3px;flex:none"><sc-for list="{{ e.pills }}" as="p" hint-placeholder-count="4"><span style="width:12px;height:12px;border-radius:3px;background:{{ p.bg }};box-shadow:{{ p.shadow }}"></span></sc-for></div></sc-if>
+</div>
+<sc-if value="{{ e.isOpen }}">
+<div style="padding:0 0 18px 36px;display:flex;flex-direction:column;gap:14px">
+<sc-if value="{{ e.pin }}"><div style="padding:10px 12px;border-radius:10px;background:#0E1015;display:flex;gap:8px;font-size:13px;line-height:1.4;color:#C6D2E4"><i class="ph-fill ph-push-pin" style="margin-top:2px"></i><span>Prof.: {{ e.pin }}</span></div></sc-if>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ e.cols }}" as="c" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:110%;letter-spacing:0.06em;color:#AEB7C6;white-space:nowrap">{{ c.l }}</span><span style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums">{{ c.v }}</span></div></sc-for>
+</div>
+<sc-if value="{{ e.evo }}"><div style="display:flex;align-items:center;gap:10px"><svg width="56" height="20" viewBox="0 0 56 20"><polyline points="0,16 10,16 20,12 30,12 40,7 56,3" fill="none" stroke="#C6D2E4" stroke-width="2"></polyline></svg><span style="font-size:13px;color:#C6D2E4"><b style="color:#F2F5FA">{{ e.evoNum }}</b> {{ e.evo }}</span></div></sc-if>
+<button onClick="{{ e.toggleVid }}" style="height:48px;border-radius:12px;border:none;background:#0E1015;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:15px;font-weight:700;cursor:pointer"><i class="{{ e.vidIcon }}" style="font-size:20px"></i>{{ e.vidLabel }}<span style="margin-left:auto;font-size:13px;font-weight:400;color:#AEB7C6">6 s</span></button>
+<sc-if value="{{ e.vidOpen }}"><div style="position:relative;height:180px;border-radius:14px;overflow:hidden;background:repeating-linear-gradient(135deg,#0E1015 0 10px,#11141A 10px 20px);display:flex;align-items:center;justify-content:center"><span style="font-size:13px;color:#AEB7C6">prévia da execução</span><span style="position:absolute;left:10px;bottom:10px;height:26px;padding:0 10px;border-radius:999px;background:rgba(5,6,10,0.8);display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:0.1em"><i class="ph-fill ph-play" style="font-size:12px"></i>LOOP · SEM SOM</span></div></sc-if>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ e.lines }}" as="l" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;font-size:15px;color:{{ l.color }};min-height:24px"><span style="width:22px;font-size:{{ l.nSize }};font-weight:800;letter-spacing:0.04em">{{ l.n }}</span><span style="flex:1;font-weight:{{ l.weight }};font-variant-numeric:tabular-nums;text-decoration:{{ l.deco }};text-decoration-color:#3A404C">{{ l.text }}</span><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.12em;color:#C6D2E4">{{ l.tag }}</span><span style="font-size:13px;color:#AEB7C6">{{ l.note }}</span><i class="{{ l.icon }}" style="color:{{ l.iconColor }}"></i></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:16px">
+<button onClick="{{ e.onMsg }}" style="background:none;border:none;padding:0;min-height:36px;font-size:13px;font-weight:600;color:#AEB7C6;display:flex;align-items:center;gap:6px;cursor:pointer"><i class="ph ph-chat-circle-text" style="font-size:16px"></i>Recado sobre esta série</button>
+<button onClick="{{ e.onSkip }}" style="background:none;border:none;padding:0;min-height:36px;font-size:13px;font-weight:600;color:#7D8698;cursor:pointer">Pular exercício</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+<sc-if value="{{ collapsed }}">
+<div style="position:absolute;top:47px;left:0;right:0;z-index:25;padding:12px 20px;background:#05060A;box-shadow:inset 0 -1px 0 #1E222A;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px;font-weight:900;font-stretch:125%">{{ dayTitle }}</span><span style="font-size:13px;color:#AEB7C6;font-variant-numeric:tabular-nums">{{ progressShort }}</span></div>
+<div style="height:3px;border-radius:2px;background:#171B22;overflow:hidden"><div style="width:{{ progressPct }};height:100%;background:linear-gradient(90deg,#6E7889,#AEB9CB 55%,#FFFFFF);transition:width .3s"></div></div>
+</div>
+</sc-if>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:20;padding:14px 12px 96px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:10px">
+<sc-if value="{{ barRegister }}">
+<sc-if value="{{ pendingLine }}"><div style="display:flex;align-items:center;gap:8px;padding:0 4px;font-size:13px;color:#F2F5FA"><i class="ph-bold ph-cloud-slash" style="color:#E8794B;font-size:16px"></i><span style="flex:1">{{ pendingLine }}</span></div></sc-if>
+<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.12em;padding:0 4px;gap:8px;min-height:20px"><span style="color:#C6D2E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ barLabel }}</span><button onClick="{{ skipSet }}" style="flex:none;margin:-12px 0;padding:12px 0 12px 12px;border:none;background:none;display:flex;align-items:center;gap:5px;color:#F2F5FA;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.08em;cursor:pointer"><i class="ph-bold ph-skip-forward" style="font-size:14px"></i>PULAR</button></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+<sc-for list="{{ steppers }}" as="s" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;justify-content:space-between;height:56px;border-radius:10px;background:#171B22">
+<button onClick="{{ s.minus }}" aria-label="Diminuir" style="width:48px;height:56px;border:none;background:none;font-size:22px;color:#AEB7C6;cursor:pointer">−</button>
+<span style="display:flex;flex-direction:column;align-items:center"><span style="font-size:24px;font-weight:900;font-stretch:110%;line-height:1;font-variant-numeric:tabular-nums">{{ s.v }}</span><span style="font-size:11px;color:#7D8698">{{ s.u }}</span></span>
+<button onClick="{{ s.plus }}" aria-label="Aumentar" style="width:48px;height:56px;border:none;background:none;font-size:22px;color:#AEB7C6;cursor:pointer">+</button>
+</div>
+</sc-for>
+</div>
+<button onClick="{{ registerSet }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Feito</button>
+</sc-if>
+<sc-if value="{{ barRest }}">
+<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.12em;padding:0 4px;gap:8px"><span style="color:#C6D2E4">DESCANSO</span><span style="color:#7D8698;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ restNext }}</span></div>
+<div style="display:flex;align-items:center;gap:14px;padding:0 4px"><span style="font-size:56px;font-weight:900;font-stretch:125%;line-height:1;font-variant-numeric:tabular-nums">{{ restClock }}</span><div style="flex:1;height:6px;border-radius:3px;background:#171B22;overflow:hidden"><div style="width:{{ restPct }};height:100%;background:linear-gradient(90deg,#6E7889,#AEB9CB 55%,#FFFFFF)"></div></div></div>
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:8px"><button onClick="{{ restAdd }}" style="height:52px;border-radius:16px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-weight:700;font-size:15px;cursor:pointer">+15s</button><button onClick="{{ restSkip }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Pular descanso</button></div>
+</sc-if>
+<sc-if value="{{ barFinish }}">
+<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.12em;padding:0 4px"><span style="color:#C6D2E4">TODAS AS SÉRIES FEITAS</span><span style="color:#7D8698">{{ progressShort }}</span></div>
+<button onClick="{{ finish }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Finalizar treino</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCardio }}">
+<div data-screen-label="Cardio" style="position:absolute;top:47px;left:0;right:0;bottom:0;padding:16px 20px 0">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">SÁBADO · CARDIO</span><button onClick="{{ goHoje }}" style="background:none;border:none;padding:0;min-height:44px;font-size:13px;font-weight:700;color:#C6D2E4;cursor:pointer">Sair</button></div>
+<div style="margin-top:2px;font-size:34px;font-weight:900;font-stretch:125%;line-height:1">CARDIO</div>
+<div style="margin-top:18px;display:flex;align-items:center;gap:14px"><i class="ph ph-person-simple-run" style="font-size:22px;color:#C6D2E4"></i><span style="flex:1;font-size:20px;font-weight:800;font-stretch:110%">Esteira inclinada</span></div>
+<div style="margin-top:14px;padding-left:36px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:110%;letter-spacing:0.06em;color:#AEB7C6;white-space:nowrap">ALVO</span><span style="font-size:15px;font-weight:700">30 min</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:110%;letter-spacing:0.06em;color:#AEB7C6;white-space:nowrap">ÚLTIMA</span><span style="font-size:15px;font-weight:700">28 min</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:110%;letter-spacing:0.06em;color:#AEB7C6;white-space:nowrap">ESFORÇO</span><span style="font-size:15px;font-weight:700">leve</span></div></div>
+<div style="margin-top:14px;padding-left:36px;font-size:15px;color:#C6D2E4;line-height:1.4">"Inclinação 8, dá pra conversar. Se cansar, baixa a velocidade e não a inclinação."</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:20;padding:14px 12px 30px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:10px">
+<sc-if value="{{ cardioRunning }}">
+<div style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.12em;color:#C6D2E4;padding:0 4px">ESTEIRA INCLINADA · ALVO 30:00</div>
+<div style="display:flex;align-items:center;gap:14px;padding:6px 4px"><span style="flex:1;font-size:64px;font-weight:900;font-stretch:75%;line-height:1;font-variant-numeric:tabular-nums">{{ cardioClock }}</span><button onClick="{{ cardioToggle }}" aria-label="Pausar ou continuar" style="width:56px;height:56px;border-radius:50%;border:none;background:#171B22;display:flex;align-items:center;justify-content:center;cursor:pointer"><i class="{{ cardioIcon }}" style="font-size:24px"></i></button></div>
+<div style="height:4px;border-radius:2px;background:#171B22;overflow:hidden"><div style="width:{{ cardioPct }};height:4px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></div></div>
+<button onClick="{{ cardioStop }}" style="height:52px;border-radius:16px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2A2E37;font-weight:700;font-size:15px;cursor:pointer">Terminar</button>
+</sc-if>
+<sc-if value="{{ cardioLog }}">
+<div style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.12em;color:#C6D2E4;padding:0 4px">ESTEIRA INCLINADA · COMO FOI</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+<sc-for list="{{ cardioSteppers }}" as="s" hint-placeholder-count="2"><div style="display:flex;align-items:center;justify-content:space-between;height:56px;border-radius:10px;background:#171B22"><button onClick="{{ s.minus }}" aria-label="Diminuir" style="width:48px;height:56px;border:none;background:none;font-size:22px;color:#AEB7C6;cursor:pointer">−</button><span style="display:flex;flex-direction:column;align-items:center"><span style="font-size:24px;font-weight:900;font-stretch:110%;line-height:1">{{ s.v }}</span><span style="font-size:11px;color:#AEB7C6">{{ s.u }}</span></span><button onClick="{{ s.plus }}" aria-label="Aumentar" style="width:48px;height:56px;border:none;background:none;font-size:22px;color:#AEB7C6;cursor:pointer">+</button></div></sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"><sc-for list="{{ cardioEfforts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.onClick }}" style="height:44px;border-radius:10px;border:none;background:{{ o.bg }};color:{{ o.color }};font-size:13px;font-weight:{{ o.weight }};cursor:pointer">{{ o.label }}</button></sc-for></div>
+<button onClick="{{ cardioDone }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Feito</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isFim }}">
+<div data-screen-label="Fim" style="position:absolute;top:47px;left:0;right:0;bottom:0;padding:28px 20px 20px;display:flex;flex-direction:column">
+<span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#C6D2E4">TREINO DE HOJE FEITO</span>
+<span style="margin-top:8px;font-size:38px;font-weight:900;font-stretch:125%;line-height:1">SUPERIORES</span>
+<div style="margin-top:22px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ fimStats }}" as="f" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:26px;font-weight:900;font-stretch:110%;font-variant-numeric:tabular-nums">{{ f.v }}</span><span style="font-size:11px;font-weight:800;font-stretch:110%;letter-spacing:0.06em;color:#AEB7C6;white-space:nowrap">{{ f.l }}</span></div></sc-for>
+</div>
+<sc-if value="{{ hojeRecord }}"><div style="margin-top:20px;display:flex;align-items:center;gap:10px;padding:12px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat top/100% 1px,linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span>★</span><span style="flex:1;font-size:15px">{{ hojeRecordName }}</span><span style="font-size:15px;font-weight:800">{{ hojeRecordVal }}</span></div></sc-if>
+<span style="margin-top:22px;font-size:15px;font-weight:600">Como foi o treino de hoje?</span>
+<div style="margin-top:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ efforts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.onClick }}" style="height:44px;border-radius:10px;border:none;background:{{ o.bg }};color:{{ o.color }};box-shadow:{{ o.shadow }};font-size:13px;font-weight:{{ o.weight }};cursor:pointer">{{ o.label }}</button></sc-for>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+<button onClick="{{ openShare }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><i class="ph-bold ph-export"></i>Compartilhar treino</button>
+<button onClick="{{ goHoje }}" style="height:44px;border:none;background:none;font-size:15px;color:#7D8698;cursor:pointer">Fechar</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isShare }}">
+<div data-screen-label="Compartilhar" style="position:absolute;top:47px;left:0;right:0;bottom:0;display:flex;flex-direction:column">
+<div style="padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center"><span style="font-size:18px;font-weight:900;font-stretch:125%">COMPARTILHAR</span><button onClick="{{ closeShare }}" style="background:none;border:none;font-size:15px;color:#7D8698;min-height:44px;cursor:pointer">Fechar</button></div>
+<div style="margin-top:6px;display:flex;justify-content:center;gap:20px">
+<sc-for list="{{ shareTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="background:none;border:none;padding:6px 0;font-size:13px;font-weight:{{ t.weight }};color:{{ t.color }};box-shadow:{{ t.line }};cursor:pointer">{{ t.label }}</button></sc-for>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:12px 0">
+<div style="width:236px;height:420px;border-radius:16px;position:relative;overflow:hidden;background:{{ previewBg }};box-shadow:inset 0 0 0 1px #2A2E37">
+<sc-if value="{{ modeCard }}">
+<div style="position:absolute;inset:0;padding:54px 15px 0">
+<img src="public/selo-silhueta.png" alt="" style="position:absolute;right:-80px;top:-70px;width:250px;height:250px;opacity:.09"></img>
+<div style="display:flex;align-items:center;gap:6px"><img src="public/selo-silhueta.png" alt="" style="width:14px;height:14px"></img><span style="flex:1;font-size:7px;font-weight:900;font-stretch:125%;letter-spacing:0.15em">CANCIO CLUB</span><span style="font-size:6.5px;color:#7D8698">SÁB · 14 NOV</span></div>
+<div style="margin-top:42px;font-size:6px;font-weight:700;letter-spacing:0.25em;color:#C6D2E4">TREINO CONCLUÍDO</div>
+<div style="margin-top:5px;font-size:22px;font-weight:900;font-stretch:125%;line-height:1">SUPERIORES</div>
+<div style="margin-top:10px;display:grid;grid-template-columns:repeat(3,1fr);padding:7px 0;box-shadow:inset 0 1px 0 #1E222A,inset 0 -1px 0 #1E222A">
+<sc-for list="{{ cardStats }}" as="c" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;padding-left:{{ c.pad }};box-shadow:{{ c.line }}"><span style="font-size:15px;font-weight:900;font-stretch:75%">{{ c.v }}</span><span style="font-size:6px;color:#7D8698">{{ c.l }}</span></div></sc-for>
+</div>
+<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ shareRows }}" as="r" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:3px;opacity:{{ r.op }}"><div style="display:flex;justify-content:space-between;font-size:8px;font-weight:600"><span>{{ r.name }}</span><span style="font-weight:800">{{ r.val }}</span></div><div style="display:flex;gap:2px"><sc-for list="{{ r.pills }}" as="p" hint-placeholder-count="3"><span style="width:11px;height:5px;border-radius:1px;background:{{ p.bg }};box-shadow:{{ p.shadow }}"></span></sc-for></div></div></sc-for>
+</div>
+<span style="position:absolute;left:0;right:0;bottom:56px;text-align:center;font-size:7px;color:#7D8698">O clube é fechado, mas o resultado é público.</span>
+</div>
+</sc-if>
+<sc-if value="{{ modeNum }}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-shadow:0 1px 6px rgba(0,0,0,.45)">
+<img src="public/selo-silhueta.png" alt="" style="width:40px;height:40px"></img>
+<span style="margin-top:8px;font-size:17px;font-weight:900;font-stretch:125%">SUPERIORES</span>
+<sc-for list="{{ numItems }}" as="n" hint-placeholder-count="4"><div style="margin-top:8px;display:flex;flex-direction:column;align-items:center"><span style="font-size:6px;font-weight:700;letter-spacing:0.3em">{{ n.l }}</span><span style="font-size:22px;font-weight:900;font-stretch:75%;line-height:1">{{ n.v }}</span></div></sc-for>
+<span style="margin-top:10px;font-size:6px;font-weight:900;font-stretch:125%;letter-spacing:0.3em">CANCIO CLUB</span>
+</div>
+</sc-if>
+<sc-if value="{{ modeTiles }}">
+<div style="position:absolute;left:17px;right:17px;bottom:56px;display:flex;flex-direction:column;gap:6px;text-shadow:0 1px 6px rgba(0,0,0,.45)">
+<div style="display:flex;justify-content:space-between;align-items:flex-end"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:6.5px;font-weight:700;letter-spacing:0.25em">SÁB · 14 NOV</span><span style="font-size:16px;font-weight:900;font-stretch:125%">SUPERIORES</span></div><img src="public/selo-silhueta.png" alt="" style="width:28px;height:28px"></img></div>
+<sc-for list="{{ shareRows }}" as="r" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:5px;font-size:7px;font-weight:600;opacity:{{ r.op }}"><span style="display:flex;gap:2px"><sc-for list="{{ r.pills }}" as="p" hint-placeholder-count="3"><span style="width:12px;height:7px;border-radius:1.5px;background:{{ p.bg }};box-shadow:{{ p.shadow }}"></span></sc-for></span>{{ r.name }}</div></sc-for>
+<div style="height:1px;background:rgba(255,255,255,.6);margin-top:4px"></div>
+<div style="display:flex;gap:14px;align-items:flex-end"><sc-for list="{{ tileStats }}" as="t" hint-placeholder-count="2"><div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:900;font-stretch:75%">{{ t.v }}</span><span style="font-size:6px">{{ t.l }}</span></div></sc-for><span style="margin-left:auto;font-size:6px;font-weight:900;font-stretch:125%;letter-spacing:0.15em">CANCIO CLUB</span></div>
+</div>
+</sc-if>
+</div>
+</div>
+<div style="padding:4px 20px 26px;display:flex;flex-direction:column;gap:8px">
+<button onClick="{{ toggleMissing }}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;border:none;background:#0E1015;text-align:left;cursor:pointer"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Mostrar o que ficou de fora</span><span style="font-size:13px;color:#7D8698">{{ missingText }}</span></span><span style="width:44px;height:26px;border-radius:999px;background:{{ swBg }};position:relative;flex:none;transition:background .2s"><span style="position:absolute;top:3px;left:{{ swLeft }};width:20px;height:20px;border-radius:50%;background:{{ swKnob }};transition:left .2s"></span></span></button>
+<sc-if value="{{ modeSticker }}"><button onClick="{{ togglePhoto }}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;border:none;background:#0E1015;text-align:left;cursor:pointer"><i class="ph ph-image" style="font-size:20px;color:#AEB7C6"></i><span style="flex:1;font-size:13px;color:#AEB7C6">{{ photoText }}</span><span style="font-size:13px;font-weight:700">{{ photoAction }}</span></button></sc-if>
+<div style="display:flex;gap:8px"><button onClick="{{ share }}" aria-label="Baixar PNG" style="width:52px;height:52px;border-radius:16px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:20px;color:#C6D2E4;cursor:pointer"><i class="ph ph-download-simple"></i></button><button onClick="{{ share }}" style="flex:1;height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><i class="ph-bold ph-export"></i>Compartilhar</button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRecados }}">
+<div data-screen-label="Recados" style="position:absolute;top:47px;left:0;right:0;bottom:0;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;padding:16px 20px 12px"><span style="width:40px;height:40px;border-radius:50%;background:#171B22;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">JP</span><div style="display:flex;flex-direction:column"><span style="font-size:18px;font-weight:900;font-stretch:125%">PROF. CANCIO</span><span style="font-size:13px;color:#7D8698">Responde em até 1 dia</span></div></div>
+<div style="margin:0 16px;padding:12px 14px;border-radius:16px;background:#0E1015;display:flex;gap:10px"><i class="ph-fill ph-push-pin" style="color:#C6D2E4;margin-top:2px"></i><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#C6D2E4">COMBINADO · SUPINO RETO</span><span style="font-size:15px;line-height:1.35">Sobe 2,5 kg se as séries válidas saírem limpas.</span></div></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:12px 20px;display:flex;flex-direction:column;gap:10px;justify-content:flex-end">
+<sc-for list="{{ msgs }}" as="m" hint-placeholder-count="5">
+<sc-if value="{{ m.isHead }}"><span style="text-align:center;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6;padding-top:4px">{{ m.text }}</span></sc-if>
+<sc-if value="{{ m.isEvent }}"><div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#7D8698"><span style="width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);color:#05060A;font-size:9px;display:flex;align-items:center;justify-content:center">{{ m.star }}</span><span style="flex:1">{{ m.text }}</span><span>{{ m.right }}</span></div></sc-if>
+<sc-if value="{{ m.isMsg }}">
+<div style="display:flex;flex-direction:column;align-items:{{ m.align }};gap:4px">
+<div style="max-width:84%;border-radius:{{ m.radius }};background:{{ m.bg }};color:{{ m.color }};overflow:hidden">
+<sc-if value="{{ m.link }}"><div style="padding:8px 14px;background:#DCE4F0;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#05060A">{{ m.link }}</div></sc-if>
+<div style="padding:11px 14px;font-size:15px;line-height:1.4">{{ m.text }}</div>
+</div>
+<span style="font-size:11px;color:#7D8698">{{ m.meta }}</span>
+</div>
+</sc-if>
+</sc-for>
+</div>
+<div style="padding:8px 16px 96px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+<button onClick="{{ openSheet }}" style="flex:none;min-height:40px;padding:0 12px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><i class="ph ph-link-simple"></i>Ligar a um exercício</button>
+<sc-for list="{{ quick }}" as="q" hint-placeholder-count="3"><button onClick="{{ q.onClick }}" style="flex:none;min-height:40px;padding:0 12px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;cursor:pointer">{{ q.label }}</button></sc-for>
+</div>
+<div style="display:flex;gap:8px"><input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" placeholder="Escreva um recado" style="flex:1;height:48px;padding:0 14px;border-radius:10px;border:none;outline:none;background:#0E1015;font-size:15px"></input><button onClick="{{ send }}" aria-label="Enviar" style="width:48px;height:48px;border-radius:10px;border:none;background:{{ sendBg }};color:{{ sendColor }};font-size:18px;cursor:pointer"><i class="ph-bold ph-arrow-up"></i></button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPerfil }}">
+<div data-screen-label="Perfil" style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;scrollbar-width:none;padding:20px 20px 120px">
+<div style="display:flex;align-items:center;gap:14px"><img src="public/selo-silhueta.png" alt="" style="width:64px;height:64px"></img><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">Nº 0001 · DESDE MAR 2025</span><span style="font-size:40px;font-weight:900;font-stretch:125%;line-height:0.92">ANA BIA</span></div></div>
+<div style="margin-top:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))">
+<sc-for list="{{ profStats }}" as="s" hint-placeholder-count="3"><div style="display:flex;flex-direction:column"><span style="font-size:24px;font-weight:800">{{ s.v }}</span><span style="font-size:11px;color:#AEB7C6">{{ s.l }}</span></div></sc-for>
+</div>
+<div style="margin-top:14px;display:flex;gap:8px"><button onClick="{{ openCard }}" style="flex:1;height:44px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer"><i class="ph ph-identification-card"></i>Carteirinha</button><button onClick="{{ openSelo }}" style="flex:1;height:44px;border-radius:10px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer"><i class="ph ph-seal"></i>Selo</button></div>
+<div style="margin-top:28px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">1 · FREQUÊNCIA · NOVEMBRO</span><span style="font-size:13px;color:#C6D2E4">{{ monthCount }}</span></div>
+<div style="margin-top:10px;display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:4px"><sc-for list="{{ monthTiles }}" as="t" hint-placeholder-count="30"><span style="height:14px;border-radius:3px;background:{{ t.bg }};box-shadow:{{ t.shadow }}"></span></sc-for></div>
+<div style="margin-top:28px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">2 · EVOLUÇÃO</span><span style="font-size:13px;color:#C6D2E4">Supino reto · +10 kg</span></div>
+<svg viewBox="0 0 350 130" width="100%" style="margin-top:8px;display:block;font-family:Archivo"><g stroke="#1E222A"><line x1="30" y1="14" x2="346" y2="14"></line><line x1="30" y1="56" x2="346" y2="56"></line><line x1="30" y1="98" x2="346" y2="98"></line></g><g fill="#AEB7C6" font-size="11" text-anchor="end"><text x="24" y="18">45</text><text x="24" y="60">40</text><text x="24" y="102">35</text></g><g fill="#7D8698" font-size="11" text-anchor="middle"><text x="42" y="124">set</text><text x="132" y="124">out</text><text x="244" y="124">nov</text><text x="334" y="124">hoje</text></g><polyline points="42,98 84,98 126,77 168,77 210,56 252,56 294,35 334,14" fill="none" stroke="#C6D2E4" stroke-width="2" stroke-linejoin="round"></polyline><circle cx="334" cy="14" r="4.5" fill="#F2F5FA"></circle></svg>
+<div style="margin-top:22px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">3 · RECORDES</span><span style="font-size:13px;color:#AEB7C6">Ver os 9 ›</span></div>
+<div style="margin-top:4px;display:flex;flex-direction:column">
+<div style="display:flex;justify-content:space-between;padding:11px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span style="font-size:15px">Supino reto com barra</span><span style="font-size:15px;font-weight:800">45 × 8</span></div>
+<div style="display:flex;justify-content:space-between;padding:11px 0"><span style="font-size:15px">Puxada frontal</span><span style="font-size:15px;font-weight:800">52,5 × 10</span></div>
+</div>
+<div style="margin-top:22px;display:flex;flex-direction:column;border-radius:16px;background:#0E1015;overflow:hidden">
+<sc-for list="{{ menuA }}" as="m" hint-placeholder-count="3"><button onClick="{{ m.onClick }}" style="display:flex;align-items:center;gap:12px;min-height:50px;padding:0 14px;border:none;background:none;box-shadow:inset 0 -1px 0 #171B22;text-align:left;cursor:pointer"><span style="flex:1;font-size:15px">{{ m.label }}</span><span style="font-size:13px;color:#C6D2E4">{{ m.v }}</span><i class="ph ph-caret-right" style="color:#7D8698"></i></button></sc-for>
+</div>
+<div style="margin-top:14px;display:flex;flex-direction:column;border-radius:16px;background:#0E1015;overflow:hidden">
+<sc-for list="{{ menuB }}" as="m" hint-placeholder-count="3"><button onClick="{{ m.onClick }}" style="display:flex;align-items:center;gap:12px;min-height:50px;padding:0 14px;border:none;background:none;box-shadow:inset 0 -1px 0 #171B22;text-align:left;cursor:pointer;color:{{ m.color }}"><span style="flex:1;font-size:15px">{{ m.label }}</span><i class="{{ m.icon }}" style="color:#7D8698"></i></button></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showTabs }}">
+<div style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;display:flex;gap:4px;padding:5px;border-radius:999px;background:#0E1015;box-shadow:inset 0 0 0 1px #1E222A, 0 8px 24px rgba(0,0,0,.5)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+<button onClick="{{ t.onClick }}" aria-label="{{ t.aria }}" style="position:relative;height:48px;min-width:52px;padding:0 {{ t.padX }};border-radius:999px;border:none;background:{{ t.bg }};color:{{ t.color }};box-shadow:{{ t.shadow }};display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;cursor:pointer;transition:background .2s"><i class="{{ t.icon }}" style="font-size:21px"></i>{{ t.label }}<sc-if value="{{ t.dot }}"><span style="position:absolute;top:10px;right:12px;width:7px;height:7px;border-radius:50%;background:#F2F5FA"></span></sc-if></button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSheet }}">
+<div onClick="{{ closeOverlay }}" style="position:absolute;inset:0;z-index:40;background:rgba(5,6,10,.6)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:41;padding:18px 16px 30px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.12em;color:#C6D2E4">{{ sheetTitle }}</span><button onClick="{{ closeOverlay }}" style="background:none;border:none;font-size:15px;color:#7D8698;min-height:36px;cursor:pointer">Fechar</button></div>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ sheetChips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.onClick }}" style="min-height:40px;padding:0 12px;border-radius:999px;border:none;background:{{ c.bg }};color:{{ c.color }};box-shadow:{{ c.shadow }};font-size:13px;font-weight:{{ c.weight }};cursor:pointer">{{ c.label }}</button></sc-for></div>
+<input value="{{ sheetText }}" onChange="{{ onSheetText }}" placeholder="Conte o que aconteceu" style="height:56px;padding:0 14px;border-radius:10px;border:none;outline:none;background:#05060A;font-size:15px"></input>
+<button onClick="{{ sendSheet }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;cursor:pointer">Mandar pro professor</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCard }}">
+<div data-screen-label="Carteirinha" style="position:absolute;inset:0;z-index:45;padding:63px 20px 30px;display:flex;flex-direction:column;align-items:center;background:radial-gradient(70% 40% at 50% 45%,#171B22,#05060A 75%)">
+<div style="align-self:stretch;display:flex;justify-content:space-between;align-items:center"><span style="font-size:18px;font-weight:900;font-stretch:125%">CARTEIRINHA</span><button onClick="{{ closeOverlay }}" style="background:none;border:none;font-size:15px;color:#7D8698;min-height:44px;cursor:pointer">Fechar</button></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;perspective:1000px">
+<div onClick="{{ flipCard }}" style="position:relative;width:290px;height:460px;cursor:pointer;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,.7,.2,1);transform:{{ cardTransform }}">
+<div style="position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:24px;background:#0E1015;box-shadow:inset 0 0 0 1px #2A2E37, 0 30px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;padding:26px 22px 22px">
+<div style="align-self:stretch;display:flex;justify-content:space-between;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6"><span>MEMBRO</span><span>Nº 0001</span></div>
+<div style="margin-top:22px;position:relative;width:156px;height:156px"><img src="public/selo-silhueta.png" alt="" style="position:absolute;left:43px;top:43px;width:70px;height:70px"></img><svg viewBox="0 0 200 200" width="156" height="156" style="position:absolute;inset:0"><defs><path id="v3sealT" d="M 100 100 m -76 0 a 76 76 0 1 1 152 0"></path><path id="v3sealB" d="M 100 100 m -86 0 a 86 86 0 0 0 172 0"></path></defs><circle cx="100" cy="100" r="97" fill="none" stroke="#C6D2E4" stroke-width="1.5"></circle><text font-family="Archivo" font-weight="900" font-size="24" letter-spacing="1" fill="#C6D2E4"><textPath href="#v3sealT" startOffset="50%" text-anchor="middle" textLength="186" lengthAdjust="spacing">CANCIO CLUB</textPath></text><text font-family="Archivo" font-weight="800" font-size="11" letter-spacing="2.6" fill="#C6D2E4"><textPath href="#v3sealB" startOffset="50%" text-anchor="middle">TREINOS · PROGRESSÃO</textPath></text></svg></div>
+<span style="margin-top:22px;font-size:28px;font-weight:900;font-stretch:125%;line-height:0.95">ANA BIA</span>
+<span style="margin-top:8px;font-size:13px;color:#AEB7C6">Membro desde mar 2025 · Prof. Cancio</span>
+<div style="margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;font-size:11px;letter-spacing:0.14em;color:#7D8698"><span>NOVEMBRO</span><span>{{ monthCountUp }}</span></div><div style="display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:4px"><sc-for list="{{ monthTiles }}" as="t" hint-placeholder-count="30"><span style="height:10px;border-radius:2px;background:{{ t.bg }};box-shadow:{{ t.shadow }}"></span></sc-for></div></div>
+</div>
+<div style="position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);border-radius:24px;overflow:hidden;background:linear-gradient(125deg,#E9EEF6 0%,#B8C3D4 38%,#F2F5FA 52%,#8D97A9 100%);color:#05060A;box-shadow:0 30px 60px rgba(0,0,0,.6)">
+<div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,6,10,.06) 1px,transparent 1px) 0 0/12px 12px,linear-gradient(180deg,rgba(5,6,10,.06) 1px,transparent 1px) 0 0/12px 12px"></div>
+<div style="position:absolute;left:24px;top:24px;display:flex;flex-direction:column;font-size:15px;font-weight:900;font-stretch:125%;line-height:0.92"><span>CANCIO</span><span style="color:#3A404C">CLUB</span></div>
+<img src="public/selo-silhueta.png" alt="" style="position:absolute;right:22px;top:20px;width:64px;height:64px;filter:brightness(0.12)"></img>
+<div style="position:absolute;left:24px;right:24px;top:170px;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;letter-spacing:0.16em;color:#3A404C">MEMBRO</span><span style="font-size:36px;font-weight:900;font-stretch:125%;line-height:0.95">ANA BIA</span></div>
+<div style="position:absolute;left:24px;right:24px;bottom:24px;display:flex;gap:24px"><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11px;letter-spacing:0.16em;color:#3A404C">Nº</span><span style="font-size:15px;font-weight:800">0001</span></div><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11px;letter-spacing:0.16em;color:#3A404C">DESDE</span><span style="font-size:15px;font-weight:800">MAR 2025</span></div><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11px;letter-spacing:0.16em;color:#3A404C">PROFESSOR</span><span style="font-size:15px;font-weight:800">CANCIO</span></div></div>
+</div>
+</div>
+</div>
+<span style="font-size:13px;color:#AEB7C6;display:flex;align-items:center;gap:6px"><i class="ph ph-hand-tap"></i>Toque para virar</span>
+<span style="margin-top:10px;font-size:13px;color:#7D8698">Só pra mostrar. Não serve de acesso à academia.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSelo }}">
+<div data-screen-label="Selo" style="position:absolute;inset:0;z-index:45;background:#05060A;padding:63px 20px 30px;display:flex;flex-direction:column">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:18px;font-weight:900;font-stretch:125%">SELO</span><button onClick="{{ closeOverlay }}" style="background:none;border:none;font-size:15px;color:#7D8698;min-height:44px;cursor:pointer">Fechar</button></div>
+<div style="margin-top:14px;align-self:flex-start;display:flex;gap:4px;padding:4px;border-radius:999px;background:#0E1015"><sc-for list="{{ seloTabs }}" as="s" hint-placeholder-count="2"><button onClick="{{ s.onClick }}" style="min-height:36px;padding:0 16px;border-radius:999px;border:none;background:{{ s.bg }};color:{{ s.color }};font-size:13px;font-weight:700;cursor:pointer">{{ s.label }}</button></sc-for></div>
+<div style="margin-top:14px;flex:1;display:flex;align-items:center;justify-content:center;border-radius:20px;background:{{ seloBg }}">
+<div style="position:relative;width:240px;height:240px"><img src="public/selo-silhueta.png" alt="" style="position:absolute;left:66px;top:66px;width:108px;height:108px;filter:{{ seloFilter }}"></img><svg viewBox="0 0 200 200" width="240" height="240" style="position:absolute;inset:0"><defs><path id="v3seloT" d="M 100 100 m -76 0 a 76 76 0 1 1 152 0"></path><path id="v3seloB" d="M 100 100 m -86 0 a 86 86 0 0 0 172 0"></path></defs><circle cx="100" cy="100" r="97" fill="none" stroke="{{ seloInk }}" stroke-width="1.5"></circle><text font-family="Archivo" font-weight="900" font-size="24" letter-spacing="1" fill="{{ seloInk }}"><textPath href="#v3seloT" startOffset="50%" text-anchor="middle" textLength="186" lengthAdjust="spacing">CANCIO CLUB</textPath></text><text font-family="Archivo" font-weight="800" font-size="11" letter-spacing="2.6" fill="{{ seloInk }}"><textPath href="#v3seloB" startOffset="50%" text-anchor="middle">TREINOS · PROGRESSÃO</textPath></text></svg></div>
+</div>
+<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><button onClick="{{ share }}" style="height:52px;border-radius:16px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #2E333D;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer"><i class="ph ph-download-simple"></i>Salvar PNG</button><button onClick="{{ share }}" style="height:52px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer"><i class="ph-bold ph-export"></i>Compartilhar</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTrocar }}">
+<div onClick="{{ closeOverlay }}" style="position:absolute;inset:0;z-index:40;background:rgba(5,6,10,.6)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:41;padding:10px 20px 30px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:10px">
+<span style="align-self:center;width:40px;height:5px;border-radius:3px;background:#2A2E37"></span>
+<span style="margin-top:8px;font-size:20px;font-weight:800;font-stretch:110%">Treinar outro dia</span>
+<span style="font-size:13px;color:#AEB7C6">Hoje seria Superiores. Os outros dias da sua ficha:</span>
+<sc-for list="{{ swapDays }}" as="d" hint-placeholder-count="4"><button onClick="{{ d.onClick }}" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:6px 14px;border-radius:14px;border:none;background:{{ d.bg }};box-shadow:{{ d.shadow }};text-align:left;cursor:pointer"><span style="width:34px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.1em;color:#AEB7C6">{{ d.d }}</span><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700;font-stretch:110%">{{ d.t }}</span><span style="font-size:13px;color:{{ d.sc }}">{{ d.s }}</span></span><i class="ph ph-caret-right" style="color:#7D8698"></i></button></sc-for>
+<span style="font-size:13px;color:#AEB7C6;text-align:center">O professor fica sabendo da troca.</span>
+</div>
+</sc-if>
+<sc-if value="{{ isEsqueci }}">
+<div onClick="{{ closeOverlay }}" style="position:absolute;inset:0;z-index:40;background:rgba(5,6,10,.6)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:41;padding:10px 20px 30px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:10px">
+<span style="align-self:center;width:40px;height:5px;border-radius:3px;background:#2A2E37"></span>
+<span style="margin-top:8px;font-size:20px;font-weight:800;font-stretch:110%">Pedir o código ao professor</span>
+<span style="font-size:15px;color:#AEB7C6">Abre o WhatsApp do Cancio com esta mensagem. Você pode mudar antes de enviar.</span>
+<div style="padding:12px 14px;border-radius:14px;background:#171B22;font-size:15px;line-height:1.4;color:#E3E8F0">Oi, Cancio! Esqueci meu código do Cancio Club. Pode me mandar?</div>
+<button onClick="{{ openWhats }}" style="height:56px;border-radius:999px;border:none;background:#F2F5FA;color:#05060A;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:800;cursor:pointer"><i class="ph-fill ph-whatsapp-logo" style="font-size:20px"></i>Abrir WhatsApp</button>
+</div>
+</sc-if>
+<sc-if value="{{ isSemana }}">
+<div data-screen-label="Resumo da semana" style="position:absolute;inset:0;z-index:45;padding:63px 20px 30px;display:flex;flex-direction:column;background:radial-gradient(80% 50% at 50% 0%,#2A2E37,#05060A 70%)">
+<span style="position:absolute;left:30px;top:40px;width:10px;height:10px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.5;box-shadow:0 0 20px rgba(198,210,228,0.5);pointer-events:none"></span><span style="position:absolute;left:70px;top:22px;width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.35;box-shadow:0 0 12px rgba(198,210,228,0.35);pointer-events:none"></span><span style="position:absolute;left:310px;top:60px;width:12px;height:12px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.45;box-shadow:0 0 24px rgba(198,210,228,0.45);pointer-events:none"></span><span style="position:absolute;left:250px;top:30px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.3;box-shadow:0 0 10px rgba(198,210,228,0.3);pointer-events:none"></span><span style="position:absolute;left:340px;top:140px;width:7px;height:7px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.35;box-shadow:0 0 14px rgba(198,210,228,0.35);pointer-events:none"></span><span style="position:absolute;left:120px;top:110px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.25;box-shadow:0 0 10px rgba(198,210,228,0.25);pointer-events:none"></span><span style="position:absolute;left:200px;top:90px;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.3;box-shadow:0 0 18px rgba(198,210,228,0.3);pointer-events:none"></span><span style="position:absolute;left:290px;top:200px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.25;box-shadow:0 0 10px rgba(198,210,228,0.25);pointer-events:none"></span><span style="position:absolute;left:40px;top:300px;width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.2;box-shadow:0 0 12px rgba(198,210,228,0.2);pointer-events:none"></span><span style="position:absolute;left:350px;top:330px;width:10px;height:10px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.25;box-shadow:0 0 20px rgba(198,210,228,0.25);pointer-events:none"></span><span style="position:absolute;left:180px;top:440px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.18;box-shadow:0 0 10px rgba(198,210,228,0.18);pointer-events:none"></span><span style="position:absolute;left:60px;top:520px;width:8px;height:8px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.18;box-shadow:0 0 16px rgba(198,210,228,0.18);pointer-events:none"></span><span style="position:absolute;left:320px;top:480px;width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.2;box-shadow:0 0 12px rgba(198,210,228,0.2);pointer-events:none"></span><span style="position:absolute;left:230px;top:560px;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.15;box-shadow:0 0 10px rgba(198,210,228,0.15);pointer-events:none"></span><span style="position:absolute;left:130px;top:610px;width:7px;height:7px;border-radius:2px;transform:rotate(45deg);background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889);opacity:0.15;box-shadow:0 0 14px rgba(198,210,228,0.15);pointer-events:none"></span>
+<span style="position:relative;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#C6D2E4">SEMANA 11–17 NOV</span>
+<span style="position:relative;margin-top:10px;font-size:56px;font-weight:900;font-stretch:125%;line-height:0.9">4 DE 5<br><span style="color:#7D8698">TREINOS</span></span>
+<div style="position:relative;margin-top:22px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px"><span style="height:28px;border-radius:7px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="height:28px;border-radius:7px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="height:28px;border-radius:7px;background:#171B22"></span><span style="height:28px;border-radius:7px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="height:28px;border-radius:7px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="height:28px;border-radius:7px;background:#171B22"></span><span style="height:28px;border-radius:7px;background:#171B22"></span></div>
+<div style="position:relative;margin-top:26px;display:flex;flex-direction:column"><div style="display:flex;gap:12px;padding:12px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="width:110px;font-size:13px;color:#AEB7C6">Recorde</span><span style="flex:1;font-size:15px;font-weight:700">Supino reto · 42,5 × 8</span></div><div style="display:flex;gap:12px;padding:12px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="width:110px;font-size:13px;color:#AEB7C6">Recorde</span><span style="flex:1;font-size:15px;font-weight:700">Puxada frontal · 52,5 × 10</span></div><div style="display:flex;gap:12px;padding:12px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="width:110px;font-size:13px;color:#AEB7C6">Séries</span><span style="flex:1;font-size:15px;font-weight:700">78 · +6 vs. semana anterior</span></div><div style="display:flex;gap:12px;padding:12px 0;"><span style="width:110px;font-size:13px;color:#AEB7C6">Mais treinado</span><span style="flex:1;font-size:15px;font-weight:700">Costas · 16 séries</span></div></div>
+<div style="position:relative;margin-top:auto;display:flex;gap:8px"><button onClick="{{ closeOverlay }}" style="flex:1;height:56px;border-radius:16px;border:none;background:transparent;box-shadow:inset 0 0 0 1px #3A404C;font-size:15px;font-weight:700;cursor:pointer">Fechar</button><button onClick="{{ share }}" style="flex:1.4;height:56px;border-radius:16px;border:none;background:#F2F5FA;color:#05060A;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:800;cursor:pointer"><i class="ph ph-share-fat" style="font-size:18px"></i>Compartilhar</button></div>
+</div>
+</sc-if>
+<sc-if value="{{ isAvisos }}">
+<div data-screen-label="Avisos" style="position:absolute;inset:0;z-index:45;padding:63px 20px 30px;background:#05060A;display:flex;flex-direction:column">
+<button onClick="{{ closeOverlay }}" style="align-self:flex-start;display:flex;align-items:center;gap:10px;min-height:44px;padding:0;border:none;background:none;cursor:pointer"><i class="ph ph-caret-left" style="font-size:22px"></i><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">PERFIL</span></button>
+<div style="margin-top:6px;font-size:30px;font-weight:900;font-stretch:125%;line-height:1">AVISOS</div>
+<div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;border-radius:16px;overflow:hidden">
+<sc-for list="{{ avisoRows }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.onClick }}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:64px;border:none;background:#0E1015;text-align:left;cursor:pointer"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">{{ a.t }}</span><span style="font-size:13px;color:#AEB7C6">{{ a.s }}</span></span><span style="flex:none;width:52px;height:32px;border-radius:999px;background:{{ a.swBg }};position:relative"><span style="position:absolute;top:3px;left:{{ a.knobLeft }};width:26px;height:26px;border-radius:50%;background:{{ a.knob }};transition:left .2s"></span></span></button></sc-for>
+</div>
+<div style="margin-top:22px;font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#AEB7C6">HORÁRIO</div>
+<div style="margin-top:8px;display:flex;flex-direction:column;gap:2px;border-radius:16px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:64px;background:#0E1015"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Hora do lembrete</span><span style="font-size:13px;color:#AEB7C6">Nos dias com treino</span></span><span style="font-size:15px;font-weight:700;font-stretch:75%">07:30</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:64px;background:#0E1015"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Silêncio</span><span style="font-size:13px;color:#AEB7C6">Das 22:00 às 07:00</span></span><span style="font-size:15px;font-weight:700;font-stretch:75%">22–07</span></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}"><div style="position:absolute;left:50%;top:60px;transform:translateX(-50%);z-index:70;padding:10px 16px;border-radius:999px;background:#F2F5FA;color:#05060A;font-size:13px;font-weight:700;white-space:nowrap">{{ toast }}</div></sc-if>
+<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#C6D2E4;z-index:80"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;telaInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;hoje&quot;,&quot;treino&quot;,&quot;cardio&quot;,&quot;recados&quot;,&quot;perfil&quot;,&quot;semana&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;diaDeDescanso&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;semInternet&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;domingo&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const PG = 'linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)';
+const OFF = 'inset 0 0 0 1px #2A2E37';
+const kg = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
+const r25 = (x) => Math.max(2.5, Math.round(x / 2.5) * 2.5);
+const mmss = (s) => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const EXS = [
+  { name: 'Supino reto com barra', evoNum: '+5 kg', evo: 'desde outubro, em 6 treinos', kinds: ['warmup', 'recon', 'working', 'working'], reps: '8–10', load: 40, rest: 120, last: '40 × 9', pin: 'Sobe 2,5 kg se as séries válidas saírem limpas.', best: 42.5 },
+  { name: 'Remada curvada', evoNum: '+2,5 kg', evo: 'desde outubro, em 5 treinos', kinds: ['working', 'working', 'working', 'working'], reps: '10', load: 35, rest: 90, last: '35 × 10', pin: 'Lombar neutra, sem roubar no final.', best: 37.5 },
+  { name: 'Desenvolvimento com halteres', kinds: ['working', 'working', 'working'], reps: '10', load: 14, rest: 75, last: '14 × 10', restr: 'ombro', best: 16 },
+  { name: 'Puxada frontal', evoNum: '+7,5 kg', evo: 'desde setembro, em 8 treinos', kinds: ['warmup', 'working', 'working', 'working'], reps: '12', load: 45, rest: 75, last: '45 × 11', best: 52.5 },
+  { name: 'Rosca direta', kinds: ['working', 'working', 'working'], reps: '12', load: 12.5, rest: 60, last: '12,5 × 12', best: 15 },
+  { name: 'Tríceps na corda', kinds: ['working', 'working', 'working'], reps: '12', load: 20, rest: 60, last: '20 × 12', best: 25 },
+];
+const mk = () => EXS.map((e) => ({ ...e, skipped: false, sets: e.kinds.map((k) => ({ kind: k, done: false, skip: false, sync: 'saved',
+  load: k === 'warmup' ? r25(e.load * 0.5) : k === 'recon' ? r25(e.load * 0.85) : e.load,
+  reps: k === 'warmup' ? 12 : k === 'recon' ? 5 : parseInt(e.reps) })) }));
+const pillOf = (s) => s.skip ? { bg: '#1A1D24', shadow: OFF } : s.done ? (s.kind === 'warmup' ? { bg: '#3A404C', shadow: 'none' } : s.kind === 'recon' ? { bg: '#7D8698', shadow: 'none' } : { bg: PG, shadow: 'none' }) : { bg: '#1A1D24', shadow: OFF };
+const TRAINED = [2, 3, 4, 6, 9, 10, 11, 13];
+
+class Component extends DCLogic {
+  state = this.initState();
+  initState() {
+    const scr0 = this.props.telaInicial ?? 'login', scr = scr0 === 'semana' ? 'hoje' : scr0;
+    const base = { screen: scr, overlay: null, code: '', codeErr: false, ex: mk(), open: 0, rest: null, now: Date.now(), started: null,
+      finished: false, finishedAt: null, effort: null, collapsed: false, flip: false, seloDark: false, shareMode: 'card', showMissing: false,
+      photo: false, toast: '', draft: '', vid: null, dayName: null, rec: [true, true, false], cardio: { run: true, paused: false, start: Date.now(), acc: 0, log: false, min: 30, km: 0, effort: 'Leve' }, avisos: { resp: true, ficha: true, lembrete: true }, sheetText: '', sheetChip: null, unread: true, showList: false,
+      msgs: [{ t: 'head', text: 'SEX · 13 NOV' }, { t: 'event', text: 'Treino feito · Inferiores · 48 min', right: 'Na medida' },
+        { t: 'msg', prof: true, text: 'Boa! Agachamento subiu bem. Segue assim.', time: '20:10' }, { t: 'head', text: 'HOJE' },
+        { t: 'msg', prof: true, text: 'Bom treino hoje. Controla a descida no desenvolvimento.', time: '07:15' }] };
+    if (scr0 === 'semana') base.overlay = 'semana';
+    if (scr === 'cardio') base.dayName = 'Cardio';
+    if (scr === 'treino') {
+      base.started = Date.now() - 18 * 60000;
+      base.ex[0].sets.forEach((s) => { s.done = true; });
+      base.ex[0].sets[3].load = 42.5;
+      base.ex[1].sets[0].done = true; base.ex[1].sets[1].done = true; base.ex[1].sets[1].load = 37.5;
+      base.open = 1;
+    }
+    return base;
+  }
+  componentDidMount() {
+    this.iv = setInterval(() => {
+      const s = this.state;
+      if (s.rest && Date.now() >= s.rest.end) return this.setState({ rest: null, now: Date.now() });
+      if ((s.started && !s.finished) || s.rest || (s.screen === 'cardio' && s.cardio.run && !s.cardio.paused)) this.setState({ now: Date.now() });
+    }, 250);
+  }
+  componentDidUpdate(pp) {
+    if (pp.telaInicial !== this.props.telaInicial && this.props.telaInicial) { clearInterval(this.iv); this.setState(this.initState(), () => this.componentDidMount()); }
+  }
+  componentWillUnmount() { clearInterval(this.iv); clearTimeout(this.tt); }
+  flash(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 2000); }
+  press(d) {
+    const s = this.state;
+    if (d === 'del') return this.setState({ code: s.code.slice(0, -1), codeErr: false });
+    if (s.code.length >= 4) return;
+    const code = s.code + d;
+    this.setState({ code, codeErr: false });
+    if (code.length === 4) setTimeout(() => { if (code === '0000') this.setState({ codeErr: true }); else this.setState({ screen: 'hoje', code: '' }); }, 300);
+  }
+  cur(st) {
+    const s = st || this.state, ex = s.ex;
+    const firstUndone = (i) => (ex[i] && !ex[i].skipped ? ex[i].sets.findIndex((x) => !x.done && !x.skip) : -1);
+    if (s.open != null && firstUndone(s.open) >= 0) return { e: s.open, i: firstUndone(s.open) };
+    for (let k = 0; k < ex.length; k++) { const i = firstUndone(k); if (i >= 0) return { e: k, i }; }
+    return null;
+  }
+  mut(fn) { this.setState((s) => { const ex = s.ex.map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x })) })); fn(ex, s); return { ex }; }); }
+  adjust(field, d) { const c = this.cur(); if (!c) return; this.mut((ex) => { const x = ex[c.e].sets[c.i]; x[field] = Math.max(field === 'load' ? 0 : 1, Math.round((x[field] + d) * 10) / 10); }); }
+  registerSet() {
+    const c = this.cur(); if (!c) return;
+    const s = this.state, e = s.ex[c.e], x = e.sets[c.i];
+    const ex = s.ex.map((q) => ({ ...q, sets: q.sets.map((y) => ({ ...y })) }));
+    ex[c.e].sets[c.i].done = true;
+    ex[c.e].sets[c.i].sync = this.props.semInternet ? 'pending' : 'saving';
+    if (!this.props.semInternet) setTimeout(() => this.mut((q) => { if (q[c.e].sets[c.i].sync === 'saving') q[c.e].sets[c.i].sync = 'saved'; }), 900);
+    const after = { ...s, ex };
+    let open = c.e;
+    if (ex[c.e].sets.every((y) => y.done || y.skip)) { const n = this.cur({ ...after, open: null }); open = n ? n.e : null; }
+    const next = this.cur({ ...after, open });
+    const total = x.kind === 'working' ? e.rest : 60;
+    this.setState({ ex, open, vid: null, rest: next ? { end: Date.now() + total * 1000, total } : null, now: Date.now() });
+  }
+  skipSet() {
+    const c = this.cur(); if (!c) return;
+    const ex = this.state.ex.map((q) => ({ ...q, sets: q.sets.map((y) => ({ ...y })) }));
+    ex[c.e].sets[c.i].skip = true;
+    let open = c.e;
+    if (ex[c.e].sets.every((y) => y.done || y.skip)) { const n = this.cur({ ...this.state, ex, open: null }); open = n ? n.e : null; }
+    this.setState({ ex, open, rest: null });
+    this.flash('Série pulada · não conta no volume');
+  }
+  finish() {
+    const s = this.state, ev = [];
+    const mins = Math.max(1, Math.round((Date.now() - (s.started || Date.now())) / 60000));
+    const rec = this.records(s.ex)[0];
+    if (rec) ev.push({ t: 'event', text: 'Recorde · ' + rec.name + ' ' + rec.val, star: '★' });
+    ev.push({ t: 'event', text: 'Treino feito · Superiores · ' + mins + ' min', right: '' });
+    this.setState({ screen: 'fim', finished: true, finishedAt: Date.now(), rest: null, msgs: s.msgs.concat(ev) });
+  }
+  records(ex) {
+    return ex.map((e) => { const w = e.sets.filter((x) => x.done && x.kind === 'working'); if (!w.length) return null; const top = w.reduce((a, b) => (b.load > a.load ? b : a)); return top.load > e.best ? { name: e.name, val: kg(top.load) + ' × ' + top.reps, short: e.name.split(' ').slice(0, 2).join(' ') } : null; }).filter(Boolean);
+  }
+  sheetSet(st) {
+    const s = st || this.state, ei = s.sheetEx ?? 0, e = s.ex[ei];
+    let i = -1; e.sets.forEach((x, k) => { if (x.done) i = k; });
+    if (i < 0) { const u = e.sets.findIndex((x) => !x.done); i = u < 0 ? 0 : u; }
+    return { e, i };
+  }
+  sendMsg(text, link) {
+    const v = (text || '').trim(); if (!v) return;
+    const time = '16:30';
+    this.setState((s) => ({ msgs: s.msgs.concat([{ t: 'msg', prof: false, text: v, time, link }]), draft: '' }));
+  }
+  renderVals() {
+    const s = this.state, P = this.props;
+    const go = (screen) => () => this.setState({ screen, overlay: null, unread: screen === 'recados' ? false : s.unread, collapsed: false });
+    const c = this.cur();
+    const allSets = s.ex.reduce((n, e) => n + e.sets.length, 0);
+    const doneSets = s.ex.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0);
+    const pendingN = s.ex.reduce((n, e) => n + e.sets.filter((x) => x.done && x.sync === 'pending').length, 0);
+    const DAYOPTS = [['SEG', 'Inferiores', 'feito seg 11/nov'], ['TER', 'Superiores B', 'feito ter 12/nov'], ['QUA', 'Cardio', 'esteira · 30 min'], ['QUI', 'Inferiores B', 'feito qui 14/nov'], ['SEX', 'Full body', 'ainda não fez essa semana']];
+    const cd = s.cardio, cElapsed = cd.acc + (cd.run && !cd.paused ? (s.now - cd.start) / 1000 : 0);
+    const dayTitle = (s.dayName || 'Superiores').toUpperCase();
+    const validDone = s.ex.reduce((n, e) => n + e.sets.filter((x) => x.done && x.kind === 'working').length, 0);
+    const lifted = s.ex.reduce((n, e) => n + e.sets.reduce((m, x) => m + (x.done && x.kind === 'working' ? x.load * x.reps : 0), 0), 0);
+    const elapsed = s.started ? ((s.finishedAt || s.now) - s.started) / 1000 : 0;
+    const inProgress = !!s.started && !s.finished;
+    const rest = !!P.diaDeDescanso && !s.started;
+    const recs = this.records(s.ex);
+    const trained = s.finished ? TRAINED.concat([14]) : TRAINED;
+    const setLabel = (e, i) => { const k = e.sets[i].kind; return k === 'warmup' ? 'AQUECIMENTO' : k === 'recon' ? 'RECONHECIMENTO' : 'SÉRIE ' + e.sets.slice(0, i + 1).filter((x) => x.kind === 'working').length; };
+    const nLabel = (e, i) => { const k = e.sets[i].kind; return k === 'warmup' ? 'AQ' : k === 'recon' ? 'RC' : String(e.sets.slice(0, i + 1).filter((x) => x.kind === 'working').length); };
+    const nextC = c;
+    const shareEx = s.ex.filter((e) => s.showMissing || e.sets.some((x) => x.done));
+    const shareRows = shareEx.map((e) => {
+      const sets = s.showMissing ? e.sets : e.sets.filter((x) => x.done);
+      const w = e.sets.filter((x) => x.done && x.kind === 'working');
+      const top = w.length ? w.reduce((a, b) => (b.load > a.load ? b : a)).load : null;
+      const isRec = recs.some((r) => r.name === e.name);
+      return { name: e.name + (isRec ? ' ★' : ''), val: top != null ? kg(top) + ' kg' : e.kinds.length + '×' + e.reps, pills: sets.map(pillOf), op: e.sets.some((x) => x.done) ? 1 : 0.55 };
+    });
+    const missEx = s.ex.filter((e) => !e.sets.some((x) => x.done)).length;
+    const missSets = s.ex.filter((e) => e.sets.some((x) => x.done)).reduce((n, e) => n + e.sets.filter((x) => !x.done).length, 0);
+    const missParts = [missEx ? missEx + (missEx === 1 ? ' exercício' : ' exercícios') : '', missSets ? missSets + (missSets === 1 ? ' série' : ' séries') : ''].filter(Boolean);
+    const sticker = s.shareMode !== 'card';
+    const tabDefs = [['hoje', 'Hoje', 'calendar-dot'], ['treino', 'Treino', 'barbell'], ['recados', 'Recados', 'chat-circle'], ['perfil', 'Perfil', 'user-circle']];
+    const tabActive = s.screen === 'fim' || s.screen === 'share' ? 'treino' : s.screen;
+    let hojeMode = rest ? 'rest' : s.finished ? 'done' : inProgress ? 'progress' : 'start';
+    const firstRec = recs[0];
+    return {
+      statusBg: s.screen === 'treino' && s.collapsed ? '#05060A' : 'transparent',
+      isLogin: s.screen === 'login', isHoje: s.screen === 'hoje', isTreino: s.screen === 'treino', isFim: s.screen === 'fim', isShare: s.screen === 'share',
+      isCardio: s.screen === 'cardio', cardioRunning: cd.run, cardioLog: cd.log,
+      cardioClock: mmss(cElapsed), cardioPct: Math.min(100, Math.round(cElapsed / 18)) + '%', cardioIcon: cd.paused ? 'ph-fill ph-play' : 'ph-fill ph-pause',
+      cardioToggle: () => this.setState({ cardio: cd.paused ? { ...cd, paused: false, start: Date.now() } : { ...cd, paused: true, acc: cElapsed } }),
+      cardioStop: () => this.setState({ cardio: { ...cd, run: false, log: true, acc: cElapsed, min: Math.max(1, Math.round(cElapsed / 60)) } }),
+      cardioSteppers: [{ v: String(cd.min), u: 'min', minus: () => this.setState({ cardio: { ...cd, min: Math.max(1, cd.min - 1) } }), plus: () => this.setState({ cardio: { ...cd, min: cd.min + 1 } }) }, { v: cd.km ? kg(cd.km) : '—', u: 'km · opcional', minus: () => this.setState({ cardio: { ...cd, km: Math.max(0, Math.round((cd.km - 0.1) * 10) / 10) } }), plus: () => this.setState({ cardio: { ...cd, km: Math.round((cd.km + 0.1) * 10) / 10 } }) }],
+      cardioEfforts: ['Leve', 'Moderado', 'Forte'].map((l) => ({ label: l, bg: cd.effort === l ? '#F2F5FA' : '#171B22', color: cd.effort === l ? '#05060A' : '#C6D2E4', weight: cd.effort === l ? '800' : '600', onClick: () => this.setState({ cardio: { ...cd, effort: l } }) })),
+      cardioDone: () => { this.setState({ screen: 'hoje', dayName: null, cardio: { ...cd, log: false, run: false } }); this.flash('Cardio registrado · ' + cd.min + ' min'); },
+      showDomingo: !!P.domingo, openSemana: () => this.setState({ overlay: 'semana' }),
+      recItems: [['Mobilidade de quadril', '10 min'], ['Alongamento de posterior', '5 min'], ['Caminhada leve', '20 min']].map(([t, d], i) => { const on = s.rec[i]; return { t, d, icon: on ? 'ph-bold ph-check' : '', boxBg: on ? '#F2F5FA' : 'transparent', boxShadow: on ? 'none' : 'inset 0 0 0 1.5px #3A404C', color: on ? '#AEB7C6' : '#F2F5FA', onClick: () => this.setState({ rec: s.rec.map((v, k) => (k === i ? !v : v)) }) }; }),
+      isRecados: s.screen === 'recados', isPerfil: s.screen === 'perfil', isCard: s.overlay === 'card', isSelo: s.overlay === 'selo', isSheet: s.overlay === 'sheet',
+      showTabs: ['hoje', 'treino', 'recados', 'perfil'].includes(s.screen), toast: s.toast, offline: !!P.semInternet,
+      loginMsg: s.codeErr ? 'Código não encontrado. Confira com o professor.' : 'O clube é fechado. Digite seu código.', loginMsgColor: s.codeErr ? '#E8794B' : '#AEB7C6',
+      codePills: [0, 1, 2, 3].map((i) => ({ bg: s.codeErr ? '#E8794B' : i < s.code.length ? PG : 'transparent', shadow: s.codeErr ? 'none' : i < s.code.length ? 'none' : i === s.code.length ? 'inset 0 0 0 1.5px #F2F5FA' : OFF })),
+      keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'prof', '0', 'del'].map((d) => ({ label: d === 'prof' ? 'Professor' : d === 'del' ? '' : d, icon: d === 'del' ? 'ph ph-backspace' : '', aria: d === 'del' ? 'Apagar' : d === 'prof' ? 'Entrar como professor' : d,
+        size: d === 'prof' ? '13px' : d === 'del' ? '24px' : '28px', weight: d === 'prof' ? '500' : '700', color: d === 'prof' || d === 'del' ? '#AEB7C6' : '#F2F5FA',
+        onClick: d === 'prof' ? () => { window.location.href = encodeURI('Cancio Club Professor v4.dc.html'); } : () => this.press(d) })),
+      tabs: tabDefs.map(([k, l, ic]) => { const act = tabActive === k, timer = k === 'treino' && inProgress && !act;
+        return { aria: l, icon: (act ? 'ph-fill ph-' : timer ? 'ph-bold ph-' : 'ph ph-') + ic, label: act ? l : timer ? mmss(elapsed) : '', padX: act || timer ? '16px' : '0',
+          bg: act ? '#F2F5FA' : timer ? '#171B22' : 'transparent', color: act ? '#05060A' : timer ? '#C6D2E4' : '#AEB7C6', shadow: timer ? 'inset 0 0 0 1px #3A404C' : 'none', dot: k === 'recados' && s.unread && !act,
+          onClick: () => this.setState({ screen: k === 'treino' && s.finished ? 'fim' : k === 'treino' && !s.started ? 'hoje' : k, overlay: null, collapsed: false, unread: k === 'recados' ? false : s.unread }) }; }),
+      goHoje: go('hoje'), goRecados: go('recados'),
+      greeting: hojeMode === 'done' ? 'Boa noite. O Club é seu,' : hojeMode === 'rest' ? 'Bom dia. Pista liberada,' : 'Boa tarde. Ritmo de pico,',
+      weekText: (s.finished ? 5 : 4) + ' de 5 essa semana', streakText: (s.finished ? 13 : 12) + ' dias de sequência',
+      hojeKicker: hojeMode === 'done' ? 'TREINO DE HOJE FEITO' : hojeMode === 'rest' ? 'DOMINGO · HOJE É DIA DE' : hojeMode === 'progress' ? 'EM ANDAMENTO · ' + doneSets + ' DE ' + allSets + ' SÉRIES' : 'SÁBADO · HOJE É DIA DE',
+      hojeKickerColor: hojeMode === 'done' || hojeMode === 'progress' ? '#C6D2E4' : '#AEB7C6', hojeShowCheck: hojeMode === 'done',
+      hojeTitle: hojeMode === 'rest' ? 'DESCANSO' : dayTitle, dayTitle, hojeCanSwap: hojeMode === 'start',
+      openTrocar: () => this.setState({ overlay: 'trocar' }), isTrocar: s.overlay === 'trocar',
+      swapDays: [['SÁB', 'Superiores', 'o de hoje']].concat(DAYOPTS).map(([d, t, st]) => { const cur = (s.dayName || 'Superiores') === t, hl = st.startsWith('ainda'); return { d, t, s: cur ? 'escolhido' : st, sc: hl ? '#F2F5FA' : '#AEB7C6', bg: cur ? '#171B22' : '#05060A', shadow: cur ? 'inset 0 0 0 1.5px #F2F5FA' : hl ? 'inset 0 0 0 1px #3A404C' : 'none', onClick: () => { this.setState({ dayName: t, overlay: null }); if (t !== 'Superiores') this.flash('Hoje: ' + t + ' · o professor fica sabendo'); } }; }),
+      openEsqueci: () => this.setState({ overlay: 'esqueci' }), isEsqueci: s.overlay === 'esqueci', openWhats: () => { this.setState({ overlay: null }); this.flash('Abrindo o WhatsApp do professor…'); },
+      isSemana: s.overlay === 'semana', isAvisos: s.overlay === 'avisos',
+      avisoRows: [['resp', 'O professor respondeu', 'Abre o recado.'], ['ficha', 'Sua ficha mudou', 'Abre o Treino no dia que mudou.'], ['lembrete', 'Lembrete do treino', 'Nos dias com treino. Abre o Hoje.']].map(([k, t, st]) => { const on = s.avisos[k]; return { t, s: st, swBg: on ? '#F2F5FA' : '#2A2E37', knob: on ? '#05060A' : '#7D8698', knobLeft: on ? '23px' : '3px', onClick: () => this.setState({ avisos: { ...s.avisos, [k]: !on } }) }; }),
+      pendingLine: pendingN ? 'Sem internet. ' + pendingN + (pendingN === 1 ? ' série salva' : ' séries salvam') + ' quando voltar.' : '', skipSet: () => this.skipSet(), hojeIsRest: hojeMode === 'rest', hojeHasCols: hojeMode !== 'rest' && s.dayName !== 'Cardio',
+      hojeCols: hojeMode === 'done'
+        ? [{ l: 'TEMPO', v: mmss(elapsed), icon: '', cursor: 'default', onClick: () => {} }, { l: 'SÉRIES VÁLIDAS', v: String(validDone), icon: '', cursor: 'default', onClick: () => {} }, { l: 'KG', v: Math.round(lifted).toLocaleString('pt-BR'), icon: '', cursor: 'default', onClick: () => {} }]
+        : [{ l: 'EXERCÍCIOS', v: String(s.ex.length), icon: s.showList ? 'ph ph-caret-down' : 'ph ph-caret-right', cursor: 'pointer', onClick: () => this.setState({ showList: !s.showList }) }, { l: 'SÉRIES', v: String(allSets), icon: '', cursor: 'default', onClick: () => {} }, { l: 'DURAÇÃO', v: '~64 min', icon: '', cursor: 'default', onClick: () => {} }],
+      showList: s.showList && hojeMode !== 'done' && hojeMode !== 'rest',
+      hojeList: s.ex.map((e, i) => ({ idx: String(i + 1).padStart(2, '0'), name: e.name, plan: e.kinds.filter((k) => k === 'working').length + '×' + e.reps })),
+      hojeRecord: hojeMode === 'done' && !!firstRec, hojeRecordName: firstRec ? 'Recorde no ' + firstRec.name.toLowerCase().replace(' com barra', '') : '', hojeRecordVal: firstRec ? firstRec.val : '',
+      hojeNext: hojeMode === 'done' ? 'Segunda · Inferiores' : hojeMode === 'rest' ? 'Amanhã · Inferiores' : '',
+      hojeShowMsg: hojeMode === 'start' || hojeMode === 'progress',
+      hojeCta: hojeMode === 'start' ? (s.dayName === 'Cardio' ? 'Começar cardio' : 'Começar treino') : hojeMode === 'progress' ? 'Continuar treino' : hojeMode === 'done' ? 'Ver e compartilhar' : hojeMode === 'rest' ? 'Fechar o dia · ' + s.rec.filter(Boolean).length + ' de 3' : '',
+      hojeCtaIcon: hojeMode === 'done' ? 'ph-bold ph-export' : '',
+      hojeCtaAction: hojeMode === 'rest' ? () => this.flash('Dia de recuperação fechado') : hojeMode === 'start' && s.dayName === 'Cardio' ? () => this.setState({ screen: 'cardio', cardio: { run: true, paused: false, start: Date.now(), acc: 0, log: false, min: 30, km: 0, effort: 'Leve' }, now: Date.now() }) : hojeMode === 'done' ? () => this.setState({ screen: 'share' }) : () => this.setState({ screen: 'treino', started: s.started || Date.now(), now: Date.now() }),
+      begin: () => this.setState({ screen: 'treino', started: Date.now(), now: Date.now() }),
+      treinoKicker: 'SÁBADO · ' + doneSets + ' DE ' + allSets + ' SÉRIES', clock: mmss(elapsed),
+      progressShort: doneSets + '/' + allSets + ' · ' + mmss(elapsed), progressPct: Math.round((doneSets / allSets) * 100) + '%',
+      collapsed: s.collapsed,
+      onTreinoScroll: (ev) => { const v = ev.target.scrollTop > 70; if (v !== s.collapsed) this.setState({ collapsed: v }); },
+      finish: () => this.finish(),
+      exList: s.ex.map((e, ei) => {
+        const isOpen = s.open === ei, done = e.sets.every((x) => x.done || x.skip) && e.sets.some((x) => x.done), started = e.sets.some((x) => x.done);
+        const curI = c && c.e === ei ? c.i : -1;
+        return {
+          idx: done ? '' : e.skipped ? '–' : String(ei + 1).padStart(2, '0'), idxIcon: done ? 'ph-bold ph-check' : '', idxColor: done ? '#C6D2E4' : isOpen ? '#F2F5FA' : '#7D8698',
+          name: e.name, nameSize: isOpen ? '20px' : '16px', nameWeight: isOpen ? '800' : '700', nameStretch: '110%', nameColor: done || e.skipped ? '#7D8698' : '#F2F5FA',
+          pad: isOpen ? '16px 0 12px' : '12px 0', isOpen, showPlan: !isOpen, showPills: !isOpen,
+          plan: e.skipped ? 'Pulado' : e.kinds.filter((k) => k === 'working').length + '×' + e.reps + ' · ' + kg(e.load) + ' kg', restr: e.restr || '',
+          count: e.sets.filter((x) => x.done).length + '/' + e.sets.length, pills: e.sets.map(pillOf), pin: e.pin || '',
+          evo: e.evo || '', evoNum: e.evoNum || '', vidOpen: s.vid === ei, vidLabel: s.vid === ei ? 'Fechar execução' : 'Ver execução', vidIcon: s.vid === ei ? 'ph ph-x-circle' : 'ph ph-play-circle', toggleVid: () => this.setState({ vid: s.vid === ei ? null : ei }),
+          cols: [{ l: 'ALVO', v: e.reps + ' reps' }, { l: 'ÚLTIMA', v: e.last }, { l: 'DESCANSO', v: mmss(e.rest) }],
+          lines: e.sets.map((x, i) => ({ n: nLabel(e, i), nSize: x.kind === 'working' ? '15px' : '11px', text: kg(x.load) + ' kg × ' + x.reps, deco: x.skip ? 'line-through' : 'none', note: x.skip ? 'pulada' : '',
+            color: x.done || x.skip ? '#AEB7C6' : i === curI ? '#F2F5FA' : '#7D8698', weight: i === curI ? '700' : '400', tag: i === curI && !s.rest ? 'AGORA ↓' : '',
+            icon: x.skip ? 'ph-bold ph-minus' : !x.done ? '' : x.sync === 'pending' ? 'ph-bold ph-cloud-slash' : x.sync === 'saving' ? 'ph ph-circle-notch' : 'ph-bold ph-check', iconColor: x.skip ? '#AEB7C6' : x.sync === 'pending' ? '#E8794B' : '#C6D2E4' })),
+          toggle: () => this.setState({ open: isOpen ? null : ei }),
+          onMsg: () => this.setState({ overlay: 'sheet', sheetEx: ei, sheetText: '', sheetChip: null }),
+          onSkip: () => { this.mut((ex) => { ex[ei].skipped = true; }); this.setState({ open: null, rest: null }); },
+        };
+      }),
+      barRegister: !s.rest && !!c, barRest: !!s.rest, barFinish: !s.rest && !c,
+      barLabel: c ? s.ex[c.e].name.toUpperCase() + ' · ' + setLabel(s.ex[c.e], c.i) : '', barCount: c ? (c.i + 1) + ' DE ' + s.ex[c.e].sets.length : '',
+      steppers: c ? [{ v: kg(s.ex[c.e].sets[c.i].load), u: 'kg', minus: () => this.adjust('load', -2.5), plus: () => this.adjust('load', 2.5) }, { v: String(s.ex[c.e].sets[c.i].reps), u: 'reps', minus: () => this.adjust('reps', -1), plus: () => this.adjust('reps', 1) }] : [],
+      registerSet: () => this.registerSet(),
+      restClock: s.rest ? mmss((s.rest.end - s.now) / 1000) : '', restPct: s.rest ? Math.round(Math.max(0, (s.rest.end - s.now) / (s.rest.total * 1000)) * 100) + '%' : '0%',
+      restNext: nextC ? 'DEPOIS: ' + (nextC.e !== (c && c.e) ? '' : '') + setLabel(s.ex[nextC.e], nextC.i) + ' · ' + kg(s.ex[nextC.e].sets[nextC.i].load) + ' × ' + s.ex[nextC.e].sets[nextC.i].reps : '',
+      restAdd: () => this.setState({ rest: { end: s.rest.end + 15000, total: s.rest.total + 15 } }), restSkip: () => this.setState({ rest: null }),
+      fimStats: [{ v: mmss(elapsed), l: 'TEMPO' }, { v: String(validDone), l: 'SÉRIES VÁLIDAS' }, { v: Math.round(lifted).toLocaleString('pt-BR'), l: 'KG LEVANTADOS' }],
+      efforts: [['facil', 'Fácil'], ['medida', 'Na medida'], ['destruidor', 'Destruidor']].map(([k, l]) => ({ label: l, bg: s.effort === k ? '#F2F5FA' : 'transparent', color: s.effort === k ? '#05060A' : '#F2F5FA', shadow: s.effort === k ? 'none' : 'inset 0 0 0 1px #2E333D', weight: s.effort === k ? '700' : '400',
+        onClick: () => this.setState((st) => ({ effort: k, msgs: st.msgs.map((m, i) => (i === st.msgs.length - 1 && m.t === 'event' ? { ...m, right: l } : m)) })) })),
+      openShare: () => this.setState({ screen: 'share' }), closeShare: () => this.setState({ screen: s.finished ? 'hoje' : 'treino' }),
+      shareTabs: [['card', 'Card'], ['num', 'Números'], ['tiles', 'Pastilhas']].map(([k, l]) => ({ label: l, weight: s.shareMode === k ? '800' : '500', color: s.shareMode === k ? '#F2F5FA' : '#7D8698', line: s.shareMode === k ? 'inset 0 -2px 0 #F2F5FA' : 'none', onClick: () => this.setState({ shareMode: k }) })),
+      modeCard: s.shareMode === 'card', modeNum: s.shareMode === 'num', modeTiles: s.shareMode === 'tiles', modeSticker: sticker,
+      previewBg: !sticker ? '#05060A' : s.photo ? 'linear-gradient(180deg,#3B3530,#2A2622 60%,#171410)' : 'repeating-conic-gradient(#171B22 0% 25%,#0E1015 0% 50%) 0 0/16px 16px',
+      cardStats: [{ v: mmss(elapsed), l: 'tempo', pad: '0', line: 'none' }, { v: String(validDone), l: 'séries válidas', pad: '6px', line: 'inset 1px 0 0 #1E222A' }, { v: recs.length ? recs.length + ' ★' : Math.round(lifted).toLocaleString('pt-BR'), l: recs.length ? (recs.length === 1 ? 'recorde' : 'recordes') : 'kg levantados', pad: '6px', line: 'inset 1px 0 0 #1E222A' }],
+      shareRows,
+      numItems: [{ v: mmss(elapsed), l: 'TEMPO' }, { v: String(validDone), l: 'SÉRIES' }, { v: Math.round(lifted).toLocaleString('pt-BR') + ' kg', l: 'LEVANTADOS' }].concat(recs.length ? [{ v: recs.length + ' ★', l: recs.length === 1 ? 'RECORDE' : 'RECORDES' }] : []),
+      tileStats: [{ v: mmss(elapsed), l: 'tempo' }, { v: String(validDone), l: 'séries' }],
+      missingText: missParts.length ? missParts.join(' e ') + ' de fora' : 'Nada ficou de fora',
+      swBg: s.showMissing ? '#F2F5FA' : '#1E222A', swLeft: s.showMissing ? '21px' : '3px', swKnob: s.showMissing ? '#05060A' : '#7D8698',
+      toggleMissing: () => this.setState({ showMissing: !s.showMissing }),
+      photoText: s.photo ? 'Figurinha aplicada sobre a sua foto' : 'Números e Pastilhas vão sobre a sua foto', photoAction: s.photo ? 'Tirar foto' : 'Escolher foto',
+      togglePhoto: () => this.setState({ photo: !s.photo }),
+      share: () => this.flash('Imagem salva na galeria'),
+      msgs: s.msgs.map((m) => ({ isHead: m.t === 'head', isEvent: m.t === 'event', isMsg: m.t === 'msg', text: m.text, right: m.right || '', star: m.star || '',
+        align: m.prof ? 'flex-start' : 'flex-end', radius: m.prof ? '16px 16px 16px 4px' : '16px 16px 4px 16px', bg: m.prof ? '#0E1015' : '#F2F5FA', color: m.prof ? '#F2F5FA' : '#05060A',
+        link: m.link || '', meta: m.time + (m.prof ? '' : P.semInternet ? ' · salvo neste aparelho' : ' · enviado') })),
+      quick: ['Senti dor', 'Carga leve demais', 'Faltei'].map((q) => ({ label: q, onClick: () => this.setState({ draft: (s.draft ? s.draft + ' ' : '') + q + '. ' }) })),
+      draft: s.draft, sendBg: s.draft.trim() ? '#F2F5FA' : '#1E222A', sendColor: s.draft.trim() ? '#05060A' : '#7D8698',
+      onDraft: (ev) => this.setState({ draft: ev.target.value }), onDraftKey: (ev) => { if (ev.key === 'Enter') this.sendMsg(s.draft); }, send: () => this.sendMsg(s.draft),
+      openSheet: () => this.setState({ overlay: 'sheet', sheetEx: c ? c.e : 0, sheetText: '', sheetChip: null }),
+      sheetTitle: (() => { const { e, i } = this.sheetSet(); return 'RECADO · ' + e.name.toUpperCase() + ' · ' + setLabel(e, i); })(),
+      sheetChips: ['Senti dor', 'Carga leve demais', 'Carga pesada demais', 'Não entendi o exercício'].map((q) => ({ label: q, bg: s.sheetChip === q ? '#F2F5FA' : 'transparent', color: s.sheetChip === q ? '#05060A' : '#F2F5FA', shadow: s.sheetChip === q ? 'none' : 'inset 0 0 0 1px #2E333D', weight: s.sheetChip === q ? '700' : '400',
+        onClick: () => this.setState({ sheetChip: q, sheetText: q + '. ' }) })),
+      sheetText: s.sheetText, onSheetText: (ev) => this.setState({ sheetText: ev.target.value }),
+      sendSheet: () => { const { e, i } = this.sheetSet(); const x = e.sets[i];
+        this.sendMsg(s.sheetText || s.sheetChip || 'Recado', e.name.toUpperCase() + ' · ' + setLabel(e, i) + ' · ' + kg(x.load) + ' × ' + x.reps); this.setState({ overlay: null }); this.flash('Recado enviado ao professor'); },
+      closeOverlay: () => this.setState({ overlay: null }),
+      profStats: [{ v: String(48 + (s.finished ? 1 : 0)), l: 'Treinos' }, { v: '13', l: 'Maior sequência' }, { v: String(9 + recs.length), l: 'Recordes' }],
+      openCard: () => this.setState({ overlay: 'card', flip: false }), openSelo: () => this.setState({ overlay: 'selo' }),
+      monthCount: trained.length + ' treinos', monthCountUp: trained.length + ' TREINOS',
+      monthTiles: Array.from({ length: 30 }, (_, i) => { const d = i + 1, on = trained.includes(d); return { bg: on ? PG : d > 14 ? '#0E1015' : 'transparent', shadow: on ? 'none' : d === 14 ? 'inset 0 0 0 1.5px #F2F5FA' : d > 14 ? 'none' : OFF }; }),
+      menuA: [['Resumo da semana', '4 de 5'], ['Metas', '2 de 3'], ['Corpo', 'Reavaliação em 12 dias'], ['Conquistas', '7 de 12']].map(([label, v]) => ({ label, v, onClick: label === 'Resumo da semana' ? () => this.setState({ overlay: 'semana' }) : () => this.flash(label + ' abre em tela própria') })),
+      menuB: [['Minha anamnese', 'ph ph-caret-right', '#F2F5FA', () => this.flash('Só leitura')], ['Avisos', 'ph ph-caret-right', '#F2F5FA', () => this.setState({ overlay: 'avisos' })], ['Meus dados', 'ph ph-caret-right', '#F2F5FA', () => {}], ['Sair', '', '#7D8698', () => this.setState({ screen: 'login', code: '', overlay: null })]]
+        .map(([label, icon, color, onClick]) => ({ label, icon, color, onClick })),
+      flipCard: () => this.setState({ flip: !s.flip }), cardTransform: s.flip ? 'rotateY(180deg) rotateX(3deg)' : 'rotateY(-10deg) rotateX(4deg)',
+      seloTabs: [['Prata', false], ['Preto', true]].map(([l, dk]) => ({ label: l, bg: s.seloDark === dk ? '#F2F5FA' : 'transparent', color: s.seloDark === dk ? '#05060A' : '#AEB7C6', onClick: () => this.setState({ seloDark: dk }) })),
+      seloBg: s.seloDark ? 'repeating-conic-gradient(#DCE4F0 0% 25%,#C6D2E4 0% 50%) 0 0/20px 20px' : 'repeating-conic-gradient(#0E1015 0% 25%,#05060A 0% 50%) 0 0/20px 20px',
+      seloInk: s.seloDark ? '#05060A' : '#C6D2E4', seloFilter: s.seloDark ? 'brightness(0.12)' : 'none',
+    };
+  }
+}
+</script>
+</body>
+</html>

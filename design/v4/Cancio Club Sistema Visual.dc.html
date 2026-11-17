@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght,wdth@100..900,62.5..125&display=swap">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:#05060A;color:#F2F5FA;font-family:'Archivo',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#C6D2E4}a:hover{color:#F2F5FA}
+</style>
+</helmet>
+<div style="max-width:1080px;margin:0 auto;padding:56px 24px 120px;display:flex;flex-direction:column;gap:72px">
+
+<header style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:24px;justify-content:space-between">
+<div style="display:flex;align-items:center;gap:20px">
+<img src="public/selo-silhueta.png" alt="Selo Cancio Club" style="width:88px;height:88px"></img>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">SISTEMA VISUAL · V3</span>
+<span style="font-size:44px;font-weight:900;font-stretch:125%;line-height:0.92">CANCIO<br><span style="color:#7D8698">CLUB</span></span>
+</div>
+</div>
+<p style="margin:0;max-width:420px;font-size:15px;line-height:1.5;color:#C6D2E4;text-wrap:pretty">Preto, prata e Archivo. As regras que os protótipos v3 da aluna e do professor seguem, para que telas novas saiam com a mesma cara.</p>
+</header>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:14px;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">01</span><span style="font-size:24px;font-weight:900;font-stretch:125%">CORES</span></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;font-weight:700;color:#AEB7C6">Superfícies</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:88px;border-radius:16px;background:#05060A;box-shadow:inset 0 0 0 1px #2A2E37"></span><span style="font-size:15px;font-weight:700">Fundo</span><span style="font-size:13px;color:#AEB7C6;font-variant-numeric:tabular-nums">#05060A · telas</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:88px;border-radius:16px;background:#0E1015"></span><span style="font-size:15px;font-weight:700">Painel</span><span style="font-size:13px;color:#AEB7C6">#0E1015 · cards, gavetas, barra do treino</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:88px;border-radius:16px;background:#171B22"></span><span style="font-size:15px;font-weight:700">Elevado</span><span style="font-size:13px;color:#AEB7C6">#171B22 · item dentro de painel, trilho de barras</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:88px;border-radius:16px;background:#1A1D24;box-shadow:inset 0 0 0 1px #2A2E37"></span><span style="font-size:15px;font-weight:700">Pendente</span><span style="font-size:13px;color:#AEB7C6">#1A1D24 · pastilha não feita</span></div>
+</div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;font-weight:700;color:#AEB7C6">Texto</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:6px"><span style="font-size:24px;font-weight:800;color:#F2F5FA">Aa</span><span style="font-size:15px;font-weight:700">Principal</span><span style="font-size:13px;color:#AEB7C6">#F2F5FA · títulos, valores, botão claro</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:6px"><span style="font-size:24px;font-weight:800;color:#C6D2E4">Aa</span><span style="font-size:15px;font-weight:700">Secundário</span><span style="font-size:13px;color:#AEB7C6">#C6D2E4 · corpo em painel, links</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:6px"><span style="font-size:24px;font-weight:800;color:#AEB7C6">Aa</span><span style="font-size:15px;font-weight:700">Apoio</span><span style="font-size:13px;color:#AEB7C6">#AEB7C6 · plano, metadados, ícones</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:6px"><span style="font-size:24px;font-weight:800;color:#7D8698">Aa</span><span style="font-size:15px;font-weight:700">Discreto</span><span style="font-size:13px;color:#AEB7C6">#7D8698 · kickers, rótulos, feito/pulado</span></div>
+</div></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;font-weight:700;color:#AEB7C6">Linhas</span>
+<div style="display:flex;flex-direction:column;border-radius:16px;background:#0E1015;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;box-shadow:inset 0 -1px 0 #171B22"><span style="width:56px;height:2px;background:#1E222A"></span><span style="flex:1;font-size:13px">Divisória</span><span style="font-size:13px;color:#7D8698">#1E222A</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;box-shadow:inset 0 -1px 0 #171B22"><span style="width:56px;height:2px;background:#2A2E37"></span><span style="flex:1;font-size:13px">Borda de campo</span><span style="font-size:13px;color:#7D8698">#2A2E37</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;box-shadow:inset 0 -1px 0 #171B22"><span style="width:56px;height:2px;background:#2E333D"></span><span style="flex:1;font-size:13px">Contorno de botão</span><span style="font-size:13px;color:#7D8698">#2E333D</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px"><span style="width:56px;height:2px;background:#3A404C"></span><span style="flex:1;font-size:13px">Separador “·”, inativo</span><span style="font-size:13px;color:#7D8698">#3A404C</span></div>
+</div></div>
+<div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;font-weight:700;color:#AEB7C6">Acento</span>
+<div style="padding:16px;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(232,121,75,.35);display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:10px;background:#E8794B"></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:700">Laranja</span><span style="font-size:13px;color:#AEB7C6">#E8794B</span></span></div>
+<span style="font-size:13px;line-height:1.5;color:#C6D2E4">Só para o que pede atenção: restrição de exercício, alerta clínico privado, código errado, "senti dor". Nunca em botão principal ou decoração.</span>
+</div></div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:14px;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">02</span><span style="font-size:24px;font-weight:900;font-stretch:125%">PRATA E PASTILHAS</span></div>
+<p style="margin:0;max-width:640px;font-size:15px;line-height:1.5;color:#C6D2E4;text-wrap:pretty">A prata é a recompensa. O degradê metálico aparece só no que foi conquistado: série válida feita, código digitado, barra de progresso. Cada pastilha é uma série; o tom sobe com o esforço (aquecimento escuro, reconhecimento médio, válida brilhante) e o tamanho é sempre o mesmo.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:12px"><span style="width:44px;height:20px;border-radius:5px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="font-size:15px;font-weight:700">Válida</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Degradê 135° · #FFFFFF → #AEB9CB 55% → #6E7889</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:12px"><span style="width:44px;height:20px;border-radius:5px;background:#3A404C"></span><span style="font-size:15px;font-weight:700">Aquecimento</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Grafite chapado · #3A404C</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:12px"><span style="width:44px;height:20px;border-radius:5px;background:#7D8698"></span><span style="font-size:15px;font-weight:700">Reconhecimento</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Prata média chapada · #7D8698</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:12px"><span style="width:44px;height:20px;border-radius:5px;background:#1A1D24;box-shadow:inset 0 0 0 1px #2A2E37"></span><span style="font-size:15px;font-weight:700">Não feita</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">#1A1D24 com fio #2A2E37</span></div>
+</div>
+<div style="padding:18px 16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:14px;max-width:520px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">TAMANHOS</span>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;gap:3px"><span style="width:12px;height:12px;border-radius:3px;background:#3A404C"></span><span style="width:12px;height:12px;border-radius:3px;background:#7D8698"></span><span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="width:12px;height:12px;border-radius:3px;background:#1A1D24;box-shadow:inset 0 0 0 1px #2A2E37"></span></span><span style="font-size:13px;color:#AEB7C6">12 × 12, raio 3 · lista do treino</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;gap:12px"><span style="width:48px;height:20px;border-radius:5px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="width:48px;height:20px;border-radius:5px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="width:48px;height:20px;border-radius:5px;box-shadow:inset 0 0 0 1.5px #C6D2E4"></span></span><span style="font-size:13px;color:#AEB7C6">48 × 20, raio 5 · código de acesso</span></div>
+</div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:14px;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">03</span><span style="font-size:24px;font-weight:900;font-stretch:125%">TIPOGRAFIA</span></div>
+<p style="margin:0;max-width:640px;font-size:15px;line-height:1.5;color:#C6D2E4;text-wrap:pretty">Uma família só, Archivo, usando a largura variável. Títulos largos e em caixa alta, números estreitos, texto corrido na largura normal.</p>
+<div style="display:flex;flex-direction:column">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:36px;font-weight:900;font-stretch:125%;line-height:1">SUPERIORES</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Display · 36 / 900 / largura 125% · altura 1 · caixa alta</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:24px;font-weight:900;font-stretch:125%;line-height:1">ANA BIA</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Título de tela · 24–30 / 900 / 125% · caixa alta</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:20px;font-weight:800;font-stretch:110%">Supino reto com barra</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Exercício aberto · 20 / 800 / 110%</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:16px;font-weight:700;font-stretch:110%">Remada curvada</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Exercício na lista · 16 / 700 / 110%</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:40px;font-weight:900;font-stretch:75%;line-height:1;font-variant-numeric:tabular-nums">52:10 · 37,5</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Números · 900 / largura 75% · algarismos tabulares, vírgula decimal</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:800;font-stretch:125%;letter-spacing:0.14em;color:#7D8698">PRÓXIMO TREINO · ALVO · DESCANSO</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Kicker · 11 / 800 / largura 125% / espaço 0,14em · caixa alta. Rótulo de coluna: 10 / 800 / 125% / 0,1em</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:15px;line-height:1.45">Recovery ativado. Água, sono e zero pressa hoje.</span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Corpo · 15 / 400 / altura 1,45</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;padding:18px 0"><span style="display:flex;flex-direction:column;gap:6px"><span style="font-size:15px;font-weight:600;font-stretch:75%;color:#AEB7C6">3×8–10 · 45 kg · descanso 2:00</span><span style="font-size:13px;color:#AEB7C6">Prefere treinar à tarde.</span></span><span style="font-size:13px;line-height:1.45;color:#AEB7C6">Apoio · números em 15 / 600 / 75%; texto de apoio em 13 / 400</span></div>
+</div>
+<div style="padding:14px 16px;border-radius:16px;background:#0E1015;font-size:13px;line-height:1.5;color:#C6D2E4">Escala usada: <b style="color:#F2F5FA">11 · 13 · 15 · 20 · 24 · 30 · 36</b>. Nada abaixo de 11, e 11 só em kicker. Na carteirinha e nos cards de compartilhar a escala é a do PNG de 1080 × 1920.</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:14px;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">04</span><span style="font-size:24px;font-weight:900;font-stretch:125%">FORMA E ESPAÇO</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:72px;border-radius:5px;background:#171B22"></span><span style="font-size:15px;font-weight:700">5</span><span style="font-size:13px;color:#AEB7C6">pastilha do código</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:72px;border-radius:10px;background:#171B22"></span><span style="font-size:15px;font-weight:700">10</span><span style="font-size:13px;color:#AEB7C6">campo, botão secundário, nota fixada</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:72px;border-radius:16px;background:#171B22"></span><span style="font-size:15px;font-weight:700">16</span><span style="font-size:13px;color:#AEB7C6">botão principal, painel, linha agrupada</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:72px;border-radius:24px;background:#171B22"></span><span style="font-size:15px;font-weight:700">24</span><span style="font-size:13px;color:#AEB7C6">card do Hoje, gaveta (só no topo)</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:72px;border-radius:999px;background:#171B22"></span><span style="font-size:15px;font-weight:700">999</span><span style="font-size:13px;color:#AEB7C6">chip, filtro, aviso de sem internet</span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">MARGENS</span><span style="font-size:15px;line-height:1.5;color:#C6D2E4">20 nas laterais da tela. 12–16 dentro de painéis e gavetas. Espaços entre itens: 2, 6, 8, 12, 14, 18, 28.</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">TOQUE</span><span style="font-size:15px;line-height:1.5;color:#C6D2E4">Alvo mínimo de 44. Botão principal 52 de altura. Linhas de lista com pelo menos 48.</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">PROFUNDIDADE</span><span style="font-size:15px;line-height:1.5;color:#C6D2E4">Sem sombra projetada. A hierarquia vem do tom da superfície (fundo → painel → elevado) e de fios de 1px por dentro.</span></div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:14px;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">05</span><span style="font-size:24px;font-weight:900;font-stretch:125%">COMPONENTES</span></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px">
+
+<div style="padding:20px;border-radius:24px;box-shadow:inset 0 0 0 1px #1E222A;display:flex;flex-direction:column;gap:14px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">BOTÕES</span>
+<span style="height:52px;border-radius:16px;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px"><i class="ph-bold ph-play"></i>Começar treino</span>
+<span style="height:44px;border-radius:10px;box-shadow:inset 0 0 0 1px #2E333D;color:#C6D2E4;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ph ph-file-arrow-down"></i>Ficha em PDF</span>
+<div style="display:flex;gap:16px;align-items:center"><span style="font-size:13px;font-weight:600;color:#AEB7C6;display:flex;align-items:center;gap:6px"><i class="ph ph-chat-circle"></i>Recado sobre esta série</span><span style="font-size:13px;font-weight:600;color:#7D8698">Pular exercício</span></div>
+<span style="font-size:13px;line-height:1.45;color:#7D8698">Um botão claro por tela, no máximo. Ação secundária com contorno; ação terciária só texto.</span>
+</div>
+
+<div style="padding:20px;border-radius:24px;box-shadow:inset 0 0 0 1px #1E222A;display:flex;flex-direction:column;gap:14px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">CHIPS</span>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><span style="min-height:36px;padding:0 12px;border-radius:999px;background:#F2F5FA;color:#05060A;font-size:13px;font-weight:700;display:flex;align-items:center">Ombros</span><span style="min-height:36px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;display:flex;align-items:center">Costas</span><span style="min-height:36px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;display:flex;align-items:center">Glúteos</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><span style="flex:1;height:44px;border-radius:10px;box-shadow:inset 0 0 0 1px #2E333D;font-size:15px;display:flex;align-items:center;justify-content:center">4x</span><span style="flex:1;height:44px;border-radius:10px;background:#F2F5FA;color:#05060A;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center">5x</span><span style="flex:1;height:44px;border-radius:10px;box-shadow:inset 0 0 0 1px #2E333D;font-size:15px;display:flex;align-items:center;justify-content:center">6x</span></div>
+<span style="font-size:13px;line-height:1.45;color:#7D8698">Selecionado vira claro e pesado. Escolhas prontas no lugar de campo livre sempre que der.</span>
+</div>
+
+<div style="padding:20px;border-radius:24px;box-shadow:inset 0 0 0 1px #1E222A;display:flex;flex-direction:column;gap:6px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">LINHA DE LISTA</span>
+<div style="display:flex;align-items:center;gap:14px;padding:12px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span style="width:22px;font-size:13px;font-weight:700;color:#C6D2E4"><i class="ph-bold ph-check"></i></span><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;color:#7D8698">Supino reto com barra</span><span style="font-size:13px;color:#AEB7C6">2×8–10 · 45 kg</span></span><span style="display:flex;gap:3px"><span style="width:12px;height:12px;border-radius:3px;background:#3A404C"></span><span style="width:12px;height:12px;border-radius:3px;background:#7D8698"></span><span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span><span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)"></span></span></div>
+<div style="display:flex;align-items:center;gap:14px;padding:12px 0;background:linear-gradient(to right,#1E222A,#1E222A calc(100% - 48px),transparent) no-repeat bottom/100% 1px"><span style="width:22px;font-size:13px;font-weight:700;color:#7D8698">02</span><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font-size:15px">Desenvolvimento</span><span style="font-size:13px;color:#AEB7C6">3×10 · 14 kg<span style="margin-left:8px;color:#E8794B;font-weight:700">● ombro D</span></span></span><span style="display:flex;gap:3px"><span style="width:12px;height:12px;border-radius:3px;background:#1A1D24;box-shadow:inset 0 0 0 1px #2A2E37"></span><span style="width:12px;height:12px;border-radius:3px;background:#1A1D24;box-shadow:inset 0 0 0 1px #2A2E37"></span><span style="width:12px;height:12px;border-radius:3px;background:#1A1D24;box-shadow:inset 0 0 0 1px #2A2E37"></span></span></div>
+<span style="margin-top:8px;font-size:13px;line-height:1.45;color:#7D8698">Sem card em volta. Divisória de 1px que some nos últimos 48px. Índice em 2 dígitos vira ✓ quando feito.</span>
+</div>
+
+<div style="padding:20px;border-radius:24px;box-shadow:inset 0 0 0 1px #1E222A;display:flex;flex-direction:column;gap:14px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">COLUNAS DE NÚMEROS</span>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7D8698">ALVO</span><span style="font-size:15px;font-weight:700">8–10 reps</span></div><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7D8698">ÚLTIMA</span><span style="font-size:15px;font-weight:700">45 × 9</span></div><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7D8698">DESCANSO</span><span style="font-size:15px;font-weight:700">2:00</span></div></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:12px 0;box-shadow:inset 0 1px 0 #1E222A,inset 0 -1px 0 #1E222A"><div style="display:flex;flex-direction:column"><span style="font-size:30px;font-weight:900;font-stretch:75%;line-height:1">52:10</span><span style="font-size:13px;color:#7D8698">tempo</span></div><div style="display:flex;flex-direction:column;padding-left:12px;box-shadow:inset 1px 0 0 #1E222A"><span style="font-size:30px;font-weight:900;font-stretch:75%;line-height:1">20</span><span style="font-size:13px;color:#7D8698">séries</span></div><div style="display:flex;flex-direction:column;padding-left:12px;box-shadow:inset 1px 0 0 #1E222A"><span style="font-size:30px;font-weight:900;font-stretch:75%;line-height:1">1 ★</span><span style="font-size:13px;color:#7D8698">recorde</span></div></div>
+<span style="font-size:13px;line-height:1.45;color:#7D8698">Rótulo em kicker em cima; valor embaixo. Resumos grandes usam o número estreito.</span>
+</div>
+
+<div style="padding:20px;border-radius:24px;box-shadow:inset 0 0 0 1px #1E222A;display:flex;flex-direction:column;gap:14px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">AVISOS</span>
+<div style="padding:10px 12px;border-radius:10px;background:#0E1015;display:flex;gap:8px;font-size:13px;line-height:1.4;color:#C6D2E4"><i class="ph-fill ph-push-pin" style="color:#AEB7C6;margin-top:2px"></i><span>Escápulas encaixadas, desce controlando até tocar o peito.</span></div>
+<div style="padding:12px 14px;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(232,121,75,.35);display:flex;gap:10px"><i class="ph ph-lock-simple" style="color:#E8794B;margin-top:2px"></i><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:0.16em;color:#E8794B">ALERTA · SÓ VOCÊ VÊ</span><span style="font-size:15px;line-height:1.4">Dor no ombro direito acima de 90°.</span></span></div>
+<span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;color:#C6D2E4"><i class="ph ph-wifi-slash"></i>Sem internet · salvando no celular</span>
+</div>
+
+<div style="padding:20px;border-radius:24px;box-shadow:inset 0 0 0 1px #1E222A;display:flex;flex-direction:column;gap:14px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">CAMPO E PROGRESSO</span>
+<span style="height:44px;padding:0 14px;border-radius:10px;background:#0E1015;font-size:15px;color:#7D8698;display:flex;align-items:center">Buscar no catálogo</span>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>Treino</span><span style="color:#AEB7C6">12 de 20 séries</span></div><div style="height:3px;border-radius:2px;background:#171B22;overflow:hidden"><div style="width:60%;height:100%;background:linear-gradient(90deg,#6E7889,#AEB9CB 55%,#FFFFFF)"></div></div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>Glúteos</span><span style="font-weight:700">17,2 <span style="font-size:11px;color:#F2F5FA">+4</span></span></div><div style="height:4px;border-radius:2px;background:#171B22;overflow:hidden"><div style="width:72%;height:100%;background:#C6D2E4"></div></div></div>
+<span style="font-size:13px;line-height:1.45;color:#7D8698">Progresso do treino em prata; volume e dados em prata clara chapada.</span>
+</div>
+
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px">
+<div style="position:relative;height:300px;border-radius:24px;background:#05060A;box-shadow:inset 0 0 0 1px #1E222A;overflow:hidden">
+<span style="position:absolute;left:20px;top:20px;font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">GAVETA</span>
+<div style="position:absolute;inset:0;background:rgba(5,6,10,.55)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;padding:18px 16px 22px;background:#0E1015;border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#C6D2E4">RECADO · SUPINO · RECONHECIMENTO</span><span style="font-size:15px;color:#7D8698">Fechar</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><span style="min-height:36px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1px #2E333D;font-size:13px;display:flex;align-items:center">Ficou leve</span><span style="min-height:36px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(232,121,75,.5);color:#E8794B;font-size:13px;display:flex;align-items:center">Senti dor</span></div>
+<span style="height:52px;border-radius:16px;background:#F2F5FA;color:#05060A;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center">Mandar pro professor</span>
+</div>
+</div>
+<div style="position:relative;height:300px;border-radius:24px;background:#05060A;box-shadow:inset 0 0 0 1px #1E222A;overflow:hidden;display:flex;flex-direction:column">
+<span style="padding:20px;font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">BARRA DE ABAS</span>
+<span style="margin:auto 20px;align-self:center;padding:10px 16px;border-radius:999px;background:#171B22;font-size:13px;display:flex;align-items:center;gap:8px"><i class="ph-bold ph-check"></i>Recado enviado ao professor</span>
+<div style="margin-top:auto;padding:10px 12px 22px;background:#05060A;box-shadow:inset 0 1px 0 #1E222A;display:grid;grid-template-columns:repeat(4,1fr)">
+<span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:700"><i class="ph-fill ph-house" style="font-size:22px"></i>Hoje</span>
+<span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#7D8698"><i class="ph ph-barbell" style="font-size:22px"></i>Treino</span>
+<span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#7D8698"><i class="ph ph-chat-circle" style="font-size:22px"></i>Recados</span>
+<span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#7D8698"><i class="ph ph-user" style="font-size:22px"></i>Perfil</span>
+</div>
+</div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:14px;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">06</span><span style="font-size:24px;font-weight:900;font-stretch:125%">MARCA E ÍCONES</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px">
+<div style="position:relative;height:220px;border-radius:24px;background:#05060A;box-shadow:inset 0 0 0 1px #1E222A;overflow:hidden;padding:20px;display:flex;flex-direction:column;justify-content:space-between">
+<img src="public/selo-silhueta.png" alt="" style="position:absolute;right:-40px;top:-30px;width:220px;height:220px;opacity:.22"></img>
+<span style="position:relative;font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">SELO</span>
+<span style="position:relative;font-size:13px;line-height:1.5;color:#C6D2E4;max-width:240px">Inteiro no login (150px) e nos cards. Como marca d'água, cortado no canto superior direito, com opacidade de 0,22 no app e 0,09 nos cards.</span>
+</div>
+<div style="padding:20px;border-radius:24px;box-shadow:inset 0 0 0 1px #1E222A;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">ÍCONES · PHOSPHOR</span>
+<div style="display:flex;flex-wrap:wrap;gap:18px;font-size:24px;color:#C6D2E4"><i class="ph ph-barbell"></i><i class="ph ph-chat-circle"></i><i class="ph ph-user"></i><i class="ph ph-export"></i><i class="ph ph-lock-simple"></i><i class="ph ph-eye"></i><i class="ph ph-caret-right"></i><i class="ph-bold ph-check"></i><i class="ph-fill ph-push-pin"></i><i class="ph-fill ph-house"></i></div>
+<span style="font-size:13px;line-height:1.5;color:#AEB7C6">Regular por padrão. Bold só no ✓ e dentro do botão principal. Fill para a aba ativa e para a nota fixada.</span>
+</div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:14px;box-shadow:inset 0 -1px 0 #1E222A"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">07</span><span style="font-size:24px;font-weight:900;font-stretch:125%">ESCRITA</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">TOM</span><span style="font-size:15px;line-height:1.5;color:#C6D2E4">Fala como o professor no salão: curto, direto, em "você". "Recovery ativado. Água, sono e zero pressa hoje."</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">NÚMEROS</span><span style="font-size:15px;line-height:1.5;color:#C6D2E4">Vírgula decimal (37,5 kg). Carga × reps com "×". Tempo em m:ss. Datas curtas: "sáb · 14 nov".</span></div>
+<div style="padding:16px;border-radius:16px;background:#0E1015;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:#7D8698">CAIXA ALTA</span><span style="font-size:15px;line-height:1.5;color:#C6D2E4">Só em títulos largos e kickers. Botões, listas e corpo em caixa normal.</span></div>
+</div>
+</section>
+
+</div>
+</x-dc>
+</body>
+</html>

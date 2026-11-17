@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { C, F } from "../../styles/tokens";
+import { C, F, KICKER } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
 import { ccConfirm } from "../../utils/confirm";
 import { AssessmentSummary } from "../assessment/AssessmentSummary";
@@ -10,7 +10,7 @@ import { ReassessmentHistory } from "../student/Reassessment";
 // só aparece quando o aluno pede. Substitui o antigo formulário aberto (FichaEditor).
 // Só é usado na visão do professor — o alerta clínico nunca chega aqui pelo lado do aluno.
 
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", color: C.text4 };
+const kicker = KICKER;
 const GOALS = ["Hipertrofia", "Força", "Emagrecimento", "Condicionamento"];
 const FREQS = [2, 3, 4, 5, 6];
 const DURS = [45, 60, 75, 90];
@@ -74,7 +74,7 @@ function DadosV3({ student: st, onSave, onPrint, onDelete }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 14, color: C.text }}>
             <button type="button" onClick={() => open("nome")} aria-label="Editar nome" style={{ alignSelf: "flex-start", padding: 0, border: "none", background: "none", color: C.text, textAlign: "left", cursor: "pointer" }}>
                 <span style={{ display: "block", fontFamily: F.display, fontSize: 26, fontWeight: 900, fontStretch: "125%", lineHeight: 1.05, overflowWrap: "anywhere" }}>{String(st.name || "").toUpperCase()}</span>
-                <span style={{ display: "block", marginTop: 4, fontSize: 13, color: C.text4 }}>{"código " + st.code}</span>
+                <span style={{ display: "block", marginTop: 4, fontSize: 13, color: C.text3 }}>{"código " + st.code}</span>
             </button>
 
             {st.deletionRequestedAt && onDelete && (
@@ -105,7 +105,7 @@ function DadosV3({ student: st, onSave, onPrint, onDelete }) {
             </div>
 
             <button type="button" onClick={() => open("obs")} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "14px 0", border: "none", background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px`, color: C.text, textAlign: "left", cursor: "pointer" }}>
-                <span style={{ ...kicker, display: "flex", alignItems: "center", gap: 6 }}>OBSERVAÇÕES<span style={{ fontFamily: F.body, fontWeight: 400, letterSpacing: 0, fontSize: 12, color: C.text4 }}>{"· " + (first || "o aluno") + " vê"}</span></span>
+                <span style={{ ...kicker, display: "flex", alignItems: "center", gap: 6 }}>OBSERVAÇÕES<span style={{ fontFamily: F.body, fontWeight: 400, letterSpacing: 0, fontSize: 12, color: C.text3 }}>{"· " + (first || "o aluno") + " vê"}</span></span>
                 <span style={{ fontSize: 15, lineHeight: 1.45, color: st.obs ? C.text : C.text4, whiteSpace: "pre-wrap" }}>{st.obs || "Preferências, histórico… Toque pra escrever."}</span>
             </button>
 

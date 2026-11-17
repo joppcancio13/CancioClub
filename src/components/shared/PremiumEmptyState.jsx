@@ -1,12 +1,26 @@
 import React from "react";
 import { C, F } from "../../styles/tokens";
 
-// 16d — estado vazio: três pastilhas apagadas + frase + ação opcional
-function PremiumEmptyState({ title, sub, compact = true, action, onAction }) {
-    return React.createElement("div", { style: { padding: compact ? "26px 18px" : "40px 22px", borderRadius: 16, boxShadow: compact ? "none" : `inset 0 0 0 1px ${C.line}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" } },
-        React.createElement("div", { "aria-hidden": "true", style: { display: "flex", gap: 3 } }, [0, 1, 2].map((i) => React.createElement("span", { key: i, style: { width: 18, height: 8, borderRadius: 1.5, boxShadow: "inset 0 0 0 1px #2A2E37" } }))),
-        React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text } }, title),
-        sub && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.45, color: C.muted, maxWidth: 300 } }, sub),
-        action && React.createElement("button", { className: "cc-tap", onClick: onAction, style: { minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, action));
+// Estados — design v4 (55a), um padrão para todas as telas:
+// · vazio: título 20/800/110% dizendo o que vai aparecer ali, uma frase de apoio 15 #AEB7C6 e um
+//   botão secundário com o próximo passo;
+// · erro (kind="error"): mesmo layout, "Não deu para carregar" e o botão claro "Tentar de novo".
+// O nome antigo (PremiumEmptyState) ficou para não mexer em todos os lugares que já o usam.
+function PremiumEmptyState({ title, sub, action, onAction, kind = "empty", onRetry }) {
+    const isErr = kind === "error";
+    const t = isErr ? (title || "Não deu para carregar") : title;
+    const s = isErr ? (sub || "Sem internet ou o servidor não respondeu. O que você já viu continua salvo.") : sub;
+    return (
+        <div role={isErr ? "alert" : undefined} style={{ padding: "24px 0", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, color: C.text, fontFamily: F.body }}>
+            <div style={{ fontFamily: F.display, fontSize: 20, fontWeight: 800, fontStretch: "110%", lineHeight: 1.15 }}>{t}</div>
+            {s && <div style={{ fontSize: 15, lineHeight: 1.45, color: C.text3, maxWidth: 360 }}>{s}</div>}
+            {isErr && onRetry && (
+                <button type="button" onClick={onRetry} style={{ marginTop: 8, minHeight: 48, padding: "0 18px", borderRadius: 12, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Tentar de novo</button>
+            )}
+            {!isErr && action && onAction && (
+                <button type="button" onClick={onAction} style={{ marginTop: 8, minHeight: 44, padding: "0 16px", borderRadius: 12, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" }}>{action}</button>
+            )}
+        </div>
+    );
 }
 export { PremiumEmptyState };

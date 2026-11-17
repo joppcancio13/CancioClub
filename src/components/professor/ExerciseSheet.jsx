@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { C, F } from "../../styles/tokens";
+import { C, F, KICKER } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
 import { exerciseCatalog } from "../../data/exerciseCatalog";
 import { suggestCatalogMatch, normalize } from "../../utils/catalogMatch";
@@ -12,7 +12,7 @@ import { planSummary } from "../../utils/workout";
 // · Trocar: primeiro os de mesmo padrão de movimento, depois os do mesmo grupo, com quanto o volume
 //   da semana muda. Séries, reps e descanso ficam; o histórico do antigo fica guardado.
 
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", color: C.text4 };
+const kicker = KICKER;
 const CAT = Object.values(exerciseCatalog);
 const has = (txt, q) => normalize(txt).includes(normalize(q).trim());
 const groupsLine = (entry) => Object.entries(groupActivation(entry)).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g, v]) => g + " " + fmtVol(v)).join(" · ");
@@ -23,9 +23,9 @@ function Row({ name, sub, action, onClick }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0", boxShadow: `inset 0 -1px 0 ${C.line}` }}>
             <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ fontFamily: F.body, fontSize: 16, fontWeight: 700, fontStretch: "110%" }}>{name}</span>
-                {sub && <span style={{ fontSize: 13, color: C.text4, fontVariantNumeric: "tabular-nums" }}>{sub}</span>}
+                {sub && <span style={{ fontSize: 13, color: C.text3, fontVariantNumeric: "tabular-nums" }}>{sub}</span>}
             </span>
-            <button type="button" onClick={onClick} style={{ flex: "none", minHeight: 40, padding: "0 14px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{action}</button>
+            <button type="button" onClick={onClick} style={{ flex: "none", minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{action}</button>
         </div>
     );
 }
@@ -102,7 +102,7 @@ function ExerciseSheet({ mode, swapEx, dayList, week, library, dayLabel, onAdd, 
                             <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", margin: "0 -20px", padding: "0 20px" }}>
                                 {GROUP_ORDER.map((g) => {
                                     const on = g === group;
-                                    return <button key={g} type="button" aria-pressed={on} onClick={() => setGroup(g)} style={{ flex: "none", minHeight: 40, padding: "0 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) }}>{g}</button>;
+                                    return <button key={g} type="button" aria-pressed={on} onClick={() => setGroup(g)} style={{ flex: "none", minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) }}>{g}</button>;
                                 })}
                             </div>
                         )}
@@ -118,7 +118,7 @@ function ExerciseSheet({ mode, swapEx, dayList, week, library, dayLabel, onAdd, 
                                 {catRows.map((e) => <Row key={e.id} name={e.nome} sub={groupsLine(e)} action="+ Pôr" onClick={() => { haptic("confirm"); addCat(e); }} />)}
                             </div>
                         )}
-                        {!libRows.length && !catRows.length && <span style={{ fontSize: 13, color: C.text4 }}>{query ? "Nada na biblioteca nem no catálogo com esse nome." : "Nada novo nesse grupo."}</span>}
+                        {!libRows.length && !catRows.length && <span style={{ fontSize: 13, color: C.text3 }}>{query ? "Nada na biblioteca nem no catálogo com esse nome." : "Nada novo nesse grupo."}</span>}
                         <button type="button" onClick={() => onManual(query)} style={{ minHeight: 48, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text2, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>
                             {query ? "Criar “" + query + "” do zero" : "Criar do zero (nome, séries, reps, vídeo)"}
                         </button>
@@ -129,7 +129,7 @@ function ExerciseSheet({ mode, swapEx, dayList, week, library, dayLabel, onAdd, 
                     <>
                         <div style={{ display: "flex", flexDirection: "column" }}>
                             {swapOpts.map((e) => { const d = diff(e); return <Row key={e.id} name={e.nome} sub={d} action="Trocar" onClick={() => { haptic("confirm"); onSwap(e); }} />; })}
-                            {!swapOpts.length && <span style={{ fontSize: 13, color: C.text4 }}>{query ? "Nada no catálogo com esse nome." : cur ? "Nenhuma alternativa que já não esteja no dia." : ""}</span>}
+                            {!swapOpts.length && <span style={{ fontSize: 13, color: C.text3 }}>{query ? "Nada no catálogo com esse nome." : cur ? "Nenhuma alternativa que já não esteja no dia." : ""}</span>}
                         </div>
                         <span style={{ fontSize: 13, lineHeight: 1.45, color: C.text4 }}>Séries, reps e descanso ficam. O que o aluno já registrou no antigo fica guardado nas fases arquivadas.</span>
                         <button type="button" onClick={onRemove} style={{ minHeight: 48, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.accentLine}`, color: C.accent, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Tirar da ficha</button>

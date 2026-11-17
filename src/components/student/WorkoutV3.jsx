@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { C, F, NON_COUNTING_KINDS, PILL_V3, PROGRESS } from "../../styles/tokens";
+import { C, F, NON_COUNTING_KINDS, PILL_V3, PROGRESS, KICKER, COL_LABEL } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
 import { daySummary, parseReps, repsCeiling, sortedHistory } from "../../utils/workout";
 
@@ -79,6 +79,20 @@ function lastTech(ex, dayDate) {
     return { when, notes: h.techNotes };
 }
 
+function IconCloudOff() {
+    return <svg width="18" height="18" viewBox="0 0 256 256" aria-hidden="true" style={{ flex: "none", color: C.accent }}><path fill="none" stroke="currentColor" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" d="M48 40l160 176M96 72a72 72 0 0 1 104 46M188 200H76a52 52 0 0 1-8-103.4" /></svg>;
+}
+// marca de cada série feita: ✓ salvo · girando enquanto envia · nuvem cortada (só no aparelho)
+function SaveMark({ state }) {
+    if (state === "saving") return (
+        <span role="img" aria-label="salvando" style={{ display: "inline-flex", color: C.text3 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke={C.raised} strokeWidth="2.5" /><path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite" /></path></svg>
+        </span>
+    );
+    if (state === "pending") return <span role="img" aria-label="salvo só no aparelho, sobe quando a internet voltar" style={{ display: "inline-flex" }}><IconCloudOff /></span>;
+    return <span role="img" aria-label="salvo" style={{ color: C.text2 }}><IconCheck /></span>;
+}
+
 function IconPin() {
     return <svg width="14" height="14" viewBox="0 0 256 256" aria-hidden="true" style={{ flex: "none", marginTop: 2 }}><path fill="currentColor" d="M235.33 104l-53.47 53.65c4.56 18.57 1.61 39.73-12.23 58.63a8 8 0 0 1-12 .87L101.72 161.25l-45.06 45.07a8 8 0 0 1-11.32-11.32l45.07-45.06L35.06 94.53a8 8 0 0 1 .87-12c19.07-13.94 40.13-16.81 58.6-12.27L148 16.69a16 16 0 0 1 22.63 0L235.31 81.4a16 16 0 0 1 0 22.6Z" /></svg>;
 }
@@ -86,12 +100,12 @@ function IconChat() {
     return <svg width="16" height="16" viewBox="0 0 256 256" aria-hidden="true"><path fill="none" stroke="currentColor" strokeWidth="16" strokeLinejoin="round" d="M79.93 211.11a96 96 0 1 0-35-35L32.42 213.46a8 8 0 0 0 10.12 10.12Z" /></svg>;
 }
 
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase" };
-const colLabel = { fontFamily: F.display, fontSize: 10, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.1em", color: C.text4 };
+const kicker = KICKER;
+const colLabel = COL_LABEL;
 const num = { fontVariantNumeric: "tabular-nums" };
 const btnMain = { height: 52, borderRadius: 16, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer", width: "100%" };
 const btnSecondary = { height: 52, borderRadius: 16, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontWeight: 700, fontSize: 15, cursor: "pointer" };
-const btnText = { background: "none", border: "none", padding: 0, minHeight: 36, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 };
+const btnText = { background: "none", border: "none", padding: 0, minHeight: 44, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 };
 
 function Stepper({ value, unit, onMinus, onPlus, onType, label }) {
     const [typing, setTyping] = useState(false);
@@ -107,7 +121,7 @@ function Stepper({ value, unit, onMinus, onPlus, onType, label }) {
                 <button type="button" onClick={() => { setTxt(String(value).replace(".", ",")); setTyping(true); }} aria-label={"Digitar " + label}
                     style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "none", border: "none", color: C.text, cursor: "pointer", padding: "4px 8px" }}>
                     <span style={{ fontFamily: F.display, fontSize: 24, fontWeight: 900, fontStretch: "110%", lineHeight: 1, ...num }}>{br(value)}</span>
-                    <span style={{ fontSize: 11, color: C.text4 }}>{unit}</span>
+                    <span style={{ fontSize: 11, color: C.text3 }}>{unit}</span>
                 </button>
             )}
             <button type="button" aria-label={"Aumentar " + label} onClick={() => { haptic("tick"); onPlus(); }} style={{ width: 48, height: 56, border: "none", background: "none", fontSize: 22, color: C.text3, cursor: "pointer" }}>+</button>
@@ -115,8 +129,16 @@ function Stepper({ value, unit, onMinus, onPlus, onType, label }) {
     );
 }
 
-function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFinalize, onFinalize, onAddLoad, onMessage, restrictionOf, bottomOffset = 0, onPickDay }) {
+function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinalize, onFinalize, onAddLoad, onMessage, restrictionOf, bottomOffset = 0, onPickDay }) {
+    // salvamento (design v4 · 35b): a série é sempre gravada no aparelho; ✓ quando já chegou na nuvem,
+    // girando enquanto envia, nuvem cortada em laranja quando ficou só no aparelho
+    // (o envio sai com um pequeno atraso depois do toque: nos primeiros 4 s com rede conta como "salvando")
+    const [, setTick] = useState(0);
+    const saveStateOf = (s) => { const at = s.log && s.log.at; if (!save || typeof at !== "number" || at <= save.syncedAt) return "saved"; if (save.online && (save.syncing || Date.now() - at < 4000)) return "saving"; return "pending"; };
     const rows = useMemo(() => list.map((ex) => describe(ex, dayDate)), [list, dayDate]);
+    const lastAt = rows.reduce((m, r) => Math.max(m, ...r.sets.map((x) => (x.log && typeof x.log.at === "number" ? x.log.at : 0))), 0);
+    useEffect(() => { const wait = lastAt + 4100 - Date.now(); if (wait <= 0) return; const t = setTimeout(() => setTick((n) => n + 1), wait); return () => clearTimeout(t); }, [lastAt]);
+    const pendingN = save ? rows.reduce((n, r) => n + r.sets.filter((x) => x.done && saveStateOf(x) === "pending").length, 0) : 0;
     const [openId, setOpenId] = useState(() => { const r = rows.find((x) => !x.allDone); return r ? r.ex.id : null; });
     const [skipped, setSkipped] = useState(() => new Set());
     const [override, setOverride] = useState(null); // { exId, setId } — tocar numa série já feita pra corrigir
@@ -208,17 +230,16 @@ function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFi
     return (
         <div style={{ display: "flex", flexDirection: "column" }}>
             <div ref={topRef} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                <span style={{ ...kicker, color: C.text4 }}>{weekday} · {doneSets} DE {allSets} SÉRIES</span>
+                <span style={{ ...kicker }}>{weekday} · {doneSets} DE {allSets} SÉRIES</span>
                 <span style={{ display: "flex", gap: 14, alignItems: "baseline" }}>
                     <span style={{ fontSize: 13, color: C.text3, ...num }}>{clock}</span>
-                    {canFinalize && <button type="button" onClick={onFinalize} style={{ ...btnText, minHeight: 32, fontWeight: 700, color: C.text2 }}>{dayDone ? "Compartilhar" : "Finalizar"}</button>}
+                    {canFinalize && <button type="button" onClick={onFinalize} style={{ ...btnText, minHeight: 44, fontWeight: 700, color: C.text2 }}>{dayDone ? "Compartilhar" : "Finalizar"}</button>}
                 </span>
             </div>
             <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12 }}>
                 <span style={{ fontFamily: F.display, fontSize: String(title).length > 14 ? 26 : 34, fontWeight: 900, fontStretch: "125%", lineHeight: 1, overflowWrap: "anywhere" }}>{title}</span>
                 {onPickDay && <button type="button" onClick={onPickDay} style={{ ...btnText, flex: "none", color: C.text3 }}>Trocar ›</button>}
             </div>
-            {offline && <div style={{ marginTop: 10, alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 999, boxShadow: `inset 0 0 0 1px ${C.outline}`, fontSize: 13, color: C.text2 }}>Salvo neste aparelho</div>}
 
             <div style={{ marginTop: 12, display: "flex", flexDirection: "column" }}>
                 {rows.map((r, ei) => {
@@ -269,11 +290,11 @@ function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFi
                                                 <button key={s.id} type="button" disabled={!s.done && !isCur}
                                                     onClick={() => { if (s.done) setOverride({ exId: r.ex.id, setId: s.id }); }}
                                                     aria-label={s.done ? "Corrigir " + s.label.toLowerCase() : undefined}
-                                                    style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 36, padding: 0, background: "none", border: "none", textAlign: "left", cursor: s.done ? "pointer" : "default", fontFamily: F.body, fontSize: 15, color: isCur ? C.text : s.done ? C.text3 : C.text4 }}>
+                                                    style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: 0, background: "none", border: "none", textAlign: "left", cursor: s.done ? "pointer" : "default", fontFamily: F.body, fontSize: 15, color: isCur ? C.text : s.done ? C.text3 : C.text4 }}>
                                                     <span style={{ width: 22, fontSize: s.working ? 15 : 11, fontWeight: 800, letterSpacing: "0.04em" }}>{s.n}</span>
                                                     <span style={{ flex: 1, fontWeight: isCur ? 700 : 400, ...num }}>{br(v.load)} kg × {v.reps}</span>
                                                     {isCur && !rest && <span style={{ ...colLabel, color: C.text2 }}>{cur.fixing ? "CORRIGINDO" : "AGORA ↓"}</span>}
-                                                    {s.done && !isCur && <span style={{ color: C.text2 }}><IconCheck /></span>}
+                                                    {s.done && !isCur && <SaveMark state={saveStateOf(s)} />}
                                                 </button>
                                             );
                                         })}
@@ -311,6 +332,7 @@ function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFi
             <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
                 {/* bottomOffset: com as abas à mostra, a barra ganha esse espaço embaixo pra elas caberem por cima (DECISOES.md · 4) */}
                 <div style={{ pointerEvents: "auto", width: "100%", maxWidth: 660, background: C.panel, borderRadius: "24px 24px 0 0", padding: `14px 12px calc(${14 + bottomOffset}px + env(safe-area-inset-bottom, 0px))`, transition: "padding .25s ease", display: "flex", flexDirection: "column", gap: 10, boxShadow: `inset 0 1px 0 ${C.line}` }}>
+                    {pendingN > 0 && <div role="status" style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 4px", fontSize: 13, color: C.text3 }}><IconCloudOff /><span>{(save && save.online ? "Ainda não chegou na nuvem. " : "Sem internet. ") + pendingN + (pendingN === 1 ? " série salva quando voltar." : " séries salvam quando voltar.")}</span></div>}
                     {rest ? (
                         <>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "0 4px" }}>
@@ -364,7 +386,7 @@ function WorkoutV3({ list, dayDate, title, workoutStart, offline, dayDone, canFi
                         <div style={{ fontSize: 13, color: C.text3, ...num }}>{sheet.context}</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                             {QUICK_REPLIES.map((q) => (
-                                <button key={q} type="button" onClick={() => sendSheet(q)} style={{ minHeight: 36, padding: "0 14px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${q === "Senti dor" ? C.accentLine : C.outline}`, color: q === "Senti dor" ? C.accent : C.text, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>{q}</button>
+                                <button key={q} type="button" onClick={() => sendSheet(q)} style={{ minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${q === "Senti dor" ? C.accentLine : C.outline}`, color: q === "Senti dor" ? C.accent : C.text, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>{q}</button>
                             ))}
                         </div>
                         <textarea value={sheetText} onChange={(e) => setSheetText(e.target.value)} placeholder="Ou escreva um recado…" rows={2}

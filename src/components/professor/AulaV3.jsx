@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { C, F } from "../../styles/tokens";
+import { C, F, KICKER, COL_LABEL } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
 import { parseReps, sortedHistory } from "../../utils/workout";
 import { describe } from "../student/WorkoutV3";
@@ -11,8 +11,8 @@ import { describe } from "../student/WorkoutV3";
 const TECH = ["Desceu rápido", "Amplitude curta", "Compensou com a lombar", "Ótima execução"];
 const MO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const WDL = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase" };
-const colLabel = { fontFamily: F.display, fontSize: 10, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.1em" };
+const kicker = KICKER;
+const colLabel = COL_LABEL;
 const num = { fontVariantNumeric: "tabular-nums" };
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
 const br = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
@@ -23,7 +23,7 @@ function Stepper({ value, unit, onMinus, onPlus, label }) {
     return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, borderRadius: 10, background: C.raised }}>
             <button type="button" aria-label={"Diminuir " + label} onClick={() => { haptic("tick"); onMinus(); }} style={{ width: 48, height: 56, border: "none", background: "none", fontSize: 22, color: C.text3, cursor: "pointer" }}>−</button>
-            <span style={{ display: "flex", flexDirection: "column", alignItems: "center" }}><span style={{ fontFamily: F.display, fontSize: 24, fontWeight: 900, fontStretch: "110%", lineHeight: 1, ...num }}>{br(value)}</span><span style={{ fontSize: 11, color: C.text4 }}>{unit}</span></span>
+            <span style={{ display: "flex", flexDirection: "column", alignItems: "center" }}><span style={{ fontFamily: F.display, fontSize: 24, fontWeight: 900, fontStretch: "110%", lineHeight: 1, ...num }}>{br(value)}</span><span style={{ fontSize: 11, color: C.text3 }}>{unit}</span></span>
             <button type="button" aria-label={"Aumentar " + label} onClick={() => { haptic("tick"); onPlus(); }} style={{ width: 48, height: 56, border: "none", background: "none", fontSize: 22, color: C.text3, cursor: "pointer" }}>+</button>
         </div>
     );
@@ -74,12 +74,12 @@ function AulaV3({ list, dayDate, studentName, restrictionOf, onAddLoad, onTech, 
                 </span>
 
                 <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 16, background: C.panel, display: "flex", flexDirection: "column", gap: 8 }}>
-                    <span style={{ ...kicker, color: C.text4 }}>{past ? "Sessão passada · " + dateShort(past.date) : "Primeira vez deste exercício"}</span>
+                    <span style={{ ...kicker }}>{past ? "Sessão passada · " + dateShort(past.date) : "Primeira vez deste exercício"}</span>
                     {past && (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8 }}>
                             {r.sets.map((s) => { const e = past.entries.find((x) => x.setId === s.id); return (
                                 <div key={s.id} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                                    <span style={{ fontSize: 11, color: C.text4 }}>{s.n}</span>
+                                    <span style={{ fontSize: 11, color: C.text3 }}>{s.n}</span>
                                     <span style={{ fontSize: 15, fontWeight: 700, color: e ? C.text : C.text4, ...num }}>{e && typeof e.load === "number" ? br(e.load) + " × " + (e.reps ?? "—") : "—"}</span>
                                 </div>
                             ); })}
@@ -107,9 +107,9 @@ function AulaV3({ list, dayDate, studentName, restrictionOf, onAddLoad, onTech, 
                 <div style={{ ...kicker, marginTop: 14, color: C.text4 }}>Técnica · vai pro histórico do aluno</div>
                 <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {[...TECH, ...techNotes.filter((t) => !TECH.includes(t))].map((t) => { const on = techNotes.includes(t); return (
-                        <button key={t} type="button" aria-pressed={on} onClick={() => toggleTech(t)} style={{ minHeight: 40, padding: "0 12px", borderRadius: 999, border: "none", background: on ? C.text : "transparent", color: on ? C.bg : C.text, boxShadow: on ? "none" : `inset 0 0 0 1px ${C.outline}`, fontFamily: F.body, fontSize: 13, fontWeight: on ? 700 : 400, cursor: "pointer" }}>{t}</button>
+                        <button key={t} type="button" aria-pressed={on} onClick={() => toggleTech(t)} style={{ minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", background: on ? C.text : "transparent", color: on ? C.bg : C.text, boxShadow: on ? "none" : `inset 0 0 0 1px ${C.outline}`, fontFamily: F.body, fontSize: 13, fontWeight: on ? 700 : 400, cursor: "pointer" }}>{t}</button>
                     ); })}
-                    {techDraft == null && <button type="button" onClick={() => setTechDraft("")} style={{ minHeight: 40, padding: "0 12px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>+ Escrever</button>}
+                    {techDraft == null && <button type="button" onClick={() => setTechDraft("")} style={{ minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>+ Escrever</button>}
                 </div>
                 {techDraft != null && (
                     <input autoFocus value={techDraft} onChange={(e) => setTechDraft(e.target.value)} placeholder="Observação e Enter" aria-label="Observação de técnica"
@@ -125,7 +125,7 @@ function AulaV3({ list, dayDate, studentName, restrictionOf, onAddLoad, onTech, 
                         <>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "0 4px" }}>
                                 <span style={{ ...colLabel, color: C.text2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.ex.name.toUpperCase()} · {cur.label}</span>
-                                <span style={{ ...colLabel, color: C.text4, flex: "none" }}>{r.sets.indexOf(cur) + 1} DE {r.sets.length}</span>
+                                <span style={{ ...colLabel, flex: "none" }}>{r.sets.indexOf(cur) + 1} DE {r.sets.length}</span>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
                                 <Stepper label="carga" unit="kg" value={draft.load} onMinus={() => setDraft((d) => ({ ...d, load: Math.max(0, d.load - step(d.load)) }))} onPlus={() => setDraft((d) => ({ ...d, load: d.load + step(d.load) }))} />
@@ -135,16 +135,16 @@ function AulaV3({ list, dayDate, studentName, restrictionOf, onAddLoad, onTech, 
                         </>
                     ) : !allDone ? (
                         <>
-                            <div style={{ display: "flex", justifyContent: "space-between", padding: "0 4px" }}><span style={{ ...colLabel, color: C.text2 }}>EXERCÍCIO FEITO</span><span style={{ ...colLabel, color: C.text4 }}>{nextI >= 0 ? rows[nextI].ex.name.toUpperCase() : ""}</span></div>
+                            <div style={{ display: "flex", justifyContent: "space-between", padding: "0 4px" }}><span style={{ ...colLabel, color: C.text2 }}>EXERCÍCIO FEITO</span><span style={{ ...colLabel }}>{nextI >= 0 ? rows[nextI].ex.name.toUpperCase() : ""}</span></div>
                             <button type="button" style={btnMain} onClick={() => setI(nextI >= 0 ? nextI : rows.findIndex((x) => !x.allDone))}>Próximo exercício →</button>
                         </>
                     ) : (
                         <>
-                            <div style={{ display: "flex", justifyContent: "space-between", padding: "0 4px" }}><span style={{ ...colLabel, color: C.text2 }}>AULA COMPLETA</span><span style={{ ...colLabel, color: C.text4, ...num }}>{mmss((now - started) / 1000)}</span></div>
+                            <div style={{ display: "flex", justifyContent: "space-between", padding: "0 4px" }}><span style={{ ...colLabel, color: C.text2 }}>AULA COMPLETA</span><span style={{ ...colLabel, ...num }}>{mmss((now - started) / 1000)}</span></div>
                             <button type="button" style={btnMain} onClick={onEnd}>Encerrar e salvar</button>
                         </>
                     )}
-                    {!allDone && rows.some((x) => x.sets.some((s) => s.done)) && <button type="button" onClick={onEnd} style={{ minHeight: 36, border: "none", background: "none", color: C.text4, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>Encerrar aula agora e salvar</button>}
+                    {!allDone && rows.some((x) => x.sets.some((s) => s.done)) && <button type="button" onClick={onEnd} style={{ minHeight: 44, border: "none", background: "none", color: C.text4, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>Encerrar aula agora e salvar</button>}
                 </div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { C, DAYS, F } from "../../styles/tokens";
+import { C, DAYS, F, KICKER } from "../../styles/tokens";
 import { planSummary } from "../../utils/workout";
 import { haptic } from "../../utils/misc";
 import { TemplateBuilder } from "./TemplateBuilder";
@@ -10,11 +10,11 @@ import { PremiumEmptyState } from "../shared/PremiumEmptyState";
 // Modelos: cartões que abrem a lista, "Aplicar em um aluno" (escolhe aluno e dia ali mesmo) e "Editar".
 // Exercícios: busca que também cria, com quantas fichas usam cada exercício.
 
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", color: C.text4 };
+const kicker = KICKER;
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
 const ghost = { border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text2, fontFamily: F.body, fontSize: 13, cursor: "pointer" };
 const norm = (s) => String(s || "").trim().toLowerCase();
-const chip = (on) => ({ flex: "none", minHeight: 40, padding: "0 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) });
+const chip = (on) => ({ flex: "none", minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) });
 const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
 
 function TplCard({ tpl, open, onToggle, inUse, students, defaultStudent, onApply, onEdit, onRemove }) {
@@ -31,14 +31,14 @@ function TplCard({ tpl, open, onToggle, inUse, students, defaultStudent, onApply
             <button type="button" onClick={() => { close(); setApplied(null); onToggle(); }} aria-expanded={open}
                 style={{ width: "100%", minHeight: 44, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "14px 16px", border: "none", background: "none", color: C.text, textAlign: "left", cursor: "pointer" }}>
                 <span style={{ fontFamily: open ? F.display : F.body, fontSize: open ? 18 : 15, fontWeight: open ? 900 : 700, fontStretch: open ? "125%" : "100%", minWidth: 0 }}>{open ? tpl.name.toUpperCase() : tpl.name}</span>
-                <span style={{ flex: "none", fontFamily: F.body, fontSize: 13, color: C.text4 }}>{sub}</span>
+                <span style={{ flex: "none", fontFamily: F.body, fontSize: 13, color: C.text3 }}>{sub}</span>
             </button>
             {open && (
                 <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", flexDirection: "column" }}>
                         {tpl.exercises.map((e, j) => (
                             <div key={j} style={{ display: "flex", gap: 10, padding: "7px 0", boxShadow: `inset 0 1px 0 ${C.line}` }}>
-                                <span style={{ width: 20, flex: "none", fontSize: 11, color: C.text4, paddingTop: 3 }}>{String(j + 1).padStart(2, "0")}</span>
+                                <span style={{ width: 20, flex: "none", fontSize: 11, color: C.text3, paddingTop: 3 }}>{String(j + 1).padStart(2, "0")}</span>
                                 <span style={{ flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 16, fontWeight: 700, fontStretch: "110%" }}>{e.name}</span>
                                 <span style={{ flex: "none", fontSize: 15, fontWeight: 600, fontStretch: "75%", color: C.text2, fontVariantNumeric: "tabular-nums" }}>{planSummary(e)}</span>
                             </div>
@@ -55,7 +55,7 @@ function TplCard({ tpl, open, onToggle, inUse, students, defaultStudent, onApply
                             <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
                                 {DAYS.map((d) => <button key={d.key} type="button" aria-pressed={d.key === dk} onClick={() => setDk(d.key)} style={chip(d.key === dk)}>{d.short}</button>)}
                             </div>
-                            <span style={{ fontSize: 13, color: C.text4, lineHeight: 1.4 }}>Os exercícios entram no fim do dia escolhido — nada da ficha é apagado.</span>
+                            <span style={{ fontSize: 13, color: C.text3, lineHeight: 1.4 }}>Os exercícios entram no fim do dia escolhido — nada da ficha é apagado.</span>
                             <div style={{ display: "flex", gap: 8 }}>
                                 <button type="button" disabled={!st || !dk} onClick={() => { haptic("confirm"); onApply(sid, dk); setApplied(st.name.split(" ")[0] + " · " + DAYS.find((d) => d.key === dk).full); close(); }}
                                     style={{ flex: 2, minHeight: 46, borderRadius: 10, border: "none", background: st && dk ? C.text : C.raised, color: st && dk ? C.bg : C.text4, fontFamily: F.body, fontSize: 13, fontWeight: 800, cursor: st && dk ? "pointer" : "default" }}>
@@ -103,7 +103,7 @@ function LibRow({ item, uses, onUpdate, onRemove }) {
                 style={{ width: "100%", minHeight: 44, display: "flex", alignItems: "center", gap: 10, padding: "12px 0", border: "none", background: "none", textAlign: "left", cursor: "pointer" }}>
                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontFamily: F.body, fontSize: 16, fontWeight: 700, fontStretch: "110%", color: uses ? C.text : C.text4 }}>{item.name}</span>
-                    <span style={{ fontFamily: F.body, fontSize: 13, color: C.text4 }}>{sub}</span>
+                    <span style={{ fontFamily: F.body, fontSize: 13, color: C.text3 }}>{sub}</span>
                 </span>
                 <span aria-hidden="true" style={{ color: C.text4, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s ease" }}>›</span>
             </button>
@@ -119,7 +119,7 @@ function LibRow({ item, uses, onUpdate, onRemove }) {
                         {item.url && <button type="button" onClick={() => setShow(!show)} style={{ ...ghost, flex: 1, minHeight: 44, borderRadius: 10 }}>{show ? "Ocultar vídeo" : "Ver vídeo"}</button>}
                         <button type="button" onClick={onRemove} style={{ ...ghost, flex: 1, minHeight: 44, borderRadius: 10, boxShadow: `inset 0 0 0 1px ${C.accentLine}`, color: C.accent }}>Remover da biblioteca</button>
                     </div>
-                    {uses > 0 && <span style={{ fontSize: 13, color: C.text4 }}>Remover daqui não tira o exercício das fichas que já usam.</span>}
+                    {uses > 0 && <span style={{ fontSize: 13, color: C.text3 }}>Remover daqui não tira o exercício das fichas que já usam.</span>}
                 </div>
             )}
         </div>
@@ -157,7 +157,7 @@ function BibliotecaV3({ templates, library, students, workouts, dayNames, defaul
             <div role="tablist" style={{ marginTop: 14, alignSelf: "flex-start", display: "inline-flex", gap: 4, padding: 4, borderRadius: 999, background: C.panel }}>
                 {[["modelos", "Modelos"], ["exercicios", "Exercícios"]].map(([k, l]) => (
                     <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                        style={{ minHeight: 36, padding: "0 16px", borderRadius: 999, border: "none", background: tab === k ? C.text : "transparent", color: tab === k ? C.bg : C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{l}</button>
+                        style={{ minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: tab === k ? C.text : "transparent", color: tab === k ? C.bg : C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{l}</button>
                 ))}
             </div>
 

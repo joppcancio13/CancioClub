@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { C, F } from "../../styles/tokens";
+import { C, F, COL_LABEL } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
 
 // Fim do treino — design v3 (design/v3/README.md · "Fim do treino", 6a): resumo primeiro (tempo, séries
@@ -7,7 +7,7 @@ import { haptic } from "../../utils/misc";
 // Substitui, pro aluno, a janela de esforço (PSEModal) + a comemoração em tela cheia.
 
 const EFFORTS = [["facil", "Fácil"], ["medida", "Na medida"], ["destruidor", "Destruidor"]];
-const colLabel = { fontFamily: F.display, fontSize: 10, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.1em", color: C.text4 };
+const colLabel = COL_LABEL;
 const divider = `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat`;
 
 function FimV3({ title, durationLabel, validSets, volume, records, onBack, onDone }) {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { C, DAYS, F, JS2KEY, NON_COUNTING_KINDS } from "../../styles/tokens";
+import { C, DAYS, F, JS2KEY, NON_COUNTING_KINDS, KICKER, COL_LABEL } from "../../styles/tokens";
 import { daySummary, sortedHistory } from "../../utils/workout";
 
 // Rendimento do aluno no professor — design v3 (README · Professor 5, 18a → 18b): números do topo,
@@ -7,8 +7,8 @@ import { daySummary, sortedHistory } from "../../utils/workout";
 // carga inicial no 1º ponto e a melhor série no último, e o aviso de carga parada. Mantém o que já
 // existia: últimas sessões série a série, nota do professor, esforço relatado e lista de sessões.
 
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase", color: C.text4 };
-const colLabel = { fontFamily: F.display, fontSize: 10, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.1em", color: C.text4 };
+const kicker = KICKER;
+const colLabel = COL_LABEL;
 const num = { fontVariantNumeric: "tabular-nums" };
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
 const br = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
@@ -28,7 +28,7 @@ const pct = (a, b) => (a && b !== a ? Math.round(((b - a) / a) * 100) : 0);
 function Chart({ points }) {
     // points: 8 semanas (null = sem treino), da mais antiga pra esta
     const vals = points.filter((v) => v != null);
-    if (vals.length < 2) return <div style={{ padding: "24px 0", fontSize: 13, color: C.text4 }}>O gráfico aparece depois de 2 semanas com registro.</div>;
+    if (vals.length < 2) return <div style={{ padding: "24px 0", fontSize: 13, color: C.text3 }}>O gráfico aparece depois de 2 semanas com registro.</div>;
     const lo = Math.min(...vals), hi = Math.max(...vals), pad = Math.max(1, (hi - lo) * 0.15);
     const y0 = lo - pad, y1 = hi + pad, X = (i) => 42 + i * ((334 - 42) / 7), Y = (v) => 110 - ((v - y0) / (y1 - y0 || 1)) * 96;
     const idx = points.map((v, i) => (v != null ? i : null)).filter((i) => i != null);
@@ -72,7 +72,7 @@ function RendimentoV3({ allEx, week, dayNames, sessions, rend, exId, onOpenEx, o
             <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
                 <button type="button" onClick={() => onOpenEx(null)} style={{ alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 15, cursor: "pointer" }}>‹ Todos os exercícios</button>
                 <div style={{ margin: "4px -20px 0", padding: "0 20px", display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
-                    {chips.map((e) => { const on = e.id === ex.id; return <button key={e.id} type="button" onClick={() => onOpenEx(e.id)} style={{ flex: "none", minHeight: 36, padding: "0 12px", borderRadius: 999, border: "none", background: on ? C.text : "transparent", color: on ? C.bg : C.text, boxShadow: on ? "none" : `inset 0 0 0 1px ${C.outline}`, fontFamily: F.body, fontSize: 13, fontWeight: on ? 700 : 400, cursor: "pointer" }}>{e.name}</button>; })}
+                    {chips.map((e) => { const on = e.id === ex.id; return <button key={e.id} type="button" onClick={() => onOpenEx(e.id)} style={{ flex: "none", minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", background: on ? C.text : "transparent", color: on ? C.bg : C.text, boxShadow: on ? "none" : `inset 0 0 0 1px ${C.outline}`, fontFamily: F.body, fontSize: 13, fontWeight: on ? 700 : 400, cursor: "pointer" }}>{e.name}</button>; })}
                 </div>
                 <span style={{ marginTop: 20, fontSize: 15, color: C.text3 }}>{ex.name}</span>
                 <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
@@ -88,13 +88,13 @@ function RendimentoV3({ allEx, week, dayNames, sessions, rend, exId, onOpenEx, o
                 {stalled >= 3 && (
                     <div style={{ marginTop: 18, padding: "12px 14px", borderRadius: 16, background: C.panel, display: "flex", alignItems: "center", gap: 12 }}>
                         <span style={{ flex: 1, fontSize: 15, lineHeight: 1.35 }}>Carga parada há {stalled} semanas.</span>
-                        <button type="button" onClick={() => onEditDay(ex._day)} style={{ minHeight: 40, padding: "0 14px", borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Editar ficha</button>
+                        <button type="button" onClick={() => onEditDay(ex._day)} style={{ minHeight: 44, padding: "0 14px", borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Editar ficha</button>
                     </div>
                 )}
                 <div style={{ ...kicker, marginTop: 24 }}>Últimas sessões · séries válidas</div>
                 {[...ss].reverse().slice(0, 5).map((x) => (
                     <div key={x.date} style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "11px 0", ...divider }}>
-                        <span style={{ width: 52, fontSize: 13, color: C.text4, ...num }}>{fmtDate(x.date)}</span>
+                        <span style={{ width: 52, fontSize: 13, color: C.text3, ...num }}>{fmtDate(x.date)}</span>
                         <span style={{ flex: 1, fontSize: 15, fontWeight: 600, fontStretch: "75%", ...num }}>{x.work.length ? x.work.map((e) => br(e.load) + "×" + (e.reps ?? "—")).join("  ") : br(x.load) + " kg"}</span>
                     </div>
                 ))}
@@ -117,13 +117,13 @@ function RendimentoV3({ allEx, week, dayNames, sessions, rend, exId, onOpenEx, o
         <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
                 {[[rend.volDelta != null ? (rend.volDelta > 0 ? "+" : "") + rend.volDelta + "%" : "–", "volume semanal"], [rend.freqPct != null ? rend.freqPct + "%" : "–", "frequência · " + rend.freqWeeks + " sem"], [rend.prTotal + " ★", "recordes"]].map(([v, l]) => (
-                    <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}><span style={{ fontFamily: F.display, fontSize: 24, fontWeight: 900, fontStretch: "110%", ...num }}>{v}</span><span style={{ fontSize: 11, color: C.text4 }}>{l}</span></div>
+                    <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}><span style={{ fontFamily: F.display, fontSize: 24, fontWeight: 900, fontStretch: "110%", ...num }}>{v}</span><span style={{ fontSize: 11, color: C.text3 }}>{l}</span></div>
                 ))}
             </div>
             <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(8,minmax(0,1fr))", gap: 6, alignItems: "end", height: 80 }}>
                 {vols.map((v, i) => <span key={i} title={Math.round(v).toLocaleString("pt-BR") + " kg"} style={{ height: Math.max(3, Math.round((v / vmax) * 80)), borderRadius: 4, background: i === 7 ? C.text : C.dim }} />)}
             </div>
-            <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text4 }}><span>8 sem atrás</span><span>volume semanal</span><span>esta</span></div>
+            <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text3 }}><span>8 sem atrás</span><span>volume semanal</span><span>esta</span></div>
 
             {days.map((d) => (
                 <div key={d.key}>
@@ -145,7 +145,7 @@ function RendimentoV3({ allEx, week, dayNames, sessions, rend, exId, onOpenEx, o
                     </div>
                 </div>
             ))}
-            <span style={{ display: "block", marginTop: 16, fontSize: 13, color: C.text4 }}>Toque num exercício para ver o gráfico.</span>
+            <span style={{ display: "block", marginTop: 16, fontSize: 13, color: C.text3 }}>Toque num exercício para ver o gráfico.</span>
 
             {effN > 0 && (
                 <>
@@ -155,11 +155,11 @@ function RendimentoV3({ allEx, week, dayNames, sessions, rend, exId, onOpenEx, o
                         {eff.medida > 0 && <span style={{ flex: eff.medida, background: C.text2 }} />}
                         {eff.destruidor > 0 && <span style={{ flex: eff.destruidor, background: C.accent }} />}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text4, marginTop: 6 }}><span>fácil {eff.facil}</span><span>na medida {eff.medida}</span><span>destruidor {eff.destruidor}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text3, marginTop: 6 }}><span>fácil {eff.facil}</span><span>na medida {eff.medida}</span><span>destruidor {eff.destruidor}</span></div>
                 </>
             )}
             <div style={{ ...kicker, marginTop: 24 }}>Sessões ({(sessions || []).length})</div>
-            {(sessions || []).length === 0 && <div style={{ fontSize: 13, color: C.text4, padding: "12px 0" }}>Nenhuma sessão registrada ainda.</div>}
+            {(sessions || []).length === 0 && <div style={{ fontSize: 13, color: C.text3, padding: "12px 0" }}>Nenhuma sessão registrada ainda.</div>}
             {[...(sessions || [])].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 12).map((x) => {
                 const realKey = JS2KEY[new Date(x.date + "T00:00:00").getDay()];
                 const real = DAYS.find((d) => d.key === realKey) || {};

@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { C, DAYS, F, PILL_V3, PROGRESS } from "../../styles/tokens";
+import { C, DAYS, F, PILL_V3, PROGRESS, KICKER } from "../../styles/tokens";
 import { describe } from "../student/WorkoutV3";
 
 // Início do professor — design v3 (design/v3/README.md · Professor 1 "Alunos" 16b e 2 "Ao vivo";
 // decisões em design/v3/DECISOES.md · 2: "na pista" atualiza a cada 30 s com a tela aberta).
 
 const WEEKDAYS = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase" };
+const kicker = KICKER;
 const num = { fontVariantNumeric: "tabular-nums" };
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
 const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("");
@@ -70,7 +70,7 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                 <div style={{ marginTop: 12, height: 4, borderRadius: 2, background: C.raised, overflow: "hidden" }}><div style={{ width: pct + "%", height: "100%", backgroundImage: PROGRESS }} /></div>
                 {live.last && (
                     <div style={{ marginTop: 18, padding: "12px 14px", borderRadius: 16, background: C.panel, display: "flex", flexDirection: "column", gap: 2 }}>
-                        <span style={{ ...kicker, color: C.text4 }}>ÚLTIMA SÉRIE · {agoMin(live.last.at, now) < 1 ? "AGORA" : "HÁ " + agoMin(live.last.at, now) + " MIN"}</span>
+                        <span style={{ ...kicker }}>ÚLTIMA SÉRIE · {agoMin(live.last.at, now) < 1 ? "AGORA" : "HÁ " + agoMin(live.last.at, now) + " MIN"}</span>
                         <span style={{ fontSize: 15, ...num }}>{live.last.r.ex.name} · {live.last.s.label.charAt(0) + live.last.s.label.slice(1).toLowerCase()} · {br(live.last.s.log.load)} kg × {live.last.s.log.reps}</span>
                     </div>
                 )}
@@ -83,7 +83,7 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                         </div>
                     ))}
                 </div>
-                <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: C.text4 }}>
+                <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: C.text3 }}>
                     {[["warmup", "Aquecimento"], ["recon", "Reconhecimento"], ["working", "Válida"]].map(([k, l]) => (
                         <span key={k} style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 2, ...pillOf(k, true) }} />{l}</span>
                     ))}
@@ -92,7 +92,7 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                     <button type="button" onClick={() => onMessage(s)} style={{ height: 52, borderRadius: 16, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Mandar recado</button>
                     <button type="button" onClick={() => onOpen(s)} style={{ height: 52, borderRadius: 16, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Abrir ficha</button>
                 </div>
-                <span style={{ display: "block", marginTop: 12, fontSize: 11, color: C.text4, textAlign: "center" }}>Atualiza sozinho a cada 30 s.</span>
+                <span style={{ display: "block", marginTop: 12, fontSize: 11, color: C.text3, textAlign: "center" }}>Atualiza sozinho a cada 30 s.</span>
             </section>
         );
     }
@@ -116,12 +116,12 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
         if (r.alert) return { t: r.alert.t, warn: WARN.has(r.alert.k) };
         return { t: r.sub || "" };
     };
-    const chip = (on) => ({ flex: "none", minHeight: 36, padding: "0 12px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) });
+    const chip = (on) => ({ flex: "none", minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) });
     const avatar = (name) => <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{initials(name)}</span>;
 
     return (
         <section style={{ paddingBottom: 20 }}>
-            <span style={{ ...kicker, color: C.text4, ...num }}>{WEEKDAYS[d.getDay()]} · {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</span>
+            <span style={{ ...kicker, ...num }}>{WEEKDAYS[d.getDay()]} · {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</span>
             <div style={{ marginTop: 6, fontFamily: F.display, fontSize: 30, fontWeight: 900, fontStretch: "125%", lineHeight: 1 }}>ALUNOS</div>
             <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
                 <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Buscar aluno" aria-label="Buscar aluno"
@@ -161,7 +161,7 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                             </button>
                         ))}
                     </div>
-                    {attn.length > 3 && <button type="button" onClick={() => setAttnAll(!attnAll)} style={{ marginTop: 6, minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer", textAlign: "left" }}>{attnAll ? "Mostrar menos" : "Ver todos · " + attn.length}</button>}
+                    {attn.length > 3 && <button type="button" onClick={() => setAttnAll(!attnAll)} style={{ marginTop: 6, minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer", textAlign: "left" }}>{attnAll ? "Mostrar menos" : "Ver todos · " + attn.length}</button>}
                 </>
             )}
 
@@ -181,12 +181,12 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                             </span>
                             <span style={{ flex: "none", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
                                 <span style={{ fontSize: 15, fontWeight: 700, ...num }}>{Math.min(r.st.week, 99)}<span style={{ color: C.dim }}>/{r.planned || "–"}</span></span>
-                                <span style={{ fontSize: 11, color: C.text4 }}>semana</span>
+                                <span style={{ fontSize: 11, color: C.text3 }}>semana</span>
                             </span>
                         </button>
                     );
                 })}
-                {list.length === 0 && <span style={{ padding: "16px 0", fontSize: 13, color: C.text4 }}>{q ? "Nenhum aluno com esse nome." : filter === "hoje" ? "Ninguém treina hoje." : filter === "atencao" ? "Ninguém precisa de atenção agora." : "Nenhum aluno ainda — toque em + pra cadastrar."}</span>}
+                {list.length === 0 && <span style={{ padding: "16px 0", fontSize: 13, color: C.text3 }}>{q ? "Nenhum aluno com esse nome." : filter === "hoje" ? "Ninguém treina hoje." : filter === "atencao" ? "Ninguém precisa de atenção agora." : "Nenhum aluno ainda — toque em + pra cadastrar."}</span>}
             </div>
         </section>
     );

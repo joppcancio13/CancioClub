@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { C, DAYS, F } from "../../styles/tokens";
+import { C, DAYS, F, KICKER } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
 import { ccConfirm } from "../../utils/confirm";
 import { EditVolumeBlock } from "./FichaV3";
@@ -8,7 +8,7 @@ import { EditVolumeBlock } from "./FichaV3";
 // o botão "Trocar treino" à vista (modelo, copiar ou trocar de dia, cardio, salvar como modelo,
 // limpar) e o volume da semana recolhido no fim. Antes isso ficava espalhado em cartões e botões.
 
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", color: C.text4 };
+const kicker = KICKER;
 const rowBtn = { width: "100%", minHeight: 52, display: "flex", alignItems: "center", gap: 12, padding: "10px 0", border: "none", background: "none", boxShadow: `inset 0 -1px 0 ${C.line}`, color: C.text, textAlign: "left", cursor: "pointer", fontFamily: F.body };
 const nameOf = (dayNames, k) => String((dayNames && dayNames[k]) || "").trim();
 
@@ -52,12 +52,12 @@ function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyT
     const others = DAYS.filter((d) => d.key !== day);
     const label = (k) => nameOf(dayNames, k) || ((week[k] || []).length ? "Treino" : cardio && cardio[k] ? "Cardio" : "Sem treino");
     const done = (fn) => { haptic("confirm"); fn(); onClose(); };
-    const back = <button type="button" onClick={() => setStep(null)} style={{ alignSelf: "flex-start", minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>‹ Voltar</button>;
+    const back = <button type="button" onClick={() => setStep(null)} style={{ alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>‹ Voltar</button>;
     const option = (t, sub, onClick, color) => (
         <button key={t} type="button" onClick={onClick} style={rowBtn}>
             <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ fontSize: 15, fontWeight: 600, color: color || C.text }}>{t}</span>
-                {sub && <span style={{ fontSize: 13, color: C.text4 }}>{sub}</span>}
+                {sub && <span style={{ fontSize: 13, color: C.text3 }}>{sub}</span>}
             </span>
             <span aria-hidden="true" style={{ color: C.text4 }}>›</span>
         </button>
@@ -80,14 +80,14 @@ function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyT
             {step === "modelo" && (
                 <>
                     {back}
-                    {list.length > 0 && <span style={{ fontSize: 13, color: C.text4, lineHeight: 1.4 }}>{"Os " + list.length + " exercícios de hoje saem; o que o aluno já registrou neles vai pras fases arquivadas."}</span>}
+                    {list.length > 0 && <span style={{ fontSize: 13, color: C.text3, lineHeight: 1.4 }}>{"Os " + list.length + " exercícios de hoje saem; o que o aluno já registrou neles vai pras fases arquivadas."}</span>}
                     {templates.map((t) => option(t.name, t.exercises.length + (t.exercises.length === 1 ? " exercício" : " exercícios"), () => done(() => onApplyTemplate(t))))}
                 </>
             )}
             {(step === "copiar" || step === "trocar") && (
                 <>
                     {back}
-                    <span style={{ fontSize: 13, color: C.text4, lineHeight: 1.4 }}>{step === "copiar" ? "O treino escolhido é copiado pra " + dayFull + " (exercícios novos, sem histórico). O dia de origem não muda." : dayFull + " e o dia escolhido trocam de lugar: exercícios, nome e histórico."}</span>
+                    <span style={{ fontSize: 13, color: C.text3, lineHeight: 1.4 }}>{step === "copiar" ? "O treino escolhido é copiado pra " + dayFull + " (exercícios novos, sem histórico). O dia de origem não muda." : dayFull + " e o dia escolhido trocam de lugar: exercícios, nome e histórico."}</span>
                     {others.map((d) => {
                         const n = (week[d.key] || []).length;
                         const off = step === "copiar" && !n;

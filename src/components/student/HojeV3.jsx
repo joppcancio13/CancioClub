@@ -1,5 +1,5 @@
 import React from "react";
-import { C, DAYS, F, SIL_URL, NON_COUNTING_KINDS } from "../../styles/tokens";
+import { C, DAYS, F, SIL_URL, NON_COUNTING_KINDS, KICKER, COL_LABEL } from "../../styles/tokens";
 import { describe } from "./WorkoutV3";
 
 // Tela "Hoje" do aluno — design v3 (design/v3/README.md · "Hoje"; decisões em design/v3/DECISOES.md).
@@ -8,8 +8,8 @@ import { describe } from "./WorkoutV3";
 // recado do professor e o botão principal fixo acima das abas.
 
 const WEEKDAYS = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase" };
-const colLabel = { fontFamily: F.display, fontSize: 10, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.1em", color: C.text4 };
+const kicker = KICKER;
+const colLabel = COL_LABEL;
 const num = { fontVariantNumeric: "tabular-nums" };
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat top/100% 1px` };
 const br = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
@@ -78,7 +78,7 @@ function HojeV3({ student, greetWord, weekLine, streak, todayKey, dayDate, week,
                         <div style={{ display: "flex", flexDirection: "column" }}>
                             {rows.map((r, i) => (
                                 <div key={r.ex.id} style={{ display: "flex", gap: 12, alignItems: "baseline", padding: "9px 0", ...divider }}>
-                                    <span style={{ width: 20, fontSize: 13, color: C.text4, ...num }}>{String(i + 1).padStart(2, "0")}</span>
+                                    <span style={{ width: 20, fontSize: 13, color: C.text3, ...num }}>{String(i + 1).padStart(2, "0")}</span>
                                     <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 600, fontStretch: "110%", color: r.allDone ? C.text4 : C.text }}>{r.ex.name}</span>
                                     <span style={{ flex: "none", fontSize: 15, fontWeight: 600, fontStretch: "75%", color: C.text3, ...num }}>{r.workCount}×{r.planReps || "—"}{r.planLoad ? " · " + br(r.planLoad) + " kg" : ""}</span>
                                 </div>

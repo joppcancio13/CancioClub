@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { C, DAYS, F, NON_COUNTING_KINDS } from "../../styles/tokens";
+import { C, DAYS, F, NON_COUNTING_KINDS, KICKER } from "../../styles/tokens";
 import { GROUP_ORDER, fmtVol, plannedGroupVolume } from "../../utils/volumeCalculator";
 import { repsCeiling, parseReps } from "../../utils/workout";
 import { describe } from "../student/WorkoutV3";
@@ -11,10 +11,10 @@ import { describe } from "../student/WorkoutV3";
 const WD_SHORT = { seg: "SEG", ter: "TER", qua: "QUA", qui: "QUI", sex: "SEX", sab: "SÁB", dom: "DOM" };
 const MO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const WDL = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-const kicker = { fontFamily: F.display, fontSize: 11, fontWeight: 800, fontStretch: "125%", letterSpacing: "0.14em", textTransform: "uppercase", color: C.text4 };
+const kicker = KICKER;
 const num = { fontVariantNumeric: "tabular-nums" };
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
-const linkBtn = { background: "none", border: "none", padding: 0, minHeight: 36, color: C.text2, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" };
+const linkBtn = { background: "none", border: "none", padding: 0, minHeight: 44, color: C.text2, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const br = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
 const dateShort = (iso) => { const [y, m, d] = iso.split("-").map(Number); return WDL[new Date(y, m - 1, d).getDay()] + " · " + d + " " + MO[m - 1]; };
 const mondayISO = () => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
@@ -62,7 +62,7 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
                         <div key={r.ex.id} style={divider}>
                             <button type="button" onClick={() => setOpenEx(isOpen ? null : r.ex.id)} disabled={!last} aria-expanded={isOpen}
                                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 0", border: "none", background: "none", color: C.text, textAlign: "left", cursor: last ? "pointer" : "default" }}>
-                                <span style={{ width: 20, fontSize: 11, color: C.text4, ...num }}>{String(i + 1).padStart(2, "0")}</span>
+                                <span style={{ width: 20, fontSize: 11, color: C.text3, ...num }}>{String(i + 1).padStart(2, "0")}</span>
                                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
                                     <span style={{ fontSize: 15, fontWeight: 600 }}>{r.ex.name}</span>
                                     <span style={{ fontSize: 13, color: C.text3, ...num }}>{r.workCount}×{r.planReps || "—"}{r.planLoad ? " · " + br(r.planLoad) + " kg" : ""}</span>
@@ -111,7 +111,7 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
                                 <span style={{ width: 36, fontSize: 13, fontWeight: isToday ? 800 : 400, color: isToday ? C.text : C.text4 }}>{WD_SHORT[d.key]}</span>
                                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
                                     <span style={{ fontSize: 15, fontWeight: isOpen ? 700 : 400 }}>{nameOf(d.key)}</span>
-                                    <span style={{ fontSize: 13, color: C.text4 }}>{n} {n === 1 ? "exercício" : "exercícios"}</span>
+                                    <span style={{ fontSize: 13, color: C.text3 }}>{n} {n === 1 ? "exercício" : "exercícios"}</span>
                                 </span>
                                 {done ? <span style={{ fontSize: 13, color: C.text2 }}>✓ feito</span> : isToday ? <span style={{ ...kicker, fontSize: 10, color: C.text2 }}>Hoje</span> : null}
                                 <span aria-hidden="true" style={{ color: C.text4, transform: isOpen ? "rotate(90deg)" : "none" }}>›</span>
@@ -127,7 +127,7 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
                 <button type="button" onClick={onOpenRend} style={linkBtn}>Abrir ›</button>
             </div>
             <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
-                {stats.map(([v, l]) => <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}><span style={{ fontFamily: F.display, fontSize: 22, fontWeight: 900, fontStretch: "110%", ...num }}>{v}</span><span style={{ fontSize: 11, color: C.text4 }}>{l}</span></div>)}
+                {stats.map(([v, l]) => <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}><span style={{ fontFamily: F.display, fontSize: 22, fontWeight: 900, fontStretch: "110%", ...num }}>{v}</span><span style={{ fontSize: 11, color: C.text3 }}>{l}</span></div>)}
             </div>
 
             <div style={{ paddingTop: 26, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -159,7 +159,7 @@ function EditVolumeBlock({ week, baseline }) {
     const vmax = Math.max(1, ...GROUP_ORDER.map((g) => vol[g] || 0));
     return (
         <div style={{ marginBottom: 14, padding: "12px 14px", borderRadius: 16, background: C.panel, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={kicker}>Séries na semana</span><span style={{ fontSize: 11, color: C.text4 }}>todas as fichas · pela ativação</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={kicker}>Séries na semana</span><span style={{ fontSize: 11, color: C.text3 }}>todas as fichas · pela ativação</span></div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "10px 16px" }}>
                 {GROUP_ORDER.map((g) => {
                     const v = vol[g] || 0, d = Math.round((v - (base[g] || 0)) * 10) / 10, on = v > 0;
