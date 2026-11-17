@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { C, DAYS, F, PILL_V3, PROGRESS } from "../../styles/tokens";
 import { describe } from "../student/WorkoutV3";
 
@@ -43,6 +43,8 @@ function Ring({ pct, label }) {
 }
 
 function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, liveId, onLive, onMessage }) {
+    const [filter, setFilter] = useState("todos"); // lista única: todos · hoje · atenção
+    const [attnAll, setAttnAll] = useState(false);
     const today = (() => { const d = new Date(now); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); })();
     const enriched = rows.map((r) => {
         const sid = r.s.id;
@@ -96,43 +98,61 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
     }
 
     // ---------- Alunos ----------
+    // arrumação (pedido do professor, 16/nov): busca no topo, "Precisa de atenção" com no máx. 3 e
+    // uma lista só em ordem alfabética com filtros — sai a divisão "Treinam hoje" / "Outros"
     const d = new Date(now);
     const q = search.trim().toLowerCase();
-    const match = (r) => !q || r.s.name.toLowerCase().includes(q);
     const pista = enriched.filter((r) => r.onPista);
     const attn = enriched.filter((r) => r.alert);
-    const trainToday = enriched.filter((r) => match(r) && (r.done || r.wait || r.live));
-    const others = enriched.filter((r) => match(r) && !(r.done || r.wait || r.live));
     const ACTION = { RECADO: "Responder", SUMIDO: "Chamar", LGPD: "Ver", FADIGA: "Ver", ANAMNESE: "Revisar", "REAVALIAÇÃO": "Ver" };
     const WARN = new Set(["SUMIDO", "LGPD", "FADIGA"]);
-    const weekCell = (r) => <span style={{ flex: "none", width: 40, textAlign: "right", fontSize: 15, fontWeight: 700, ...num }}>{Math.min(r.st.week, 99)}<span style={{ color: C.dim }}>/{r.planned || "–"}</span></span>;
+    const trainsToday = (r) => !!(r.done || r.wait || r.live);
+    const FILTERS = [["todos", "Todos", enriched.length], ["hoje", "Treinam hoje", enriched.filter(trainsToday).length], ["atencao", "Atenção", attn.length]];
+    const list = enriched.filter((r) => (!q || r.s.name.toLowerCase().includes(q)) && (filter === "todos" || (filter === "hoje" ? trainsToday(r) : !!r.alert)))
+        .sort((a, b) => String(a.s.name).localeCompare(String(b.s.name), "pt-BR"));
+    const status = (r) => {
+        if (r.onPista) return { t: "treinando agora", strong: true };
+        if (r.done || (r.live && r.live.finished)) return { t: "✓ feito hoje" + (r.sessToday && r.sessToday.durationSec ? " · " + Math.round(r.sessToday.durationSec / 60) + " min" : "") };
+        if (r.alert) return { t: r.alert.t, warn: WARN.has(r.alert.k) };
+        return { t: r.sub || "" };
+    };
+    const chip = (on) => ({ flex: "none", minHeight: 36, padding: "0 12px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) });
+    const avatar = (name) => <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{initials(name)}</span>;
 
     return (
         <section style={{ paddingBottom: 20 }}>
             <span style={{ ...kicker, color: C.text4, ...num }}>{WEEKDAYS[d.getDay()]} · {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</span>
             <div style={{ marginTop: 6, fontFamily: F.display, fontSize: 30, fontWeight: 900, fontStretch: "125%", lineHeight: 1 }}>ALUNOS</div>
+            <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
+                <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Buscar aluno" aria-label="Buscar aluno"
+                    style={{ flex: 1, minWidth: 0, boxSizing: "border-box", fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "12px 14px", outline: "none" }} />
+                <button type="button" onClick={onAdd} aria-label="Novo aluno" style={{ flex: "none", width: 44, height: 44, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontSize: 20, cursor: "pointer" }}>+</button>
+            </div>
 
-            {pista.length > 0 && (
-                <div style={{ margin: "18px -20px 0", padding: "0 20px", display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
-                    {pista.map((r) => (
-                        <button key={r.s.id} type="button" onClick={() => onLive(r.s.id)} style={{ flex: "none", display: "flex", alignItems: "center", gap: 10, padding: "8px 14px 8px 8px", borderRadius: 999, border: "none", background: C.panel, color: C.text, textAlign: "left", cursor: "pointer" }}>
-                            <Ring pct={r.live.total ? r.live.done / r.live.total : 0} label={initials(r.s.name)} />
-                            <span style={{ display: "flex", flexDirection: "column" }}>
-                                <span style={{ fontSize: 15, fontWeight: 700 }}>{String(r.s.name).split(" ").slice(0, 2).join(" ")}</span>
-                                <span style={{ fontSize: 13, color: C.text3, ...num }}>{r.live.done}/{r.live.total}{r.live.first ? " · " + agoMin(r.live.first.at, now) + " min" : ""}</span>
-                            </span>
-                        </button>
-                    ))}
-                </div>
+            {pista.length > 0 && !q && (
+                <>
+                    <div style={{ ...kicker, marginTop: 20, color: C.text2 }}>Treinando agora · {pista.length}</div>
+                    <div style={{ margin: "8px -20px 0", padding: "0 20px", display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+                        {pista.map((r) => (
+                            <button key={r.s.id} type="button" onClick={() => onLive(r.s.id)} style={{ flex: "none", display: "flex", alignItems: "center", gap: 10, padding: "8px 14px 8px 8px", borderRadius: 999, border: "none", background: C.panel, color: C.text, cursor: "pointer" }}>
+                                <Ring pct={r.live.total ? r.live.done / r.live.total : 0} label={initials(r.s.name)} />
+                                <span style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+                                    <span style={{ fontSize: 15, fontWeight: 700 }}>{String(r.s.name).split(" ").slice(0, 2).join(" ")}</span>
+                                    <span style={{ fontSize: 13, color: C.text3, ...num }}>{r.live.done}/{r.live.total}{r.live.first ? " · " + agoMin(r.live.first.at, now) + " min" : ""}</span>
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </>
             )}
 
-            {attn.length > 0 && (
+            {attn.length > 0 && !q && (
                 <>
                     <div style={{ ...kicker, marginTop: 22, color: C.accent }}>Precisa de atenção · {attn.length}</div>
                     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, borderRadius: 16, overflow: "hidden" }}>
-                        {attn.map((r) => (
+                        {(attnAll ? attn : attn.slice(0, 3)).map((r) => (
                             <button key={r.s.id} type="button" onClick={() => onAttn(r)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: C.panel, border: "none", color: C.text, textAlign: "left", cursor: "pointer" }}>
-                                <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{initials(r.s.name)}</span>
+                                {avatar(r.s.name)}
                                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                                     <span style={{ fontSize: 15, fontWeight: 700 }}>{r.s.name}</span>
                                     <span style={{ fontSize: 13, color: WARN.has(r.alert.k) ? C.accent : C.text3 }}>{r.alert.t}{r.alert.more ? " · +" + r.alert.more : ""}</span>
@@ -141,37 +161,33 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                             </button>
                         ))}
                     </div>
+                    {attn.length > 3 && <button type="button" onClick={() => setAttnAll(!attnAll)} style={{ marginTop: 6, minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer", textAlign: "left" }}>{attnAll ? "Mostrar menos" : "Ver todos · " + attn.length}</button>}
                 </>
             )}
 
-            <div style={{ marginTop: 22, display: "flex", gap: 8 }}>
-                <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Buscar aluno" aria-label="Buscar aluno"
-                    style={{ flex: 1, minWidth: 0, boxSizing: "border-box", fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "12px 14px", outline: "none" }} />
-                <button type="button" onClick={onAdd} aria-label="Novo aluno" style={{ flex: "none", width: 44, height: 44, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontSize: 20, cursor: "pointer" }}>+</button>
+            <div style={{ marginTop: 22, display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+                {FILTERS.map(([k, l, n]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} style={chip(filter === k)}>{l + " · " + n}</button>)}
             </div>
-
-            {[["Treinam hoje", trainToday], ["Outros", others]].map(([label, list]) => list.length > 0 && (
-                <div key={label}>
-                    <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between" }}><span style={{ ...kicker, color: C.text4 }}>{label} · {list.length}</span><span style={{ fontSize: 13, color: C.text4 }}>semana</span></div>
-                    <div style={{ marginTop: 4, display: "flex", flexDirection: "column" }}>
-                        {list.map((r) => {
-                            const dn = r.live ? (((data.dayNames && data.dayNames[r.s.id]) || {})[r.live.dayKey] || "") : "";
-                            const sub = r.onPista ? (dn || "Treino") : r.done || (r.live && r.live.finished) ? "feito" + (r.sessToday && r.sessToday.durationSec ? " · " + Math.round(r.sessToday.durationSec / 60) + " min" : "") : r.sub;
-                            return (
-                                <button key={r.s.id} type="button" onClick={() => (r.onPista ? onLive(r.s.id) : onOpen(r.s))}
-                                    style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 46, padding: 0, border: "none", ...divider, color: C.text, textAlign: "left", cursor: "pointer" }}>
-                                    <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: r.done && !r.onPista ? C.text3 : C.text }}>
-                                        {r.s.name} <span style={{ color: C.text4 }}>· {sub}</span>
-                                    </span>
-                                    {r.onPista && <span style={{ ...kicker, fontSize: 10, color: C.text2 }}>NA PISTA</span>}
-                                    {!r.onPista && (r.done || (r.live && r.live.finished)) && <span aria-label="feito" style={{ color: C.text2 }}>✓</span>}
-                                    {weekCell(r)}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            ))}
+            <div style={{ marginTop: 6, display: "flex", flexDirection: "column" }}>
+                {list.map((r) => {
+                    const st = status(r);
+                    return (
+                        <button key={r.s.id} type="button" onClick={() => (r.onPista ? onLive(r.s.id) : onOpen(r.s))}
+                            style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 58, padding: "8px 0", border: "none", ...divider, color: C.text, textAlign: "left", cursor: "pointer" }}>
+                            {avatar(r.s.name)}
+                            <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                                <span style={{ fontSize: 15, fontWeight: 600 }}>{r.s.name}</span>
+                                {st.t && <span style={{ fontSize: 13, color: st.warn ? C.accent : st.strong ? C.text : C.text4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.t}</span>}
+                            </span>
+                            <span style={{ flex: "none", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
+                                <span style={{ fontSize: 15, fontWeight: 700, ...num }}>{Math.min(r.st.week, 99)}<span style={{ color: C.dim }}>/{r.planned || "–"}</span></span>
+                                <span style={{ fontSize: 11, color: C.text4 }}>semana</span>
+                            </span>
+                        </button>
+                    );
+                })}
+                {list.length === 0 && <span style={{ padding: "16px 0", fontSize: 13, color: C.text4 }}>{q ? "Nenhum aluno com esse nome." : filter === "hoje" ? "Ninguém treina hoje." : filter === "atencao" ? "Ninguém precisa de atenção agora." : "Nenhum aluno ainda — toque em + pra cadastrar."}</span>}
+            </div>
         </section>
     );
 }

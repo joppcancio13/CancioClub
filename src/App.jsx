@@ -1126,15 +1126,6 @@ function CancioClub() {
         const dn = ((data.dayNames || {})[alunoId] || {})[s.day] || (DAYS.find((d) => d.key === s.day) || {}).full || "Treino";
         setShareCard({ name: alunoStudent.name, workoutName: dn, durationLabel: s.durationSec ? fmtDur(s.durationSec) : "—", dateLabel: fmtDate(s.date), targetDate: s.date, streak, tint: tier.tint, isRestDay: s.effort === "descanso", exercises: lst.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
     };
-    // treinos feitos viram eventos na conversa (design v3 · Recados): "Treino feito · Superiores · 48 min" + esforço
-    const sessionEvents = (sid) => {
-        const EFF = { facil: "Fácil", medida: "Na medida", destruidor: "Destruidor" };
-        const since = (() => { const d = new Date(); d.setDate(d.getDate() - 21); return isoOf(d); })();
-        return ((data && data.sessions && data.sessions[sid]) || []).filter((x) => x.date >= since).map((x) => {
-            const dn = (((data.dayNames || {})[sid] || {})[x.day]) || (DAYS.find((d) => d.key === x.day) || {}).full || "Treino";
-            return { id: x.id, date: x.date + "T23:00:00", text: (x.effort === "descanso" ? "Recuperação" : "Treino feito · " + String(dn).split("·")[0].trim()) + (x.durationSec ? " · " + Math.max(1, Math.round(x.durationSec / 60)) + " min" : ""), right: EFF[x.effort] || "" };
-        });
-    };
     // abrir a aba Recados conta como ler os recados do professor
     useEffect(() => { if (role === "aluno" && alunoId && alunoTab === "recados") markProfRead(alunoId); }, [role, alunoId, alunoTab]);
     const focusStudent = students.find((s) => s.id === focusId);
@@ -1521,7 +1512,7 @@ function CancioClub() {
                     // design v3: o título (não lidos + RECADOS) agora vem do próprio ProfInbox
                     React.createElement("div", { style: { marginBottom: 26 } },
                         notifButton,
-                        React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead, eventsFor: sessionEvents,
+                        React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead,
                             onOpenFicha: (sid) => { setActive(sid); setProfTab("alunos"); setProfView("aluno"); setFichaTab("resumo"); setRendEx(null); setExpanded(null); window.scrollTo(0, 0); } })))),
                 profTab === "painel" && (React.createElement(React.Fragment, null,
                     React.createElement("button", { onClick: () => setAdvOpen((v) => !v), style: { minHeight: 44, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 8 } }, "Avan\u00E7ado \u00B7 backup e restaura\u00E7\u00E3o", React.createElement("span", { style: { color: C.muted, transform: advOpen ? "rotate(90deg)" : "none" } }, "\u203A")),
@@ -1590,7 +1581,7 @@ function CancioClub() {
                     React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, marginBottom: 6 } }, "RECADOS"),
                     React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.text3, marginBottom: 16 } }, "Conversa com o seu professor."),
                     notifButton,
-                    React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), events: sessionEvents(alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
+                    React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
