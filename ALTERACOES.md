@@ -157,3 +157,11 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Notas de técnica pro aluno** (`components/student/WorkoutV3.jsx`): o exercício aberto mostra as notas da última aula ("Na aula de 12 nov · Técnica").
 - **Mescla** (`utils/merge.js` e Edge Function `student` v7): as notas de técnica não somem mais ao juntar os dados e a cópia do aluno nunca sobrescreve a do professor.
 - Cache v57.
+
+## v58 — arrumação do professor e diário no Perfil
+- **Recados**: o professor puxa conversa com qualquer aluno ("+ Nova conversa"; o "Chamar" do aluno sumido não abria nada). A conversa ficou só com recados — saíram os eventos "Treino feito", dos dois lados.
+- **Alunos** (`components/professor/AlunosV3.jsx`): busca no topo, "Precisa de atenção" com no máx. 3 (e "Ver todos") e uma lista só, A–Z, com filtros Todos · Treinam hoje · Atenção.
+- **Ficha do aluno** (`components/professor/FichaV3.jsx`): Recado, Editar ficha e Dados no topo; Semana primeiro, cada dia abre o prescrito × feito com "Editar este dia" e Modo aula. Saem a fileira de atalhos e a seção "Ficha de …".
+- **Editar ficha** (`components/professor/DayToolsV3.jsx`): dias em abas; "Trocar treino" (aplicar modelo, copiar ou trocar com outro dia, cardio, salvar como modelo, baixar a série, limpar); "Trocar" visível em cada exercício; volume da semana recolhido no fim.
+- **Diário do aluno**: saiu da tela Hoje e virou um bloco do Perfil.
+- Cache v58.
