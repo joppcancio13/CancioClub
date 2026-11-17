@@ -165,3 +165,14 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Editar ficha** (`components/professor/DayToolsV3.jsx`): dias em abas; "Trocar treino" (aplicar modelo, copiar ou trocar com outro dia, cardio, salvar como modelo, baixar a série, limpar); "Trocar" visível em cada exercício; volume da semana recolhido no fim.
 - **Diário do aluno**: saiu da tela Hoje e virou um bloco do Perfil.
 - Cache v58.
+
+## v59 — design v4, fases 1 a 3
+- **Rótulos e toque (55a):** rótulos pequenos em 11 px #AEB7C6 (antes cinza escuro); alvos de toque de 44 px.
+- **Desfazer (33b):** depois de cada ação grande do professor (Trocar treino, trocar/tirar exercício, modelos e biblioteca), a pílula das abas vira "Desfazer" por 8 s.
+- **Estados (55a):** vazio, carregando (blocos, sem rodinha) e erro com "Tentar de novo" no mesmo padrão.
+- **Salvamento no treino (35b):** cada série mostra ✓ / enviando / só no aparelho; "Sem internet. N séries salvam quando voltar." Saiu o selo "Salvo neste aparelho".
+- **Treino (36b, 45c):** PULAR série (não conta no volume), evolução da carga com minigráfico e "Ver execução" com o vídeo dentro do exercício.
+- **Hoje (43a, 39, 44b):** Trocar o treino do dia; recuperação marcada no card com "Fechar o dia · N de 3"; fundo com reflexos em losango.
+- **Login (46a):** "Esqueci o código" abre o pedido pronto no WhatsApp.
+- **Cardio (39b):** dia de cardio com plano do professor (atividade, alvo, esforço, nota), cronômetro e registro (minutos, km, esforço).
+- Detalhes e decisões em `design/v4/DECISOES.md`. Cache v59.
