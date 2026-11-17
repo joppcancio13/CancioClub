@@ -36,6 +36,7 @@ import { AlunosV3 } from "./components/professor/AlunosV3";
 import { FichaV3, EditVolumeBlock } from "./components/professor/FichaV3";
 import { ExerciseSheet } from "./components/professor/ExerciseSheet";
 import { UndoPill } from "./components/shared/UndoPill";
+import { ForgotCode } from "./components/student/ForgotCode";
 import { DayToolsV3, VolumeFold } from "./components/professor/DayToolsV3";
 import { rendSummary } from "./utils/rendimento";
 import { RendimentoV3 } from "./components/professor/RendimentoV3";
@@ -735,7 +736,7 @@ function CancioClub() {
         const weeklyTargetF = parseWeeklyTarget(focusStudent && focusStudent.freqWeekly);
         setData((p) => {
             const sess = { ...(p.sessions || {}) };
-            sess[focusId] = [...(sess[focusId] || []), { id: sid, date: dayDate, day, durationSec, effort }];
+            sess[focusId] = [...(sess[focusId] || []), { id: sid, date: dayDate, day: opts.dayKey || day, durationSec, effort }];
             const next = { ...p, sessions: sess, ...checkInTodayFor(p, focusId, dayDate) };
             syncStudentToCloud(next, focusId);
             return next;
@@ -1157,6 +1158,10 @@ function CancioClub() {
     // explícita ("trocar treino ›"). Só pro aluno já com o termo aceito e a ficha inicial feita.
     // design v3: a tela "Hoje" substituiu as duas aberturas automáticas que existiam aqui (a tela
     // cheia de entrada do dia e o perfil quando já treinou). A entrada do dia continua no "Trocar treino".
+    const [hojeSwap, setHojeSwap] = useState(() => { try { return JSON.parse(localStorage.getItem("cancio:hoje") || "null"); } catch (e) { return null; } });
+    const loggedTodayKey = role === "aluno" ? (DAYS.find((d) => (week[d.key] || []).some((ex) => (ex.history || []).some((h) => h.date === todayISO() && Array.isArray(h.entries) && h.entries.length))) || {}).key : null;
+    const hojeKey = loggedTodayKey || (hojeSwap && hojeSwap.date === todayISO() && hojeSwap.sid === alunoId && ((week[hojeSwap.key] || []).length || (cardioFocus && cardioFocus[hojeSwap.key])) ? hojeSwap.key : todayKey);
+    const swapHoje = (k) => { const v = { date: todayISO(), sid: alunoId, key: k }; setHojeSwap(v); try { localStorage.setItem("cancio:hoje", JSON.stringify(v)); } catch (e) { } setDay(k); setExpanded(null); };
     const todaySessionAluno = role === "aluno" && alunoId ? ((data && data.sessions && data.sessions[alunoId]) || []).filter((x) => x.date === todayISO()).slice(-1)[0] : null;
     // compartilhar o treino feito hoje a partir da tela Hoje (mesmo card do fim do treino)
     const shareTodaySession = () => {
@@ -1551,6 +1556,7 @@ function CancioClub() {
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 38, letterSpacing: "-0.01em" } }, React.createElement("span", { style: { lineHeight: "35px" } }, "CANCIO"), React.createElement("span", { style: { lineHeight: "35px", color: C.silver } }, "CLUB"))),
                     React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: codeErr ? C.warn : C.muted, marginTop: "auto", paddingTop: 28, textAlign: "center" } }, loginBusy ? "Buscando sua ficha\u2026" : codeErr ? "C\u00F3digo n\u00E3o encontrado. Confira com seu professor." : "Digite o c\u00F3digo que o professor te passou"),
                     React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 12 } }, boxes),
+                    React.createElement(ForgotCode, null), // design v4 (46a): Esqueci o código
                     React.createElement("div", { style: { width: "100%", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 28, padding: "0 24px", boxSizing: "border-box" } }, keys),
                     React.createElement("button", { className: "cc-tap", onClick: () => switchRole("prof"), style: { minHeight: 44, marginTop: 10, fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 10, cursor: "pointer" } }, "Sou professor \u203A"));
             })(),
@@ -1559,17 +1565,17 @@ function CancioClub() {
             // ===== aluno · design v3 (fase 2): abas Hoje / Treino / Recados / Perfil (TabBarV3) =====
             role === "aluno" && alunoStudent && (React.createElement(React.Fragment, null,
                 alunoTab === "hoje" && React.createElement(HojeV3, {
-                    student: alunoStudent, greetWord, weekLine: weeklyLine, streak, todayKey, dayDate: todayISO(),
+                    student: alunoStudent, greetWord, weekLine: weeklyLine, streak, todayKey, dayKey: hojeKey, dayDate: todayISO(),
+                    sessions: (data.sessions || {})[alunoId] || [], recovery: ((data.recoveryLog || {})[alunoId] || {})[todayISO()] || { hydration: false, sleep: false, mobility: false },
+                    onToggleRecovery: toggleRecovery, onCloseRest: () => finalizeWorkout("descanso", { dayKey: todayKey }), onSwapDay: swapHoje,
                     week, dayNames: (data.dayNames || {})[alunoId] || {}, cardio: cardioFocus,
                     dayDone: !!todaySessionAluno,
-                    inProgress: (week[todayKey] || []).some((ex) => (ex.history || []).some((h) => h.date === todayISO() && Array.isArray(h.entries) && h.entries.length)),
+                    inProgress: (week[hojeKey] || []).some((ex) => (ex.history || []).some((h) => h.date === todayISO() && Array.isArray(h.entries) && h.entries.length)),
                     lastProfMsg: messages.filter((m) => m.studentId === alunoId && m.fromProf).slice(-1)[0] || null,
                     unreadFromProf: messages.some((m) => m.studentId === alunoId && m.fromProf && !m.read),
-                    onStart: () => { setDay(todayKey); setExpanded(null); setAlunoTab("treino"); window.scrollTo(0, 0); },
+                    onStart: () => { setDay(hojeKey); setExpanded(null); setAlunoTab("treino"); window.scrollTo(0, 0); },
                     onShare: shareTodaySession,
-                    onPickDay: (k) => { if (!k) { setDayEntryOpen(true); return; } setDay(k); setExpanded(null); setAlunoTab("treino"); window.scrollTo(0, 0); },
                     onOpenRecados: () => setAlunoTab("recados"),
-                    onOpenDiary: () => { setAlunoTab("diario"); window.scrollTo(0, 0); },
                     banners: React.createElement(React.Fragment, null,
                         reassessDue(alunoStudent) && React.createElement("button", { className: "cc-tap", onClick: () => setReassessOpen(true), style: { position: "relative", width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginTop: 20, borderRadius: 16, border: "none", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.text, cursor: "pointer" } },
                             React.createElement("div", { style: { flex: 1 } },

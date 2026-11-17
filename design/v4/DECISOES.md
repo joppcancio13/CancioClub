@@ -43,3 +43,10 @@ Ele foi escrito sobre arquivos que a v55–v58 já trocou. Vale o que existe hoj
 - **Pular série (36b):** a série pulada vai numa lista à parte no dia do histórico (`skipped`, ids das séries), fora de `entries`. Assim volume, recordes, cards e rendimento continuam contando só o que foi feito, sem mexer em cada cálculo. A mescla do aparelho soma os pulos dos dois lados; a Edge Function já guarda o que o aluno manda (sem nova versão).
 - **Evolução (45c):** carga da série válida (a mesma do "ÚLTIMA") nas sessões antes de hoje: diferença entre a primeira e a última, o mês da primeira e quantos treinos. Só aparece com 2 ou mais sessões.
 - **Vídeo (45c):** "Ver execução" abre a prévia dentro do exercício e recolhe ao registrar a série. YouTube abre embutido, mudo e em loop (sem a duração "6 s", que o link não informa); mp4/webm em loop sem som; gif/imagem como imagem; outros links abrem fora do app.
+
+## Notas da fase 3 (parte 1: Hoje e login)
+- **Trocar (43a):** o botão "Trocar" fica ao lado de "Começar treino" só antes de começar. A escolha vale para hoje (guardada no aparelho) e muda o título no Hoje e no Treino. "O professor fica sabendo" pelo próprio treino: a lista de Alunos, o Ao vivo e a sessão registram o dia da ficha que foi feito. Não há recado automático.
+- **Recuperação (39):** usa os 3 itens que o app já guarda por dia (hidratação, sono, mobilidade), não itens prescritos pelo professor como no protótipo. "Fechar o dia · N de 3" fecha mesmo sem todos. Saiu "Treinar mesmo assim".
+- **Fundo (44b):** reflexos prata em losango; o selo grande saiu.
+- **Esqueci o código (46a):** "Abrir WhatsApp" usa o link do WhatsApp sem número (o aluno escolhe a conversa do professor), porque o app não tem o número do professor guardado num lugar que o aluno sem login possa ler. Dá para fixar o número depois.
+- **Domingo (47b):** fica para a fase 7, junto com o Resumo da semana.
