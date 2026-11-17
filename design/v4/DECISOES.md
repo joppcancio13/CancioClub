@@ -38,3 +38,8 @@ Ele foi escrito sobre arquivos que a v55–v58 já trocou. Vale o que existe hoj
 - **Estados:** o vazio e o erro seguem o padrão novo em todas as telas que usam `PremiumEmptyState`. O erro está ligado na lista de Alunos (quando a busca na nuvem falha e não há nada para mostrar).
 - **Salvamento:** cada série feita mostra ✓ (chegou na nuvem), girando (enviando; também nos primeiros 4 s depois do toque, porque o envio sai com um pequeno atraso) ou a nuvem cortada em laranja (só no aparelho). Com séries pendentes, a barra de registro mostra "Sem internet. N séries salvam quando voltar." O selo "Salvo neste aparelho" do topo saiu.
 - **Limite conhecido:** o "girando/salvo" é por envio da ficha inteira, não por série: quando um envio termina, todas as séries feitas até o começo dele viram ✓.
+
+## Notas da fase 2
+- **Pular série (36b):** a série pulada vai numa lista à parte no dia do histórico (`skipped`, ids das séries), fora de `entries`. Assim volume, recordes, cards e rendimento continuam contando só o que foi feito, sem mexer em cada cálculo. A mescla do aparelho soma os pulos dos dois lados; a Edge Function já guarda o que o aluno manda (sem nova versão).
+- **Evolução (45c):** carga da série válida (a mesma do "ÚLTIMA") nas sessões antes de hoje: diferença entre a primeira e a última, o mês da primeira e quantos treinos. Só aparece com 2 ou mais sessões.
+- **Vídeo (45c):** "Ver execução" abre a prévia dentro do exercício e recolhe ao registrar a série. YouTube abre embutido, mudo e em loop (sem a duração "6 s", que o link não informa); mp4/webm em loop sem som; gif/imagem como imagem; outros links abrem fora do app.

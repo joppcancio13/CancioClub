@@ -485,6 +485,25 @@ function CancioClub() {
         }
         catch (e) { }
     }, [workoutStart, focusId]);
+    // série pulada (design v4 · 36b): vai numa lista à parte do dia (`skipped`), fora de `entries` —
+    // assim volume, recordes, cards e rendimento continuam contando só o que foi feito
+    const skipSetFor = React.useCallback((exId, setId, date) => {
+        if (role === "aluno") markWorkoutStarted();
+        setData((p) => {
+            const w = { ...p.workouts[focusId] };
+            w[day] = (w[day] || []).map((e) => {
+                if (e.id !== exId) return e;
+                const hist = (e.history || []).map((h) => ({ ...h }));
+                let idx = hist.findIndex((h) => h.date === date && Array.isArray(h.entries));
+                if (idx < 0) { hist.push({ date, entries: [] }); idx = hist.length - 1; }
+                hist[idx].skipped = Array.from(new Set([...(hist[idx].skipped || []), setId]));
+                return { ...e, history: hist };
+            });
+            const next = { ...p, workouts: { ...p.workouts, [focusId]: w } };
+            syncStudentToCloud(next, focusId);
+            return next;
+        });
+    }, [focusId, day, role, syncStudentToCloud]);
     const addLoad = React.useCallback((exId, entry) => {
         if (role === "aluno")
             markWorkoutStarted();
@@ -1580,7 +1599,7 @@ function CancioClub() {
                             workoutStart, save: { syncedAt, syncing, online }, dayDone, canFinalize: hasLoggedSomething || dayDone,
                             bottomOffset: tabsHidden ? 0 : 84,
                             onPickDay: () => setDayEntryOpen(true),
-                            onAddLoad: addLoad, onMessage: (t) => { markProfRead(alunoId); sendMessage(t); },
+                            onAddLoad: addLoad, onSkipSet: skipSetFor, onMessage: (t) => { markProfRead(alunoId); sendMessage(t); },
                             restrictionOf: (name) => restrictionFor(name, alunoStudent, "aluno"),
                             onFinalize: () => {
                                 if (dayDone) {

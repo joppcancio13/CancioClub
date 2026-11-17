@@ -112,6 +112,10 @@ function mergeHistoryDay(localH, cloudH) {
     if (note !== undefined)
         merged.studentNote = note;
     // notas de técnica do Modo aula: só o professor escreve -> vale a da nuvem; sem ela, a local
+    // séries puladas (design v4 · 36b): soma dos dois lados — pular é do aluno e não volta atrás
+    const skipped = Array.from(new Set([...(localH.skipped || []), ...(cloudH.skipped || [])]));
+    if (skipped.length)
+        merged.skipped = skipped;
     const tech = cloudH.techNotes !== undefined ? cloudH.techNotes : localH.techNotes;
     if (tech !== undefined)
         merged.techNotes = tech;

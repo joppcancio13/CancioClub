@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { C, F, NON_COUNTING_KINDS, PILL_V3, PROGRESS, KICKER, COL_LABEL } from "../../styles/tokens";
-import { haptic } from "../../utils/misc";
+import { haptic, ytId } from "../../utils/misc";
 import { daySummary, parseReps, repsCeiling, sortedHistory } from "../../utils/workout";
 
 // Tela de treino do aluno — design v3 (design/v3/README.md · "Treino"; decisões em design/v3/DECISOES.md).
@@ -32,6 +32,7 @@ function describe(ex, dayDate) {
     const hist = sortedHistory(ex.history || []);
     const today = hist.find((h) => h.date === dayDate && Array.isArray(h.entries));
     const logged = new Map((today ? today.entries : []).filter((e) => typeof e.load === "number").map((e) => [e.setId, e]));
+    const skippedIds = new Set((today && Array.isArray(today.skipped)) ? today.skipped : []);
     const before = hist.filter((h) => h.date < dayDate);
     const lastH = before[before.length - 1] || null;
     const lastEntries = [...before].reverse().find((h) => Array.isArray(h.entries) && h.entries.length);
@@ -49,7 +50,7 @@ function describe(ex, dayDate) {
             : { load: p.kind === "warmup" ? r25(baseLoad * 0.5) : p.kind === "recon" ? r25(baseLoad * 0.85) : baseLoad, reps: ceil || (p.kind === "warmup" ? 12 : p.kind === "recon" ? 5 : 10) };
         const log = logged.get(p.id);
         return {
-            id: p.id, kind: p.kind, target: p.reps, working, suggest, log, done: !!log,
+            id: p.id, kind: p.kind, target: p.reps, working, suggest, log, done: !!log, skip: !log && skippedIds.has(p.id),
             n: p.kind === "warmup" ? "AQ" : p.kind === "recon" ? "RC" : String(workN),
             label: p.kind === "warmup" ? "AQUECIMENTO" : p.kind === "recon" ? "RECONHECIMENTO" : "SÉRIE " + workN,
         };
@@ -64,8 +65,33 @@ function describe(ex, dayDate) {
         rest: ex.rest || 90,
         planLoad: firstWork ? firstWork.suggest.load : 0,
         planReps: targets[0] || "",
-        allDone: sets.every((s) => s.done),
+        allDone: sets.every((s) => s.done || s.skip) && sets.some((s) => s.done),
+        evo: evolutionOf(hist, dayDate),
     };
+}
+
+const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+// evolução (v4 · 45c): carga da série válida ao longo das sessões anteriores
+function evolutionOf(hist, dayDate) {
+    const pts = hist.filter((h) => h.date < dayDate).map((h) => ({ date: h.date, v: daySummary(h).load })).filter((x) => typeof x.v === "number" && x.v > 0);
+    if (pts.length < 2) return null;
+    const d = Math.round((pts[pts.length - 1].v - pts[0].v) * 10) / 10;
+    const month = MONTHS[Number(pts[0].date.slice(5, 7)) - 1];
+    return { pts: pts.slice(-8).map((x) => x.v), num: d === 0 ? "Mesma carga" : (d > 0 ? "+" : "−") + br(Math.abs(d)) + " kg", text: "desde " + month + ", em " + pts.length + " treinos" };
+}
+function Spark({ pts }) {
+    const min = Math.min(...pts), max = Math.max(...pts), span = max - min || 1;
+    const xy = pts.map((v, i) => ((i / (pts.length - 1)) * 54 + 1).toFixed(1) + "," + (17 - ((v - min) / span) * 14).toFixed(1)).join(" ");
+    return <svg width="56" height="20" viewBox="0 0 56 20" aria-hidden="true" style={{ flex: "none" }}><polyline points={xy} fill="none" stroke={C.text2} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" /></svg>;
+}
+// vídeo (v4 · 45c): prévia dentro do exercício, em loop e sem som quando o link permite (YouTube, mp4, gif)
+function VideoPreview({ url }) {
+    const yt = ytId(url);
+    const box = { position: "relative", borderRadius: 14, overflow: "hidden", background: C.panel };
+    if (yt) return <div style={{ ...box, paddingBottom: "56.25%", height: 0 }}><iframe title="Execução do exercício" src={"https://www.youtube-nocookie.com/embed/" + yt + "?autoplay=1&mute=1&loop=1&playlist=" + yt + "&controls=0&playsinline=1&rel=0&modestbranding=1"} allow="autoplay; encrypted-media; picture-in-picture" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }} /></div>;
+    if (/\.(mp4|webm|ogg)(\?|$)/i.test(url)) return <div style={box}><video src={url} autoPlay muted loop playsInline style={{ display: "block", width: "100%" }} /></div>;
+    if (/\.(gif|png|jpe?g|webp)(\?|$)/i.test(url)) return <div style={box}><img src={url} alt="Execução do exercício" style={{ display: "block", width: "100%" }} /></div>;
+    return <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: C.text2 }}>Abrir o vídeo fora do app ↗</a>;
 }
 
 function IconCheck({ size = 14 }) {
@@ -129,7 +155,8 @@ function Stepper({ value, unit, onMinus, onPlus, onType, label }) {
     );
 }
 
-function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinalize, onFinalize, onAddLoad, onMessage, restrictionOf, bottomOffset = 0, onPickDay }) {
+function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinalize, onFinalize, onAddLoad, onSkipSet, onMessage, restrictionOf, bottomOffset = 0, onPickDay }) {
+    const [vidId, setVidId] = useState(null); // exercício com a prévia de execução aberta
     // salvamento (design v4 · 35b): a série é sempre gravada no aparelho; ✓ quando já chegou na nuvem,
     // girando enquanto envia, nuvem cortada em laranja quando ficou só no aparelho
     // (o envio sai com um pequeno atraso depois do toque: nos primeiros 4 s com rede conta como "salvando")
@@ -157,7 +184,7 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
             const s = r && r.sets.find((y) => y.id === override.setId);
             if (s) return { r, s, fixing: true };
         }
-        const pending = (r) => (skipped.has(r.ex.id) ? null : r.sets.find((s) => !s.done));
+        const pending = (r) => (skipped.has(r.ex.id) ? null : r.sets.find((s) => !s.done && !s.skip));
         const open = rows.find((x) => x.ex.id === openId);
         if (open && pending(open)) return { r: open, s: pending(open) };
         for (const r of rows) { const s = pending(r); if (s) return { r, s }; }
@@ -193,7 +220,8 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
 
     const allSets = rows.reduce((n, r) => n + r.sets.length, 0);
     const doneSets = rows.reduce((n, r) => n + r.sets.filter((s) => s.done).length, 0);
-    const pct = allSets ? Math.round((doneSets / allSets) * 100) : 0;
+    const resolvedSets = rows.reduce((n, r) => n + r.sets.filter((s) => s.done || s.skip).length, 0);
+    const pct = allSets ? Math.round((resolvedSets / allSets) * 100) : 0;
     const startedAt = workoutStart && workoutStart.date === dayDate ? workoutStart.startedAt : null;
     const clock = startedAt ? mmss((now - startedAt) / 1000) : "0:00";
     const weekday = WEEKDAYS[new Date(dayDate + "T00:00:00").getDay()];
@@ -208,11 +236,21 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
         onAddLoad(r.ex.id, { date: dayDate, setId: s.id, kind: s.kind, targetReps: s.target, load: draft.load, reps: draft.reps, checkPR: true });
         haptic("confirm");
         setOverride(null);
+        setVidId(null); // o vídeo recolhe sozinho ao registrar a série (45c)
         if (fixing) return; // correção não reinicia descanso
-        const left = rows.reduce((n, x) => n + (skipped.has(x.ex.id) ? 0 : x.sets.filter((y) => !y.done && !(x.ex.id === r.ex.id && y.id === s.id)).length), 0);
+        const left = rows.reduce((n, x) => n + (skipped.has(x.ex.id) ? 0 : x.sets.filter((y) => !y.done && !y.skip && !(x.ex.id === r.ex.id && y.id === s.id)).length), 0);
         if (left > 0) { const total = s.working ? r.rest : NON_WORKING_REST; setRest({ end: Date.now() + total * 1000, total }); }
-        const moreHere = r.sets.some((y) => !y.done && y.id !== s.id);
-        if (!moreHere) { const next = rows.find((x) => x.ex.id !== r.ex.id && !skipped.has(x.ex.id) && x.sets.some((y) => !y.done)); setOpenId(next ? next.ex.id : null); }
+        const moreHere = r.sets.some((y) => !y.done && !y.skip && y.id !== s.id);
+        if (!moreHere) { const next = rows.find((x) => x.ex.id !== r.ex.id && !skipped.has(x.ex.id) && x.sets.some((y) => !y.done && !y.skip)); setOpenId(next ? next.ex.id : null); }
+    };
+    // pular a série da vez (36b): não conta no volume e não trava o fim do exercício; sem descanso
+    const skipSet = () => {
+        if (!cur || cur.fixing || !onSkipSet) return;
+        const { r, s } = cur;
+        onSkipSet(r.ex.id, s.id, dayDate);
+        haptic("tick"); setVidId(null);
+        const moreHere = r.sets.some((y) => !y.done && !y.skip && y.id !== s.id);
+        if (!moreHere) { const next = rows.find((x) => x.ex.id !== r.ex.id && !skipped.has(x.ex.id) && x.sets.some((y) => !y.done && !y.skip)); setOpenId(next ? next.ex.id : null); }
     };
 
     const nextLabel = (() => {
@@ -282,6 +320,15 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
                                             <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}><span style={colLabel}>{l}</span><span style={{ fontSize: 15, fontWeight: 700, ...num }}>{v}</span></div>
                                         ))}
                                     </div>
+                                    {r.evo && <div style={{ display: "flex", alignItems: "center", gap: 10 }}><Spark pts={r.evo.pts} /><span style={{ fontSize: 13, color: C.text2 }}><b style={{ color: C.text }}>{r.evo.num}</b> {r.evo.text}</span></div>}
+                                    {r.ex.url && (
+                                        <button type="button" onClick={() => setVidId(vidId === r.ex.id ? null : r.ex.id)} aria-expanded={vidId === r.ex.id}
+                                            style={{ height: 48, borderRadius: 12, border: "none", background: C.panel, color: C.text, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", fontFamily: F.body, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                                            <svg width="20" height="20" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" strokeWidth="16" />{vidId === r.ex.id ? <path d="M96 96l64 64M160 96l-64 64" fill="none" stroke="currentColor" strokeWidth="16" strokeLinecap="round" /> : <path d="M112 92l56 36-56 36z" fill="currentColor" />}</svg>
+                                            {vidId === r.ex.id ? "Fechar execução" : "Ver execução"}
+                                        </button>
+                                    )}
+                                    {r.ex.url && vidId === r.ex.id && <VideoPreview url={r.ex.url} />}
                                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                         {r.sets.map((s) => {
                                             const isCur = s.id === curSetId;
@@ -292,7 +339,9 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
                                                     aria-label={s.done ? "Corrigir " + s.label.toLowerCase() : undefined}
                                                     style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: 0, background: "none", border: "none", textAlign: "left", cursor: s.done ? "pointer" : "default", fontFamily: F.body, fontSize: 15, color: isCur ? C.text : s.done ? C.text3 : C.text4 }}>
                                                     <span style={{ width: 22, fontSize: s.working ? 15 : 11, fontWeight: 800, letterSpacing: "0.04em" }}>{s.n}</span>
-                                                    <span style={{ flex: 1, fontWeight: isCur ? 700 : 400, ...num }}>{br(v.load)} kg × {v.reps}</span>
+                                                    <span style={{ flex: 1, fontWeight: isCur ? 700 : 400, textDecoration: s.skip ? "line-through" : "none", color: s.skip ? C.text3 : undefined, ...num }}>{br(v.load)} kg × {v.reps}</span>
+                                                    {s.skip && <span style={{ fontSize: 13, color: C.text3 }}>pulada</span>}
+                                                    {s.skip && <span aria-hidden="true" style={{ width: 12, height: 2, borderRadius: 1, background: C.text3 }} />}
                                                     {isCur && !rest && <span style={{ ...colLabel, color: C.text2 }}>{cur.fixing ? "CORRIGINDO" : "AGORA ↓"}</span>}
                                                     {s.done && !isCur && <SaveMark state={saveStateOf(s)} />}
                                                 </button>
@@ -305,7 +354,6 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
                                             const v = s.log ? s.log : s.suggest;
                                             setSheet({ context: r.ex.name + " · " + s.label.charAt(0) + s.label.slice(1).toLowerCase() + " · " + br(v.load) + " kg × " + v.reps });
                                         }}><IconChat />Recado sobre esta série</button>
-                                        {r.ex.url && <a href={r.ex.url} target="_blank" rel="noopener noreferrer" style={{ ...btnText, color: C.text3, textDecoration: "none" }}>Ver vídeo</a>}
                                         {!r.allDone && !isSkipped && <button type="button" style={{ ...btnText, color: C.text4 }} onClick={() => { setSkipped((p) => new Set(p).add(r.ex.id)); setOpenId(null); setRest(null); }}>Pular exercício</button>}
                                         {isSkipped && <button type="button" style={{ ...btnText, color: C.text4 }} onClick={() => setSkipped((p) => { const n = new Set(p); n.delete(r.ex.id); return n; })}>Voltar a fazer</button>}
                                     </div>
@@ -353,6 +401,7 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "0 4px" }}>
                                 <span style={{ ...colLabel, color: C.text2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{(cur.fixing ? "CORRIGIR · " : "") + cur.r.ex.name.toUpperCase() + " · " + cur.s.label}</span>
                                 <span style={{ ...colLabel, flex: "none" }}>{cur.r.sets.indexOf(cur.s) + 1} DE {cur.r.sets.length}</span>
+                                {!cur.fixing && onSkipSet && <button type="button" onClick={skipSet} style={{ ...colLabel, flex: "none", margin: "-12px -4px -12px 0", minHeight: 44, padding: "0 4px 0 10px", border: "none", background: "none", display: "flex", alignItems: "center", gap: 5, color: C.text, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 256 256" aria-hidden="true"><path d="M56 56l112 72-112 72zM200 56v144" fill="none" stroke="currentColor" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" /></svg>PULAR</button>}
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
                                 <Stepper label="carga" value={draft.load} unit="kg" onMinus={() => setLoad(draft.load - step(draft.load))} onPlus={() => setLoad(draft.load + step(draft.load))} onType={setLoad} />
