@@ -298,6 +298,7 @@ function ExerciseCard({ ex, role, expanded, onToggle, onAddLoad, onRemove, onSwa
                             ex.rest ? ` · desc ${ex.rest}s` : "",
                             ex.url ? React.createElement("span", { style: { color: C.silver } }, " \u00B7 v\u00EDdeo") : "",
                             ex.note ? React.createElement("span", { style: { color: C.amber } }, " \u00B7 obs") : ""))),
+                role === "prof" && onSwap && !expanded && React.createElement("button", { onClick: () => onSwap(ex), style: { flexShrink: 0, minHeight: 40, padding: "0 12px", borderRadius: 999, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #2E333D", color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" } }, "Trocar"),
                 isResting && activeRest ? (() => {
                     const remaining = Math.max(0, Math.ceil((activeRest.endTime - Date.now()) / 1000));
                     const p = activeRest.total > 0 ? Math.min(100, Math.max(0, (1 - remaining / activeRest.total) * 100)) : 0;
@@ -469,8 +470,7 @@ const formatLoad = (v) => (Number.isInteger(v) ? String(v) : String(Math.round(v
                         React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" } },
                             React.createElement("button", { onClick: () => onMove(ex.id, -1), disabled: isFirst, style: { fontFamily: F.mono, fontSize: 13, color: isFirst ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isFirst ? "default" : "pointer" } }, "\u2191 Subir"),
                             React.createElement("button", { onClick: () => onMove(ex.id, 1), disabled: isLast, style: { fontFamily: F.mono, fontSize: 13, color: isLast ? C.line : C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: isLast ? "default" : "pointer" } }, "\u2193 Descer"),
-                            onSwap && React.createElement("button", { onClick: () => onSwap(ex), style: { marginLeft: "auto", fontFamily: F.mono, fontSize: 13, color: C.silver, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Trocar"),
-                            React.createElement("button", { onClick: () => onRemove(ex.id), style: { marginLeft: onSwap ? 0 : "auto", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Remover")))))))));
+                            React.createElement("button", { onClick: () => onRemove(ex.id), style: { marginLeft: "auto", fontFamily: F.mono, fontSize: 13, color: C.muted, background: C.panel2, borderRadius: 10, padding: "9px 12px", cursor: "pointer" } }, "Remover")))))))));
 }
 ExerciseCard = React.memo(ExerciseCard);
 export { ExerciseCard };
