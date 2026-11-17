@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { C, DAYS, F, NON_COUNTING_KINDS, KICKER } from "../../styles/tokens";
-import { GROUP_ORDER, fmtVol, plannedGroupVolume } from "../../utils/volumeCalculator";
+import { C, DAYS, F, NON_COUNTING_KINDS, KICKER, PROGRESS } from "../../styles/tokens";
+import { GROUP_ORDER, fmtVol, plannedGroupVolume, calculateWeeklyVolume } from "../../utils/volumeCalculator";
 import { repsCeiling, parseReps } from "../../utils/workout";
 import { describe } from "../student/WorkoutV3";
 
@@ -42,9 +42,13 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
     const lastOf = (k) => [...(sessions || [])].filter((s) => s.day === k).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     const [openDay, setOpenDay] = useState(() => (todayList.length ? todayKey : null));
 
+    // volume (design v4 · 37a): o FEITO na semana (barra prata) sobre o PRESCRITO (contorno), nos 11 grupos
     const vol = useMemo(() => plannedGroupVolume(week), [week]);
-    const volRows = GROUP_ORDER.map((g) => ({ g, v: vol.values[g] || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
-    const vmax = Math.max(1, ...volRows.map((x) => x.v));
+    const done = useMemo(() => { const all = []; DAYS.forEach((d) => (week[d.key] || []).forEach((e) => all.push({ ...e, _day: d.key }))); return calculateWeeklyVolume(all, 0); }, [week]);
+    const volRows = GROUP_ORDER.map((g) => ({ g, p: vol.values[g] || 0, d: Math.round((done.groupTotals[g] || 0) * 10) / 10 }));
+    const vmax = Math.max(1, ...volRows.map((x) => Math.max(x.p, x.d)));
+    const rangeLabel = (() => { const a = new Date(done.startISO + "T12:00:00"), b = new Date(done.endISO + "T12:00:00"); return a.getDate() + "–" + b.getDate() + " " + MO[b.getMonth()]; })();
+    const weekDone = DAYS.filter((d) => (week[d.key] || []).length && weekSess.some((x) => x.day === d.key)).length;
     const stats = [[rend.volDelta != null ? (rend.volDelta > 0 ? "+" : "") + rend.volDelta + "%" : "–", "volume semanal"], [rend.freqPct != null ? rend.freqPct + "%" : "–", "frequência"], [rend.prTotal + " ★", "recordes"]];
 
     const dayDetail = (k) => {
@@ -84,7 +88,6 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
                 })}
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                     <button type="button" onClick={() => onEdit(k)} style={{ flex: 1, minHeight: 44, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Editar este dia</button>
-                    {k === todayKey && <button type="button" onClick={onAula} style={{ flex: 1, minHeight: 44, borderRadius: 10, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Modo aula</button>}
                 </div>
             </div>
         );
@@ -94,7 +97,16 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
     // mesmo; depois Rendimento e Volume. Sai a fileira de atalhos e a seção "Ficha de …" separada.
     return (
         <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ ...kicker, paddingTop: 18 }}>Semana</div>
+            {todayList.length > 0 && (
+                <div style={{ marginTop: 14, padding: 14, borderRadius: 16, background: C.panel, display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span style={kicker}>Aula hoje?</span>
+                        <span style={{ fontSize: 15 }}>{nameOf(todayKey)}</span>
+                    </span>
+                    <button type="button" onClick={onAula} style={{ flex: "none", minHeight: 48, padding: "0 16px", borderRadius: 12, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Modo aula</button>
+                </div>
+            )}
+            <div style={{ ...kicker, paddingTop: 18 }}>{"Essa semana · " + weekDone + " de " + days.length}</div>
             <div style={{ marginTop: 6, display: "flex", flexDirection: "column" }}>
                 {days.length === 0 && (
                     <button type="button" onClick={() => onEdit(todayKey)} style={{ minHeight: 48, marginTop: 4, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text2, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>Ficha vazia · Montar a ficha</button>
@@ -122,30 +134,43 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
                 })}
             </div>
 
-            <div style={{ paddingTop: 26, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={kicker}>Rendimento · {rend.freqWeeks} {rend.freqWeeks === 1 ? "semana" : "semanas"}</span>
-                <button type="button" onClick={onOpenRend} style={linkBtn}>Abrir ›</button>
-            </div>
-            <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
-                {stats.map(([v, l]) => <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}><span style={{ fontFamily: F.display, fontSize: 22, fontWeight: 900, fontStretch: "110%", ...num }}>{v}</span><span style={{ fontSize: 11, color: C.text3 }}>{l}</span></div>)}
-            </div>
+            <button type="button" onClick={onOpenRend} style={{ marginTop: 22, width: "100%", minHeight: 60, display: "flex", alignItems: "center", gap: 12, padding: "0 14px", borderRadius: 16, border: "none", background: C.panel, color: C.text, textAlign: "left", cursor: "pointer", fontFamily: F.body }}>
+                <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                    <span style={kicker}>{"Rendimento · " + rend.freqWeeks + (rend.freqWeeks === 1 ? " semana" : " semanas")}</span>
+                    <span style={{ fontSize: 15 }}>{"Volume " + (rend.volDelta != null ? (rend.volDelta > 0 ? "+" : "") + rend.volDelta + "%" : "–") + " · frequência " + (rend.freqPct != null ? rend.freqPct + "%" : "–") + " · " + rend.prTotal + (rend.prTotal === 1 ? " recorde" : " recordes")}</span>
+                </span>
+                <span aria-hidden="true" style={{ color: C.text3 }}>›</span>
+            </button>
 
-            <div style={{ paddingTop: 26, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <span style={kicker}>Volume por músculo · séries na semana</span>
-                <button type="button" onClick={onOpenVol} style={{ ...linkBtn, flex: "none" }}>Feito ›</button>
+            <div style={{ marginTop: 26, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                <span style={kicker}>{"Volume · " + rangeLabel}</span>
+                <span style={{ display: "flex", gap: 10, fontSize: 13, color: C.text3 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 12, height: 8, borderRadius: 3, boxShadow: "inset 0 0 0 1px #3A404C" }} />prescrito</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 12, height: 8, borderRadius: 3, backgroundImage: PROGRESS }} />feito</span>
+                </span>
             </div>
-            <span style={{ fontSize: 13, color: C.text3 }}>Prescrito em todas as fichas, pela ativação de cada exercício.</span>
-            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-                {volRows.length === 0 && <span style={{ fontSize: 13, color: C.text3 }}>Nenhum exercício vinculado ao catálogo ainda.</span>}
+            {vol.unmatched > 0 && (
+                <button type="button" onClick={onOpenVol} style={{ marginTop: 10, width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 6px 10px 14px", borderRadius: 16, border: "none", background: C.panel, color: C.text, textAlign: "left", cursor: "pointer", fontFamily: F.body }}>
+                    <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span style={{ fontSize: 15, fontWeight: 600 }}>{vol.unmatched + (vol.unmatched === 1 ? " exercício fora da conta" : " exercícios fora da conta")}</span>
+                        <span style={{ fontSize: 13, color: C.text3 }}>Sem vínculo com o catálogo</span>
+                    </span>
+                    <span style={{ minHeight: 44, padding: "0 16px", borderRadius: 999, background: C.text, color: C.bg, display: "flex", alignItems: "center", fontSize: 13, fontWeight: 800 }}>Vincular</span>
+                </button>
+            )}
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column" }}>
                 {volRows.map((x) => (
-                    <div key={x.g} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ width: 96, fontSize: 13 }}>{x.g}</span>
-                        <span style={{ flex: 1, height: 8, borderRadius: 4, background: C.raised, overflow: "hidden" }}><span style={{ display: "block", width: Math.round((x.v / vmax) * 100) + "%", height: "100%", background: C.text2, borderRadius: 4 }} /></span>
-                        <span style={{ width: 40, textAlign: "right", fontSize: 13, fontWeight: 700, ...num }}>{fmtVol(x.v)}</span>
+                    <div key={x.g} style={{ display: "grid", gridTemplateColumns: "92px minmax(0,1fr) 72px", alignItems: "center", gap: 10, minHeight: 30 }}>
+                        <span style={{ fontSize: 13, color: C.text2 }}>{x.g}</span>
+                        <span style={{ position: "relative", height: 10, borderRadius: 5, background: "#11141A" }}>
+                            <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: Math.round((x.p / vmax) * 100) + "%", borderRadius: 5, boxShadow: "inset 0 0 0 1px #3A404C" }} />
+                            <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: Math.round((x.d / vmax) * 100) + "%", borderRadius: 5, backgroundImage: PROGRESS }} />
+                        </span>
+                        <span style={{ textAlign: "right", fontSize: 15, fontWeight: 700, fontStretch: "75%", ...num }}>{fmtVol(x.d)} <span style={{ color: C.text3, fontWeight: 600 }}>{"/ " + fmtVol(x.p)}</span></span>
                     </div>
                 ))}
-                {vol.unmatched > 0 && <button type="button" onClick={onOpenVol} style={{ ...linkBtn, alignSelf: "flex-start", color: C.text3 }}>{vol.unmatched} {vol.unmatched === 1 ? "exercício fora da conta" : "exercícios fora da conta"} · Vincular ›</button>}
             </div>
+            <span style={{ display: "block", marginTop: 10, fontSize: 13, lineHeight: 1.4, color: C.text3 }}>Séries por grupo, contadas pela maior ativação do grupo em cada exercício.</span>
         </div>
     );
 }

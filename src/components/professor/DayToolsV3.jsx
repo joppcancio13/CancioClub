@@ -44,8 +44,8 @@ function Sheet({ title, onClose, children }) {
     );
 }
 
-function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyTemplate, onCopyFrom, onSwapWith, onToggleCardio, onSaveTemplate, onClear, onSerie }) {
-    const [step, setStep] = useState(null); // null · "modelo" · "copiar" · "trocar" · "salvar"
+function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyTemplate, onCopyFrom, onSwapWith, onToggleCardio, onSaveTemplate, onClear, onSerie, onPrint, onArchive, startStep, menu }) {
+    const [step, setStep] = useState(startStep || null); // null · "modelo" · "copiar" · "trocar" · "salvar"
     const [tplName, setTplName] = useState(nameOf(dayNames, day));
     const dayFull = (DAYS.find((d) => d.key === day) || {}).full;
     const list = week[day] || [];
@@ -62,18 +62,24 @@ function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyT
             <span aria-hidden="true" style={{ color: C.text4 }}>›</span>
         </button>
     );
-    const title = "TROCAR TREINO · " + String(dayFull || "").toUpperCase();
+    const title = menu ? "FICHA" : "TROCAR TREINO · " + String(dayFull || "").toUpperCase();
 
     return (
         <Sheet title={title} onClose={onClose}>
-            {step === null && (
+            {step === null && menu && (
+                <>
+                    {list.length > 0 && option("Salvar como modelo", "Guarda " + dayFull + " na Biblioteca (sem as cargas do aluno)", () => setStep("salvar"))}
+                    {onPrint && option("Baixar PDF da ficha", "A ficha da semana inteira, com a anamnese", () => { onClose(); onPrint(); })}
+                    {list.length > 0 && onSerie && option("Baixar a série", "Imagem da ficha de " + dayFull + " pra mandar", () => { onClose(); onSerie(); })}
+                    {onArchive && option("Arquivar e começar nova fase", "Guarda a ficha de agora como uma fase; a ficha continua aqui pra você mudar", () => done(onArchive))}
+                </>
+            )}
+            {step === null && !menu && (
                 <>
                     {option("Aplicar um modelo", templates.length ? "Troca os exercícios de " + dayFull + " pelos do modelo" : "Nenhum modelo salvo ainda — crie na Biblioteca", templates.length ? () => setStep("modelo") : undefined)}
                     {option("Copiar de outro dia", "Repete aqui o treino de outro dia", () => setStep("copiar"))}
                     {option("Trocar com outro dia", "Os dois dias trocam de lugar, com o histórico", () => setStep("trocar"))}
                     {option(cardio && cardio[day] ? "Tirar a marca de cardio" : "Marcar como dia de cardio", "Só pra você planejar — o aluno registra cardio em qualquer dia", () => done(onToggleCardio))}
-                    {list.length > 0 && option("Salvar como modelo", "Guarda este dia na Biblioteca", () => setStep("salvar"))}
-                    {list.length > 0 && option("Baixar a série", "Imagem da ficha deste dia pra mandar", () => { onClose(); onSerie(); })}
                     {list.length > 0 && option("Limpar o dia", "Tira todos os exercícios; o que já foi registrado vai pras fases arquivadas", async () => { if (await ccConfirm("Os exercícios saem de " + dayFull + ". O que o aluno já registrou fica nas fases arquivadas.", { title: "Limpar " + dayFull + "?", ok: "Limpar", danger: true })) done(onClear); }, C.accent)}
                 </>
             )}
@@ -97,7 +103,8 @@ function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyT
             )}
             {step === "salvar" && (
                 <>
-                    {back}
+                    {!menu && back}
+                    {menu && <button type="button" onClick={() => setStep(null)} style={{ alignSelf: "flex-start", minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>‹ Voltar</button>}
                     <input autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="Nome do modelo" aria-label="Nome do modelo"
                         style={{ boxSizing: "border-box", width: "100%", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", outline: "none", background: C.bg, boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 15 }} />
                     <button type="button" disabled={!tplName.trim()} onClick={() => done(() => onSaveTemplate(tplName.trim()))}
@@ -133,17 +140,20 @@ function CardioPlan({ plan, onChange }) {
 function DayToolsV3(props) {
     const { week, day, dayNames, cardio, doneDays, onPick, onRename, onCardioPlan } = props;
     const [open, setOpen] = useState(false);
+    const [menu, setMenu] = useState(false);
     const dayFull = (DAYS.find((d) => d.key === day) || {}).full;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
             <DayTabs week={week} day={day} dayNames={dayNames} cardio={cardio} doneDays={doneDays} onPick={onPick} />
             <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
                 <input value={(dayNames && dayNames[day]) || ""} onChange={(e) => onRename(e.target.value)} placeholder={"Nome do treino de " + dayFull} aria-label={"Nome do treino de " + dayFull}
-                    style={{ flex: 1, minWidth: 0, boxSizing: "border-box", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", outline: "none", background: C.panel, color: C.text, fontFamily: F.body, fontSize: 16, fontWeight: 700 }} />
+                    style={{ flex: 1, minWidth: 0, boxSizing: "border-box", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", outline: "none", background: C.panel, color: C.text, fontFamily: F.display, fontSize: 22, fontWeight: 900, fontStretch: "110%" }} />
                 <button type="button" onClick={() => { haptic("tick"); setOpen(true); }} style={{ flex: "none", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Trocar treino</button>
+                <button type="button" onClick={() => { haptic("tick"); setMenu(true); }} aria-label="Mais ações da ficha" style={{ flex: "none", width: 48, minHeight: 48, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 20, fontWeight: 800, cursor: "pointer" }}>⋯</button>
             </div>
             {cardio && cardio[day] && onCardioPlan && <CardioPlan key={day} plan={typeof cardio[day] === "object" ? cardio[day] : {}} onChange={onCardioPlan} />}
             {open && <TrocarSheet {...props} onClose={() => setOpen(false)} />}
+            {menu && <TrocarSheet {...props} menu onClose={() => setMenu(false)} />}
         </div>
     );
 }
