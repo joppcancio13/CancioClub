@@ -37,6 +37,7 @@ import { FichaV3, EditVolumeBlock } from "./components/professor/FichaV3";
 import { ExerciseSheet } from "./components/professor/ExerciseSheet";
 import { UndoPill } from "./components/shared/UndoPill";
 import { ForgotCode } from "./components/student/ForgotCode";
+import { CardioV3 } from "./components/student/CardioV3";
 import { DayToolsV3, VolumeFold } from "./components/professor/DayToolsV3";
 import { rendSummary } from "./utils/rendimento";
 import { RendimentoV3 } from "./components/professor/RendimentoV3";
@@ -351,6 +352,8 @@ function CancioClub() {
         delete sc[dk];
     else
         sc[dk] = true; cd[sid] = sc; const next = { ...p, cardio: cd }; syncStudentToCloud(next, sid); return next; });
+    const setCardioPlan = (sid, dk, patch) => setData((p) => { const cd = { ...(p.cardio || {}) }; const sc = { ...(cd[sid] || {}) }; const cur = sc[dk] && typeof sc[dk] === "object" ? sc[dk] : {}; sc[dk] = { ...cur, ...patch }; cd[sid] = sc; const next = { ...p, cardio: cd }; syncStudentToCloud(next, sid); return next; });
+    const [cardioAuto, setCardioAuto] = useState(false); // "Começar cardio" no Hoje já liga o cronômetro
     const addLibrary = (name, url, tag) => setData((p) => { const next = { ...p, library: [...(p.library || []), { id: uid(), name, url: url || "", tag: tag || "" }] }; syncGlobalToCloud(next); return next; });
     const updateLibrary = (id, patch) => setData((p) => { const next = { ...p, library: (p.library || []).map((e) => (e.id === id ? { ...e, ...patch } : e)) }; syncGlobalToCloud(next); return next; });
     const removeLibrary = (id) => setData((p) => { const next = { ...p, library: (p.library || []).filter((e) => e.id !== id) }; syncGlobalToCloud(next); return next; });
@@ -673,6 +676,12 @@ function CancioClub() {
         markWorkoutStarted();
         setData((p) => { const cl = { ...(p.cardioLog || {}) }; const list = [...(cl[focusId] || [])]; list.push({ id: uid(), date: dayDate, activity: act, minutes: min }); cl[focusId] = list; const next = { ...p, cardioLog: cl }; syncStudentToCloud(next, focusId); return next; });
         setCardioForm({ activity: "", minutes: "" });
+    };
+    const finishCardio = ({ activity, minutes, km, effort }) => {
+        markWorkoutStarted();
+        setData((p) => { const cl = { ...(p.cardioLog || {}) }; const lst = [...(cl[focusId] || [])]; lst.push({ id: uid(), date: dayDate, day, activity, minutes, km, effort }); cl[focusId] = lst; const next = { ...p, cardioLog: cl }; syncStudentToCloud(next, focusId); return next; });
+        finalizeWorkout({ leve: "facil", moderado: "medida", forte: "destruidor" }[effort] || null, { silent: true, dayKey: day });
+        setCardioAuto(false); setAlunoTab("hoje"); window.scrollTo(0, 0);
     };
     // recuperação ativa (dias sem treino de força): 3 marcações simples do dia, guardadas por data — igual ao espírito do cardioLog
     const toggleRecovery = (key) => {
@@ -1472,7 +1481,7 @@ function CancioClub() {
                             doneDays: new Set(((data.sessions && data.sessions[profId]) || []).filter((x) => isThisWeek(x.date)).map((x) => x.day)),
                             onPick: (k) => { setDay(k); setExpanded(null); setExSheet(null); }, onRename: (v) => updateDayName(profId, day, v),
                             onApplyTemplate: (t) => withUndo(dayFullOf(day) + " virou " + t.name, [profId], false, () => replaceDayWith(t.exercises, t.name)), onCopyFrom: (k) => withUndo(dayFullOf(day) + " virou cópia de " + dayFullOf(k), [profId], false, () => replaceDayWith(week[k] || [], ((data.dayNames && data.dayNames[profId]) || {})[k] || "")),
-                            onSwapWith: (k) => withUndo(dayFullOf(day) + " e " + dayFullOf(k) + " trocaram", [profId], false, () => swapDayWith(k)), onToggleCardio: () => withUndo(dayFullOf(day) + (cardioFocus[day] ? " não é mais cardio" : " virou dia de cardio"), [profId], false, () => toggleCardio(profId, day)), onSaveTemplate: saveDayTemplateNamed, onClear: () => withUndo(dayFullOf(day) + " ficou vazio", [profId], false, () => replaceDayWith([], null)), onSerie: () => setSerieOpen(true) }),
+                            onSwapWith: (k) => withUndo(dayFullOf(day) + " e " + dayFullOf(k) + " trocaram", [profId], false, () => swapDayWith(k)), onCardioPlan: (patch) => setCardioPlan(profId, day, patch), onToggleCardio: () => withUndo(dayFullOf(day) + (cardioFocus[day] ? " não é mais cardio" : " virou dia de cardio"), [profId], false, () => toggleCardio(profId, day)), onSaveTemplate: saveDayTemplateNamed, onClear: () => withUndo(dayFullOf(day) + " ficou vazio", [profId], false, () => replaceDayWith([], null)), onSerie: () => setSerieOpen(true) }),
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 } },
                             list.length === 0 && !adding && React.createElement(PremiumEmptyState, { icon: "dumbbell", title: `Nenhum treino em ${dayFull} \u2014 a ficha t\u00E1 em branco.`, sub: "Monte um exerc\u00EDcio do zero ou aplique um modelo salvo." }),
                             list.map((ex, i) => profViewMode === "aula"
@@ -1573,7 +1582,7 @@ function CancioClub() {
                     inProgress: (week[hojeKey] || []).some((ex) => (ex.history || []).some((h) => h.date === todayISO() && Array.isArray(h.entries) && h.entries.length)),
                     lastProfMsg: messages.filter((m) => m.studentId === alunoId && m.fromProf).slice(-1)[0] || null,
                     unreadFromProf: messages.some((m) => m.studentId === alunoId && m.fromProf && !m.read),
-                    onStart: () => { setDay(hojeKey); setExpanded(null); setAlunoTab("treino"); window.scrollTo(0, 0); },
+                    onStart: () => { setDay(hojeKey); setExpanded(null); setCardioAuto(!(week[hojeKey] || []).length && !!cardioFocus[hojeKey]); setAlunoTab("treino"); window.scrollTo(0, 0); },
                     onShare: shareTodaySession,
                     onOpenRecados: () => setAlunoTab("recados"),
                     banners: React.createElement(React.Fragment, null,
@@ -1597,8 +1606,11 @@ function CancioClub() {
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
-                        list.length === 0 && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1 } }, "TREINO"),
-                        list.length === 0 && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema — registre seu cardio abaixo, se fez." }),
+                        list.length === 0 && !!cardioFocus[day] && !dayDone && React.createElement(CardioV3, { key: day + "|" + dayDate, weekday: (["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"])[new Date(dayDate + "T12:00:00").getDay()], plan: cardioFocus[day], autoStart: cardioAuto,
+                            last: [...focusCardioLog].reverse().find((c) => c.date < dayDate) || null, bottomOffset: tabsHidden ? 0 : 84,
+                            onExit: () => { setCardioAuto(false); setAlunoTab("hoje"); window.scrollTo(0, 0); }, onDone: finishCardio }),
+                        list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1 } }, "TREINO"),
+                        list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema — registre seu cardio abaixo, se fez." }),
                         // treino v3 (design/v3): lista corrida + registro só na barra de baixo
                         list.length > 0 && React.createElement(WorkoutV3, {
                             key: day + "|" + dayDate, list, dayDate, title: String(dayName || dayFull || "Treino").split("·")[0].trim().toUpperCase(),
@@ -1616,10 +1628,10 @@ function CancioClub() {
                             },
                         }))),
                 todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar resumo da semana")),
-                React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
-                list.length === 0 && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
+                !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
+                list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
                 // dia sem exercício (cardio/recuperação) continua com a barra antiga, erguida acima das abas
-                list.length === 0 && React.createElement(BottomActionBar, {
+                list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(BottomActionBar, {
                     progress: workingProgress(list, dayDate),
                     label: dayDone ? "Compartilhar treino" : isRestDay ? "Salvar recuperação" : "Finalizar treino",
                     canFinalize: hasLoggedSomething || dayDone,

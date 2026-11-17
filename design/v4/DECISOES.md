@@ -50,3 +50,9 @@ Ele foi escrito sobre arquivos que a v55–v58 já trocou. Vale o que existe hoj
 - **Fundo (44b):** reflexos prata em losango; o selo grande saiu.
 - **Esqueci o código (46a):** "Abrir WhatsApp" usa o link do WhatsApp sem número (o aluno escolhe a conversa do professor), porque o app não tem o número do professor guardado num lugar que o aluno sem login possa ler. Dá para fixar o número depois.
 - **Domingo (47b):** fica para a fase 7, junto com o Resumo da semana.
+
+## Notas da fase 3 (parte 2: cardio)
+- **Dia de cardio (39b):** o dia marcado como cardio na ficha passa a guardar o plano `{ activity, target, effort, note }` (antes era só `true`; `true` continua valendo, sem plano). O professor preenche atividade, alvo em minutos, esforço e nota no Editar ficha, logo abaixo do nome do dia.
+- **Tela do aluno:** "Começar cardio" no Hoje já liga o cronômetro; o cronômetro fica guardado no aparelho se a página recarregar. "Terminar" vai para o registro (minutos já preenchidos, km opcional, Leve / Moderado / Forte). Quem usou o relógio da esteira toca "Já fiz" e vai direto ao registro (o protótipo fazia isso pelo Terminar).
+- **Feito:** grava no `cardioLog` (com km e esforço) e fecha o dia, com o esforço convertido para a escala do treino (Leve → Fácil, Moderado → Na medida, Forte → Destruidor). Volta para o Hoje.
+- **Cardio no Modo aula:** fica para a fase 5, junto com as telas do professor.

@@ -108,9 +108,30 @@ function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyT
     );
 }
 
+// dia de cardio (v4 · 39b): o que o aluno vê na tela de cardio — atividade, alvo, esforço e a nota
+const EFF = [["leve", "Leve"], ["moderado", "Moderado"], ["forte", "Forte"]];
+function CardioPlan({ plan, onChange }) {
+    const [f, setF] = useState({ activity: plan.activity || "", target: plan.target ? String(plan.target) : "", note: plan.note || "" });
+    const inp = { boxSizing: "border-box", width: "100%", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", outline: "none", background: C.panel, color: C.text, fontFamily: F.body, fontSize: 15 };
+    const save = (k, v) => onChange({ [k]: k === "target" ? (parseInt(v) || undefined) : (String(v).trim() || undefined) });
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 14, borderRadius: 16, boxShadow: `inset 0 0 0 1px ${C.line}` }}>
+            <span style={kicker}>DIA DE CARDIO · O QUE O ALUNO VÊ</span>
+            <div style={{ display: "flex", gap: 8 }}>
+                <input value={f.activity} onChange={(e) => setF({ ...f, activity: e.target.value })} onBlur={() => save("activity", f.activity)} placeholder="Atividade (ex.: esteira inclinada)" aria-label="Atividade" style={{ ...inp, flex: 2, minWidth: 0 }} />
+                <input value={f.target} onChange={(e) => setF({ ...f, target: e.target.value.replace(/[^0-9]/g, "") })} onBlur={() => save("target", f.target)} inputMode="numeric" placeholder="Alvo (min)" aria-label="Alvo em minutos" style={{ ...inp, flex: 1, minWidth: 0 }} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+                {EFF.map(([k, l]) => { const on = plan.effort === k; return <button key={k} type="button" aria-pressed={on} onClick={() => onChange({ effort: on ? undefined : k })} style={{ minHeight: 44, borderRadius: 10, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text, boxShadow: `inset 0 0 0 1px ${C.outline}` }) }}>{l}</button>; })}
+            </div>
+            <input value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} onBlur={() => save("note", f.note)} placeholder="Nota pro aluno (ex.: dá pra conversar)" aria-label="Nota do cardio" style={inp} />
+        </div>
+    );
+}
+
 // topo do Editar ficha: abas dos dias + nome do treino + "Trocar treino"
 function DayToolsV3(props) {
-    const { week, day, dayNames, cardio, doneDays, onPick, onRename } = props;
+    const { week, day, dayNames, cardio, doneDays, onPick, onRename, onCardioPlan } = props;
     const [open, setOpen] = useState(false);
     const dayFull = (DAYS.find((d) => d.key === day) || {}).full;
     return (
@@ -121,7 +142,7 @@ function DayToolsV3(props) {
                     style={{ flex: 1, minWidth: 0, boxSizing: "border-box", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", outline: "none", background: C.panel, color: C.text, fontFamily: F.body, fontSize: 16, fontWeight: 700 }} />
                 <button type="button" onClick={() => { haptic("tick"); setOpen(true); }} style={{ flex: "none", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Trocar treino</button>
             </div>
-            {cardio && cardio[day] && <span style={{ fontSize: 13, color: C.text3 }}>Marcado como dia de cardio</span>}
+            {cardio && cardio[day] && onCardioPlan && <CardioPlan key={day} plan={typeof cardio[day] === "object" ? cardio[day] : {}} onChange={onCardioPlan} />}
             {open && <TrocarSheet {...props} onClose={() => setOpen(false)} />}
         </div>
     );
