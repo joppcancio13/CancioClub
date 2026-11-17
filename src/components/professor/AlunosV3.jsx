@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { C, DAYS, F, PILL_V3, PROGRESS, KICKER } from "../../styles/tokens";
+import { C, DAYS, F, JS2KEY, PILL_V3, PROGRESS, KICKER } from "../../styles/tokens";
 import { describe } from "../student/WorkoutV3";
 
 // Início do professor — design v3 (design/v3/README.md · Professor 1 "Alunos" 16b e 2 "Ao vivo";
@@ -42,7 +42,10 @@ function Ring({ pct, label }) {
     );
 }
 
-function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, liveId, onLive, onMessage }) {
+function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, onReav, onBatch, templates = [], liveId, onLive, onMessage }) {
+    const [view, setView] = useState("lista"); // Lista | Semana (51a)
+    const [sel, setSel] = useState(null); // seleção em lote (49a): null = desligada; senão os ids marcados
+    const [batch, setBatch] = useState(null); // gaveta do lote: { kind: "model" | "copy", pick, mode, dayKey }
     const [filter, setFilter] = useState("todos"); // lista única: todos · hoje · atenção
     const [attnAll, setAttnAll] = useState(false);
     const today = (() => { const d = new Date(now); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); })();
@@ -104,8 +107,8 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
     const q = search.trim().toLowerCase();
     const pista = enriched.filter((r) => r.onPista);
     const attn = enriched.filter((r) => r.alert);
-    const ACTION = { RECADO: "Responder", SUMIDO: "Chamar", LGPD: "Ver", FADIGA: "Ver", ANAMNESE: "Revisar", "REAVALIAÇÃO": "Ver" };
-    const WARN = new Set(["SUMIDO", "LGPD", "FADIGA"]);
+    const ACTION = { RECADO: "Responder", SUMIDO: "Chamar", LGPD: "Ver", FADIGA: "Ver", ANAMNESE: "Revisar", "REAVALIAÇÃO": "Ver", REAV: "Ver" };
+    const WARN = new Set(["SUMIDO", "LGPD", "FADIGA", "REAV"]);
     const trainsToday = (r) => !!(r.done || r.wait || r.live);
     const FILTERS = [["todos", "Todos", enriched.length], ["hoje", "Treinam hoje", enriched.filter(trainsToday).length], ["atencao", "Atenção", attn.length]];
     const list = enriched.filter((r) => (!q || r.s.name.toLowerCase().includes(q)) && (filter === "todos" || (filter === "hoje" ? trainsToday(r) : !!r.alert)))
@@ -121,8 +124,11 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
 
     return (
         <section style={{ paddingBottom: 20 }}>
-            <span style={{ ...kicker, ...num }}>{WEEKDAYS[d.getDay()]} · {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</span>
-            <div style={{ marginTop: 6, fontFamily: F.display, fontSize: 30, fontWeight: 900, fontStretch: "125%", lineHeight: 1 }}>ALUNOS</div>
+            <span style={{ ...kicker, ...num }}>{sel ? "SELECIONANDO" : WEEKDAYS[d.getDay()] + " · " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0")}</span>
+            <div style={{ marginTop: 6, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <span style={{ fontFamily: F.display, fontSize: 30, fontWeight: 900, fontStretch: "125%", lineHeight: 1 }}>{sel ? sel.length + (sel.length === 1 ? " ALUNO" : " ALUNOS") : "ALUNOS"}</span>
+                {onBatch && enriched.length > 1 && <button type="button" onClick={() => { setSel(sel ? null : []); setBatch(null); }} style={{ flex: "none", minHeight: 44, padding: "0 4px", border: "none", background: "none", color: C.text2, fontFamily: F.body, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>{sel ? "Cancelar" : "Selecionar"}</button>}
+            </div>
             <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
                 <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Buscar aluno" aria-label="Buscar aluno"
                     style={{ flex: 1, minWidth: 0, boxSizing: "border-box", fontFamily: F.body, fontSize: 15, color: C.text, background: C.panel, border: "none", borderRadius: 10, padding: "12px 14px", outline: "none" }} />
@@ -151,7 +157,8 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                     <div style={{ ...kicker, marginTop: 22, color: C.accent }}>Precisa de atenção · {attn.length}</div>
                     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, borderRadius: 16, overflow: "hidden" }}>
                         {(attnAll ? attn : attn.slice(0, 3)).map((r) => (
-                            <button key={r.s.id} type="button" onClick={() => onAttn(r)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: C.panel, border: "none", color: C.text, textAlign: "left", cursor: "pointer" }}>
+                            <div key={r.s.id} style={{ display: "flex", flexDirection: "column", background: C.panel }}>
+                            <button type="button" onClick={() => onAttn(r)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer" }}>
                                 {avatar(r.s.name)}
                                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                                     <span style={{ fontSize: 15, fontWeight: 700 }}>{r.s.name}</span>
@@ -159,22 +166,39 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                                 </span>
                                 <span style={{ flex: "none", fontSize: 15, fontWeight: 700, color: C.text }}>{ACTION[r.alert.k] || "Ver"}</span>
                             </button>
+                            {/* reavaliação vencida (53a): duas ações na própria linha */}
+                            {r.alert.k === "REAV" && onReav && (
+                                <div style={{ display: "flex", gap: 6, padding: "0 14px 12px 62px" }}>
+                                    <button type="button" onClick={() => onReav(r.s.id, "done")} style={{ minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Feita hoje</button>
+                                    <button type="button" onClick={() => onReav(r.s.id, "snooze")} style={{ minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", background: C.raised, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Adiar 1 semana</button>
+                                </div>
+                            )}
+                            </div>
                         ))}
                     </div>
                     {attn.length > 3 && <button type="button" onClick={() => setAttnAll(!attnAll)} style={{ marginTop: 6, minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer", textAlign: "left" }}>{attnAll ? "Mostrar menos" : "Ver todos · " + attn.length}</button>}
                 </>
             )}
 
-            <div style={{ marginTop: 22, display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
-                {FILTERS.map(([k, l, n]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} style={chip(filter === k)}>{l + " · " + n}</button>)}
+            <div style={{ marginTop: 22, display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+                    {FILTERS.map(([k, l, n]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} style={chip(filter === k)}>{l + " · " + n}</button>)}
+                </div>
+                {!sel && (
+                    <div role="tablist" style={{ flex: "none", display: "flex", padding: 3, borderRadius: 999, background: C.panel }}>
+                        {[["lista", "Lista"], ["semana", "Semana"]].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{ minHeight: 38, padding: "0 12px", borderRadius: 999, border: "none", background: view === k ? C.text : "transparent", color: view === k ? C.bg : C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{l}</button>)}
+                    </div>
+                )}
             </div>
-            <div style={{ marginTop: 6, display: "flex", flexDirection: "column" }}>
+            {view === "semana" && !sel && <WeekGrid list={list} data={data} today={today} />}
+            <div style={{ marginTop: 6, display: view === "semana" && !sel ? "none" : "flex", flexDirection: "column", paddingBottom: sel ? 90 : 0 }}>
                 {list.map((r) => {
                     const st = status(r);
+                    const on = sel && sel.includes(r.s.id);
                     return (
-                        <button key={r.s.id} type="button" onClick={() => (r.onPista ? onLive(r.s.id) : onOpen(r.s))}
+                        <button key={r.s.id} type="button" aria-pressed={sel ? !!on : undefined} onClick={() => (sel ? setSel(on ? sel.filter((x) => x !== r.s.id) : [...sel, r.s.id]) : r.onPista ? onLive(r.s.id) : onOpen(r.s))}
                             style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 58, padding: "8px 0", border: "none", ...divider, color: C.text, textAlign: "left", cursor: "pointer" }}>
-                            {avatar(r.s.name)}
+                            {sel ? <span aria-hidden="true" style={{ width: 28, height: 28, flex: "none", margin: "0 4px", borderRadius: 8, background: on ? C.text : "transparent", boxShadow: on ? "none" : "inset 0 0 0 1.5px #3A404C", color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>{on ? "✓" : ""}</span> : avatar(r.s.name)}
                             <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                                 <span style={{ fontSize: 15, fontWeight: 600 }}>{r.s.name}</span>
                                 {st.t && <span style={{ fontSize: 13, color: st.warn ? C.accent : st.strong ? C.text : C.text4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.t}</span>}
@@ -188,7 +212,102 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, li
                 })}
                 {list.length === 0 && <span style={{ padding: "16px 0", fontSize: 13, color: C.text3 }}>{q ? "Nenhum aluno com esse nome." : filter === "hoje" ? "Ninguém treina hoje." : filter === "atencao" ? "Ninguém precisa de atenção agora." : "Nenhum aluno ainda — toque em + pra cadastrar."}</span>}
             </div>
+            {sel && sel.length > 0 && !batch && (
+                <div style={{ position: "fixed", left: 12, right: 12, bottom: "calc(16px + env(safe-area-inset-bottom))", zIndex: 95, maxWidth: 636, margin: "0 auto", padding: 8, borderRadius: 24, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}, 0 8px 24px rgba(0,0,0,.5)`, display: "flex", gap: 6 }}>
+                    <button type="button" disabled={!templates.length} onClick={() => setBatch({ kind: "model", pick: 0, mode: "novo", dayKey: JS2KEY[new Date(now).getDay()] })} style={{ flex: 1, height: 52, borderRadius: 16, border: "none", background: C.raised, color: templates.length ? C.text : C.text4, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Aplicar modelo</button>
+                    <button type="button" onClick={() => setBatch({ kind: "copy", pick: 0 })} style={{ flex: 1, height: 52, borderRadius: 16, border: "none", background: C.raised, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Copiar ficha de…</button>
+                </div>
+            )}
+            {batch && sel && <BatchSheet batch={batch} setBatch={setBatch} sel={sel} rows={enriched} templates={templates} data={data}
+                onDone={(b) => { onBatch({ ...b, sids: sel }); setBatch(null); setSel(null); }} />}
         </section>
+    );
+}
+
+// grade da semana (51a): aluno × dia, com feito (prata), treinando (branco com halo), faltou (traço) e ainda vai (contorno)
+const WK = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+function WeekGrid({ list, data, today }) {
+    const t = new Date(today + "T12:00:00"); const mon = new Date(t); mon.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+    const dates = WK.map((_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return d.toISOString().slice(0, 10); });
+    const cell = (st) => {
+        const base = { width: 22, height: 22, borderRadius: 6, margin: "0 auto" };
+        if (st === "feito") return <span style={{ ...base, display: "block", backgroundImage: PROGRESS }} />;
+        if (st === "treinando") return <span style={{ ...base, display: "block", background: C.text, boxShadow: "0 0 0 3px rgba(242,245,250,.18)" }} />;
+        if (st === "faltou") return <span style={{ ...base, display: "flex", alignItems: "center", justifyContent: "center", background: "#171B22" }}><span style={{ width: 10, height: 2, borderRadius: 1, background: C.text3 }} /></span>;
+        if (st === "vai") return <span style={{ ...base, display: "block", boxShadow: "inset 0 0 0 1.5px #3A404C" }} />;
+        return <span style={{ ...base, display: "block" }} />;
+    };
+    return (
+        <div style={{ marginTop: 10, display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) repeat(7, 28px) 40px", gap: 4, alignItems: "center", padding: "0 0 6px" }}>
+                <span />{WK.map((k, i) => <span key={k} style={{ ...KICKER, fontSize: 11, letterSpacing: "0.04em", textAlign: "center", color: dates[i] === today ? C.text : C.text3 }}>{"STQQSSD"[i]}</span>)}<span />
+            </div>
+            {list.map((r) => {
+                const sid = r.s.id; const wk = ((data.workouts || {})[sid]) || {}; const cd = ((data.cardio || {})[sid]) || {};
+                const sess = ((data.sessions || {})[sid]) || [];
+                let done = 0, planned = 0;
+                const states = WK.map((k, i) => {
+                    const date = dates[i]; const pl = (wk[k] || []).length > 0 || !!cd[k];
+                    if (pl) planned += 1;
+                    if (sess.some((x) => x.date === date)) { done += 1; return "feito"; }
+                    if (date === today && r.onPista) return "treinando";
+                    if (!pl) return null;
+                    return date < today ? "faltou" : "vai";
+                });
+                return (
+                    <div key={sid} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) repeat(7, 28px) 40px", gap: 4, alignItems: "center", minHeight: 48, ...divider }}>
+                        <span style={{ fontSize: 15, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.s.name}</span>
+                        {states.map((st, i) => <span key={i}>{cell(st)}</span>)}
+                        <span style={{ textAlign: "right", fontSize: 15, fontWeight: 700, ...num }}>{done}<span style={{ color: C.dim }}>/{planned}</span></span>
+                    </div>
+                );
+            })}
+            <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 14, fontSize: 13, color: C.text3 }}>
+                {[["feito", "feito"], ["treinando", "treinando"], ["faltou", "faltou"], ["vai", "ainda vai"]].map(([k, l]) => <span key={k} style={{ display: "flex", alignItems: "center", gap: 6 }}>{cell(k)}{l}</span>)}
+            </div>
+        </div>
+    );
+}
+
+// gaveta do lote (49a): aplicar um modelo (como novo dia ou substituindo um dia) ou copiar a ficha de outro aluno
+function BatchSheet({ batch, setBatch, sel, rows, templates, onDone }) {
+    const names = sel.map((id) => { const r = rows.find((x) => x.s.id === id); return r ? String(r.s.name).split(" ")[0] : "?"; });
+    const isModel = batch.kind === "model";
+    const opts = isModel ? templates.map((t) => ({ id: t.id, t: t.name, s: t.exercises.length + (t.exercises.length === 1 ? " exercício" : " exercícios") }))
+        : rows.filter((r) => !sel.includes(r.s.id)).map((r) => ({ id: r.s.id, t: "Ficha de " + r.s.name, s: "sem cargas nem histórico" }));
+    const pick = opts[batch.pick] || opts[0];
+    const DAYL = { seg: "segunda", ter: "terça", qua: "quarta", qui: "quinta", sex: "sexta", sab: "sábado", dom: "domingo" };
+    return (
+        <div role="dialog" aria-modal="true" aria-label={isModel ? "Aplicar modelo" : "Copiar ficha"} style={{ position: "fixed", inset: 0, zIndex: 120, color: C.text, fontFamily: F.body }}>
+            <div onClick={() => setBatch(null)} style={{ position: "absolute", inset: 0, background: "rgba(5,6,10,.72)" }} />
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, maxWidth: 620, margin: "0 auto", boxSizing: "border-box", borderRadius: "20px 20px 0 0", background: C.panel, padding: "12px 20px calc(20px + env(safe-area-inset-bottom, 0px))", display: "flex", flexDirection: "column", gap: 8, maxHeight: "86vh", overflowY: "auto" }}>
+                <span aria-hidden="true" style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, background: C.raised }} />
+                <span style={{ marginTop: 8, fontFamily: F.display, fontSize: 20, fontWeight: 800, fontStretch: "110%" }}>{(isModel ? "Aplicar em " : "Copiar para ") + names.join(", ")}</span>
+                {opts.length === 0 && <span style={{ fontSize: 15, color: C.text3 }}>{isModel ? "Nenhum modelo salvo ainda." : "Nenhum outro aluno pra copiar."}</span>}
+                {opts.map((o, i) => { const on = pick && pick.id === o.id; return (
+                    <button key={o.id} type="button" onClick={() => setBatch({ ...batch, pick: i })} style={{ minHeight: 56, display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "8px 14px", borderRadius: 14, border: "none", background: on ? C.raised : C.bg, boxShadow: on ? `inset 0 0 0 1.5px ${C.text}` : "none", color: C.text, textAlign: "left", cursor: "pointer", fontFamily: F.body }}>
+                        <span style={{ fontSize: 15, fontWeight: 700 }}>{o.t}</span><span style={{ fontSize: 13, color: C.text3 }}>{o.s}</span>
+                    </button>
+                ); })}
+                {isModel && (
+                    <>
+                        <span style={{ ...KICKER, marginTop: 6 }}>ENTRA COMO</span>
+                        <div style={{ display: "flex", gap: 6 }}>
+                            {[["novo", "Novo dia"], ["sub", "Substitui " + DAYL[batch.dayKey]]].map(([k, l]) => <button key={k} type="button" aria-pressed={batch.mode === k} onClick={() => setBatch({ ...batch, mode: k })} style={{ flex: 1, minHeight: 44, borderRadius: 12, border: "none", background: batch.mode === k ? C.text : C.raised, color: batch.mode === k ? C.bg : C.text, fontFamily: F.body, fontSize: 13, fontWeight: batch.mode === k ? 800 : 700, cursor: "pointer" }}>{l}</button>)}
+                        </div>
+                        {batch.mode === "sub" && (
+                            <div style={{ display: "flex", gap: 4 }}>
+                                {WK.map((k) => <button key={k} type="button" aria-pressed={batch.dayKey === k} onClick={() => setBatch({ ...batch, dayKey: k })} style={{ flex: 1, minHeight: 44, borderRadius: 10, border: "none", background: batch.dayKey === k ? C.text : "transparent", boxShadow: batch.dayKey === k ? "none" : `inset 0 0 0 1px ${C.outline}`, color: batch.dayKey === k ? C.bg : C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{DAYL[k].slice(0, 3)}</button>)}
+                            </div>
+                        )}
+                        <span style={{ fontSize: 13, color: C.text3 }}>{batch.mode === "novo" ? "Entra no primeiro dia vazio da ficha de cada um." : "Os exercícios desse dia saem; o que já foi registrado neles vai pras fases arquivadas."}</span>
+                    </>
+                )}
+                {!isModel && <span style={{ fontSize: 13, color: C.text3 }}>A ficha inteira é trocada pela cópia. A anterior de cada um fica guardada nas fases arquivadas.</span>}
+                <button type="button" disabled={!pick} onClick={() => onDone(isModel ? { kind: "model", tplId: pick.id, mode: batch.mode, dayKey: batch.dayKey } : { kind: "copy", fromSid: pick.id })}
+                    style={{ marginTop: 6, height: 56, borderRadius: 16, border: "none", background: pick ? C.text : C.raised, color: pick ? C.bg : C.text4, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>{(isModel ? "Aplicar em " : "Copiar para ") + sel.length}</button>
+            </div>
+        </div>
     );
 }
 

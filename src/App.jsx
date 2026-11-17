@@ -38,13 +38,15 @@ import { ExerciseSheet } from "./components/professor/ExerciseSheet";
 import { UndoPill } from "./components/shared/UndoPill";
 import { ForgotCode } from "./components/student/ForgotCode";
 import { CardioV3 } from "./components/student/CardioV3";
+import { DemoPill, DemoEntry } from "./components/professor/DemoPill";
+import { buildDemo } from "./utils/demoData";
 import { DayToolsV3, VolumeFold } from "./components/professor/DayToolsV3";
 import { rendSummary } from "./utils/rendimento";
 import { RendimentoV3 } from "./components/professor/RendimentoV3";
 import { AulaV3 } from "./components/professor/AulaV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
-import { Reassessment, reassessDue } from "./components/student/Reassessment";
+import { Reassessment, reassessDue, nextReassess } from "./components/student/Reassessment";
 import { MyData } from "./components/student/MyData";
 import { MemberCard } from "./components/student/MemberCard";
 import { StudentProfile, Avatar } from "./components/student/StudentProfile";
@@ -100,7 +102,14 @@ function CancioClub() {
     const toggleExpanded = React.useCallback((id) => setExpanded((p) => (p === id ? null : id)), []);
     const [adding, setAdding] = useState(false);
     const [undo, setUndo] = useState(null); // design v4 (33b): { label, before, sids, global, at } — a pílula das abas vira Desfazer por 8 s
-    const [exSheet, setExSheet] = useState(null); // design v3 · gavetas do Editar ficha: { mode: "add" } | { mode: "swap", ex }
+    const [exSheet, setExSheet] = useState(null);
+    // demonstração (design v4 · 32b): troca os dados por alunos fictícios (isSeed: nunca salvos) e guarda os
+    // de verdade pra voltar no Sair; enquanto isso a busca na nuvem fica parada
+    const [demo, setDemo] = useState(false);
+    const demoRealRef = React.useRef(null);
+    const enterDemo = () => { demoRealRef.current = useDataStore.getState().data; setUndo(null); setData(() => buildDemo()); setDemo(true); setProfTab("alunos"); setProfView("home"); setLiveStudentId(null); window.scrollTo(0, 0); };
+    const exitDemo = () => { const real = demoRealRef.current; demoRealRef.current = null; setUndo(null); setDemo(false); if (real) setData(() => real); setProfTab("painel"); setProfView("home"); setLiveStudentId(null); window.scrollTo(0, 0); }; // design v3 · gavetas do Editar ficha: { mode: "add" } | { mode: "swap", ex }
+    useEffect(() => { if (role !== "prof" && demoRealRef.current) exitDemo(); }, [role]); // sair do professor também sai da demonstração
     // swipe horizontal troca o dia — só dispara se o gesto for bem mais horizontal que vertical,
     // pra não atrapalhar a rolagem normal da lista
     const swipeStart = React.useRef(null);
@@ -608,10 +617,43 @@ function CancioClub() {
     // Desfazer (design v4 · 33b): guarda o estado de antes e, ao desfazer, devolve SÓ o que a ação mexe
     // (o aluno afetado e/ou modelos e biblioteca) — o resto que chegou nesses 8 s fica
     const withUndo = (label, sids, global, fn) => { const before = useDataStore.getState().data; fn(); setUndo({ label, before, sids: sids || [], global: !!global, at: Date.now() }); };
-    const doUndo = () => { const u = undo; if (!u) return; setUndo(null); const b = u.before; setData((p) => { let next = { ...p }; u.sids.forEach((sid) => { ["workouts", "dayNames", "cardio", "archives"].forEach((k) => { const m = { ...(next[k] || {}) }; if (b[k] && b[k][sid] !== undefined) m[sid] = b[k][sid]; else delete m[sid]; next[k] = m; }); }); if (u.global) { next.templates = b.templates; next.library = b.library; } u.sids.forEach((sid) => syncStudentToCloud(next, sid)); if (u.global) syncGlobalToCloud(next); return next; }); };
+    const doUndo = () => { const u = undo; if (!u) return; setUndo(null); const b = u.before; setData((p) => { let next = { ...p }; u.sids.forEach((sid) => { ["workouts", "dayNames", "cardio", "archives"].forEach((k) => { const m = { ...(next[k] || {}) }; if (b[k] && b[k][sid] !== undefined) m[sid] = b[k][sid]; else delete m[sid]; next[k] = m; }); }); if (u.sids.length) next.students = (next.students || []).map((st) => (u.sids.includes(st.id) ? ((b.students || []).find((x) => x.id === st.id) || st) : st)); if (u.global) { next.templates = b.templates; next.library = b.library; } u.sids.forEach((sid) => syncStudentToCloud(next, sid)); if (u.global) syncGlobalToCloud(next); return next; }); };
     useEffect(() => { setUndo(null); }, [profTab, profView, fichaTab, profId, role]);
     const dayFullOf = (k) => (DAYS.find((d) => d.key === k) || {}).full || k;
     const removeExerciseU = (exId) => { const ex = (week[day] || []).find((e) => e.id === exId); withUndo((ex ? ex.name : "Exercício") + " saiu da ficha", [focusId], false, () => removeExercise(exId)); };
+    // lote (design v4 · 49a): aplicar modelo em vários alunos (novo dia ou substituindo um dia) ou copiar a
+    // ficha de um aluno para os marcados. O que sai com registros vai pras fases arquivadas; tudo com Desfazer.
+    const freshEx = (e) => ({ id: uid(), name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, note: e.note, url: e.url, catalogId: e.catalogId, setPlan: (e.setPlan && e.setPlan.length ? e.setPlan : defaultSetPlan(e.sets, e.reps)).map((x) => ({ ...x, id: uidShort() })), history: [] });
+    const runBatch = (b) => {
+        const sids = b.sids || []; if (!sids.length) return;
+        const label = sids.length + (sids.length === 1 ? " ficha mudou" : " fichas mudaram");
+        withUndo(label, sids, false, () => setData((p) => {
+            const workouts = { ...(p.workouts || {}) }, dayNamesAll = { ...(p.dayNames || {}) }, cardioAll = { ...(p.cardio || {}) }, archivesAll = { ...(p.archives || {}) };
+            const tpl = b.kind === "model" ? (p.templates || []).find((t) => t.id === b.tplId) : null;
+            const src = b.kind === "copy" ? (p.workouts || {})[b.fromSid] || emptyWeek() : null;
+            const srcName = b.kind === "copy" ? ((p.students || []).find((x) => x.id === b.fromSid) || {}).name : "";
+            if (b.kind === "model" && !tpl) return p;
+            sids.forEach((sid) => {
+                const w = { ...(workouts[sid] || emptyWeek()) }; const dn = { ...(dayNamesAll[sid] || {}) }; const cd = { ...(cardioAll[sid] || {}) };
+                const arch = [...(archivesAll[sid] || [])];
+                const keep = (lbl, wk) => { const withHist = {}; let any = false; DAYS.forEach((d) => { const l = (wk[d.key] || []).filter((e) => (e.history || []).length); if (l.length) { withHist[d.key] = JSON.parse(JSON.stringify(l)); any = true; } }); if (any) arch.push({ id: uid(), label: lbl, date: new Date().toISOString(), week: withHist }); };
+                if (b.kind === "model") {
+                    const dk = b.mode === "sub" ? b.dayKey : (DAYS.find((d) => !(w[d.key] || []).length && !cd[d.key]) || {}).key || b.dayKey;
+                    if (b.mode === "sub") keep("Antes de " + tpl.name, { [dk]: w[dk] || [] });
+                    w[dk] = tpl.exercises.map(freshEx); dn[dk] = tpl.name;
+                } else {
+                    keep("Antes da cópia da ficha de " + srcName, w);
+                    DAYS.forEach((d) => { w[d.key] = (src[d.key] || []).map(freshEx); });
+                    Object.keys(dn).forEach((k) => delete dn[k]); Object.assign(dn, (p.dayNames || {})[b.fromSid] || {});
+                    Object.keys(cd).forEach((k) => delete cd[k]); Object.assign(cd, JSON.parse(JSON.stringify((p.cardio || {})[b.fromSid] || {})));
+                }
+                workouts[sid] = w; dayNamesAll[sid] = dn; cardioAll[sid] = cd; archivesAll[sid] = arch;
+            });
+            const next = { ...p, workouts, dayNames: dayNamesAll, cardio: cardioAll, archives: archivesAll };
+            sids.forEach((sid) => syncStudentToCloud(next, sid));
+            return next;
+        }));
+    };
     const openSwap = React.useCallback((ex) => setExSheet({ mode: "swap", ex }), []);
     const removeExercise = React.useCallback((exId) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].filter((e) => e.id !== exId); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
     const updateExercise = React.useCallback((exId, patch) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, ...patch } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
@@ -996,6 +1038,7 @@ function CancioClub() {
     // AUTENTICAÇÃO REAL DO SUPABASE — a senha é verificada de verdade pelo Supabase Auth (nunca
     // gravada no código; só o e-mail da conta única de professor é fixo).
     const fetchAllStudentsAfterAuth = async (quiet) => {
+        if (demoRealRef.current) return; // demonstração: nada vem da nuvem
         if (!quiet) { setLoadingRoster(true); setRosterError(false); } // quiet: a atualização de 30 s do "na pista" não mostra carregando
         try {
             // a linha "global" (biblioteca, modelos...) vem junto: num aparelho que só tinha os dados de
@@ -1327,7 +1370,8 @@ function CancioClub() {
                 React.createElement("button", { onClick: unlockProf, disabled: loginBusy, style: { minHeight: 44, ...keyBtn, cursor: loginBusy ? "default" : "pointer", opacity: loginBusy ? 0.7 : 1 } }, loginBusy ? "Buscando…" : "Entrar"),
                 React.createElement("button", { onClick: () => switchRole("aluno"), style: { minHeight: 44, display: "block", margin: "14px auto 0", fontFamily: F.body, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 8, cursor: "pointer" } }, "\u2039 Sou aluno"))),
             role === "prof" && profUnlocked && (React.createElement(React.Fragment, null,
-                React.createElement("div", { style: { position: "fixed", left: 12, right: 12, bottom: "calc(16px + env(safe-area-inset-bottom))", zIndex: 91, maxWidth: 636, margin: "0 auto" } },
+                React.createElement("div", { style: { position: "fixed", left: 12, right: 12, bottom: "calc(16px + env(safe-area-inset-bottom))", zIndex: 91, maxWidth: 636, margin: "0 auto", display: "flex", flexDirection: "column" } },
+                    demo && React.createElement(DemoPill, { onExit: exitDemo }),
                     undo ? React.createElement(UndoPill, { key: undo.at, label: undo.label, startedAt: undo.at, onUndo: doUndo, onExpire: () => setUndo(null) }) : React.createElement("div", { style: { display: "flex", gap: 2, padding: 6, borderRadius: 16, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}, 0 -16px 40px rgba(5,6,10,.9)` } },
                         [
                             ["alunos", "Alunos", () => { setProfTab("alunos"); setProfView("home"); setRendEx(null); setExpanded(null); }],
@@ -1360,6 +1404,7 @@ function CancioClub() {
                                     unreadN > 0 && { k: "RECADO", t: unreadN + (unreadN > 1 ? " recados sem resposta" : " recado sem resposta") },
                                     lastEffortFor(s.id) === "destruidor" && { k: "FADIGA", t: "\u00DAltimo treino veio como Destruidor" },
                                     st.week === 0 && planned > 0 && { k: "SUMIDO", t: "Nenhum treino nos \u00FAltimos 7 dias" },
+                                    reassessDue(s) && { k: "REAV", t: "Reavaliação vencida há " + Math.max(1, Math.floor((Date.now() - nextReassess(s)) / 864e5)) + (Math.floor((Date.now() - nextReassess(s)) / 864e5) > 1 ? " dias" : " dia") },
                                     newAnam && { k: "ANAMNESE", t: "Respondeu a anamnese \u2014 vale revisar" },
                                     (() => { const rl = s.reassessments || []; const lr = rl[rl.length - 1]; return lr && Date.now() - new Date(lr.date).getTime() < 7 * 864e5 && { k: "REAVALIA\u00C7\u00C3O", t: "Mandou peso e medidas novas" }; })(),
                                 ].filter(Boolean);
@@ -1373,6 +1418,8 @@ function CancioClub() {
                             return React.createElement(React.Fragment, null,
                                 React.createElement(AlunosV3, { rows, data, now: liveNow, search: studentSearch, onSearch: setStudentSearch, onAdd: () => setAddStudentOpen(true), onOpen: (s) => { setLiveStudentId(null); open(s); },
                                     onAttn: (r) => { if (r.alert.k === "RECADO" || r.alert.k === "SUMIDO") { setInboxFocus(r.s.id); setProfTab("recados"); markThreadRead(r.s.id); } else open(r.s); },
+                                    onReav: (sid, act) => { const st = students.find((x) => x.id === sid); if (!st) return; const patch = act === "done" ? { reassessDoneAt: new Date().toISOString(), reassessSnoozeUntil: undefined } : { reassessSnoozeUntil: new Date(Date.now() + 7 * 864e5).toISOString() }; const nx = nextReassess({ ...st, ...patch }); const lbl = "Próxima em " + new Date(nx).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(/\./g, ""); withUndo(lbl, [sid], false, () => updateStudent(sid, patch)); },
+                                    onBatch: runBatch, templates,
                                     liveId: liveStudentId, onLive: (id) => { setLiveStudentId(id); window.scrollTo(0, 0); },
                                     onMessage: (s) => { setLiveStudentId(null); setInboxFocus(s.id); setProfTab("recados"); markThreadRead(s.id); } }),
                                 addStudentOpen && React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 110, background: "rgba(5,6,10,.8)" }, onClick: () => setAddStudentOpen(false) },
@@ -1535,6 +1582,7 @@ function CancioClub() {
                         React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead,
                             onOpenFicha: (sid) => { setActive(sid); setProfTab("alunos"); setProfView("aluno"); setFichaTab("resumo"); setRendEx(null); setExpanded(null); window.scrollTo(0, 0); } })))),
                 profTab === "painel" && (React.createElement(React.Fragment, null,
+                    !demo && React.createElement(DemoEntry, { onEnter: enterDemo }),
                     React.createElement("button", { onClick: () => setAdvOpen((v) => !v), style: { minHeight: 44, width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 8 } }, "Avan\u00E7ado \u00B7 backup e restaura\u00E7\u00E3o", React.createElement("span", { style: { color: C.muted, transform: advOpen ? "rotate(90deg)" : "none" } }, "\u203A")),
                     advOpen && React.createElement(React.Fragment, null,
                     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },

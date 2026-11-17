@@ -4,12 +4,20 @@ import { C, F } from "../../styles/tokens";
 const FIELDS = [["peso", "Peso (kg)", "decimal"], ["cintura", "Cintura (cm)", "decimal"], ["quadril", "Quadril (cm)", "decimal"], ["braco", "Bra\u00E7o (cm)", "decimal"], ["coxa", "Coxa (cm)", "decimal"]];
 const readPhoto = (file) => new Promise((res, rej) => { const r = new FileReader(); r.onerror = rej; r.onload = () => { const img = new Image(); img.onerror = rej; img.onload = () => { const S = 480, c = document.createElement("canvas"); const k = Math.min(1, S / Math.max(img.width, img.height)); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", 0.8)); }; img.src = r.result; }; r.readAsDataURL(file); });
 // quando vence a reavaliação: a cada N semanas (padrão 6) desde a última ou desde a anamnese
-function reassessDue(student) {
-    if (!student || !student.assessmentAt) return false;
+// próxima reavaliação: N semanas depois da última (a do aluno, ou a que o professor marcou como feita —
+// design v4 · 53a "Feita hoje"); "Adiar 1 semana" empurra pelo reassessSnoozeUntil
+function nextReassess(student) {
+    if (!student || !student.assessmentAt) return null;
     const list = student.reassessments || [];
-    const last = list.length ? list[list.length - 1].date : student.assessmentAt;
+    const dates = [student.assessmentAt, list.length ? list[list.length - 1].date : null, student.reassessDoneAt].filter(Boolean).map((d) => new Date(d).getTime());
     const weeks = Number(student.reassessEvery) || 6;
-    return Date.now() - new Date(last).getTime() >= weeks * 7 * 864e5;
+    let next = Math.max(...dates) + weeks * 7 * 864e5;
+    if (student.reassessSnoozeUntil) next = Math.max(next, new Date(student.reassessSnoozeUntil).getTime());
+    return next;
+}
+function reassessDue(student) {
+    const next = nextReassess(student);
+    return next != null && Date.now() >= next;
 }
 function Reassessment({ onSubmit, onClose }) {
     const [f, setF] = useState({});
@@ -51,4 +59,4 @@ function ReassessmentHistory({ student, onSave }) {
                     cols.map(([k]) => { const prev = all.slice(0, i).reverse().find((x) => x[k] != null); return React.createElement("td", { key: k, style: { padding: "8px 10px 8px 0", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" } }, r[k] != null ? String(r[k]).replace(".", ",") : "\u2014", r[k] != null && prev && React.createElement("span", { style: { color: C.muted, fontSize: 11 } }, d(r[k], prev[k]))); })))))),
         list.some((r) => r.foto) && React.createElement("div", { style: { display: "flex", gap: 8, overflowX: "auto", marginTop: 12 } }, list.filter((r) => r.foto).map((r, i) => React.createElement("img", { key: i, src: r.foto, alt: "Foto " + new Date(r.date).toLocaleDateString("pt-BR"), style: { height: 120, borderRadius: 10, flexShrink: 0 } }))));
 }
-export { Reassessment, ReassessmentHistory, reassessDue };
+export { Reassessment, ReassessmentHistory, reassessDue, nextReassess };
