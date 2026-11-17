@@ -47,7 +47,7 @@ function Spark({ pts, h, stroke }) {
     return React.createElement("svg", { viewBox: `0 0 320 ${h}`, width: "100%", height: h, preserveAspectRatio: "none", "aria-hidden": "true" }, React.createElement("polyline", { points: d, fill: "none", stroke: C.silver, strokeWidth: stroke || 2.5, strokeLinejoin: "round", vectorEffect: "non-scaling-stroke" }));
 }
 
-function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone }) {
+function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone, diaryView, diaryCount }) {
     const [view, setView] = useState(null);
     const [evoIdx, setEvoIdx] = useState(0);
     const [contact, setContact] = useState(null);
@@ -92,6 +92,8 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
             title && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1 } }, title),
             body));
 
+    // diário de treinos (pedido do professor, 16/nov): saiu do Hoje e virou um bloco do Perfil
+    if (view === "diario") return shell("DIÁRIO", diaryView || null);
     if (view === "recordes") return shell("RECORDES", records.length ? React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, records.map((r) => React.createElement("div", { key: r.name, style: { minHeight: 52, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "12px 0", borderBottom: `1px solid ${C.line}` } },
         React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, r.name),
         React.createElement("span", { style: { display: "flex", alignItems: "baseline", gap: 8, flexShrink: 0 } }, React.createElement("span", { style: { fontSize: 13, color: C.muted } }, dShort(r.date)), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24 } }, kgs(r.best)), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, "kg")))))
@@ -176,6 +178,9 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
             React.createElement("div", { style: { ...block, gridColumn: "span 2", cursor: "default", gap: 10 } },
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } }, React.createElement("span", { style: label }, "FREQUÊNCIA"), React.createElement("span", { style: small }, `${MO[now.getMonth()]} · ${monthSet.size} ${monthSet.size === 1 ? "treino" : "treinos"}`)),
                 React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(16,1fr)", gap: 4 } }, Array.from({ length: dim }, (_, i) => { const on = monthSet.has(i + 1), fut = i + 1 > now.getDate(); return React.createElement("span", { key: i, style: { height: 12, borderRadius: 2, background: on ? TILE_ON : fut ? C.panel : "#1A1D24", boxShadow: on ? "none" : "inset 0 0 0 1px #2A2E37" } }); }))),
+            diaryView && React.createElement("button", { className: "cc-tap", onClick: () => setView("diario"), style: { ...block, gridColumn: "span 2", flexDirection: "row", alignItems: "center", gap: 14 } },
+                React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2 } }, React.createElement("span", { style: label }, "DIÁRIO"), React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, diaryCount ? diaryCount + (diaryCount === 1 ? " treino registrado" : " treinos registrados") : "Seus treinos dia a dia"), React.createElement("span", { style: small }, "Calendário com cada treino, carga e recorde")),
+                React.createElement("span", { "aria-hidden": "true", style: { marginLeft: "auto", fontSize: 18, color: "#7D8698" } }, "›")),
             React.createElement("button", { className: "cc-tap", onClick: () => setView("recordes"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "RECORDES"),
                 top ? React.createElement(React.Fragment, null, React.createElement("span", { style: big }, kgs(top.best), React.createElement("span", { style: unit }, " kg")), React.createElement("span", { style: small }, `${top.name} · sua maior carga`)) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Ainda sem carga registrada")),
             React.createElement("button", { className: "cc-tap", onClick: () => setView("evolucao"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "EVOLUÇÃO"),

@@ -114,7 +114,6 @@ function HojeV3({ student, greetWord, weekLine, streak, todayKey, dayDate, week,
 
             <div style={{ marginTop: 18, display: "flex", gap: 18, flexWrap: "wrap" }}>
                 {state !== "rest" && otherDays.length > 0 && <button type="button" onClick={() => onPickDay(null)} style={{ background: "none", border: "none", padding: 0, minHeight: 44, color: C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Trocar treino ›</button>}
-                <button type="button" onClick={onOpenDiary} style={{ background: "none", border: "none", padding: 0, minHeight: 44, color: C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Diário de treinos ›</button>
             </div>
 
             {cta && (
