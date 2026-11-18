@@ -30,7 +30,7 @@ function statusOf(r) {
     return low ? { t: "abaixo", c: C.accent } : high ? { t: "no teto", c: C.text } : { t: "no alvo", c: C.text2 };
 }
 
-function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, onEdit, onOpenRend, onOpenVol }) {
+function FichaV3({ student, week, dayNames, sessions, todayKey, cardio, rend, onAula, onEdit, onOpenRend, onOpenVol }) {
     const [openEx, setOpenEx] = useState(null);
     const days = DAYS.filter((d) => (week[d.key] || []).length);
     const nameOf = (k) => String((dayNames && dayNames[k]) || (DAYS.find((d) => d.key === k) || {}).full || "").split("·")[0].trim();
@@ -97,11 +97,11 @@ function FichaV3({ student, week, dayNames, sessions, todayKey, rend, onAula, on
     // mesmo; depois Rendimento e Volume. Sai a fileira de atalhos e a seção "Ficha de …" separada.
     return (
         <div style={{ display: "flex", flexDirection: "column" }}>
-            {todayList.length > 0 && (
+            {days.length > 0 && (
                 <div style={{ marginTop: 14, padding: 14, borderRadius: 16, background: C.panel, display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                         <span style={kicker}>Aula hoje?</span>
-                        <span style={{ fontSize: 15 }}>{nameOf(todayKey)}</span>
+                        <span style={{ fontSize: 15 }}>{todayList.length ? nameOf(todayKey) : cardio && cardio[todayKey] ? "Cardio" : "Descanso · recuperação"}</span>
                     </span>
                     <button type="button" onClick={onAula} style={{ flex: "none", minHeight: 48, padding: "0 16px", borderRadius: 12, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Modo aula</button>
                 </div>

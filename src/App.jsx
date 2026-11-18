@@ -39,6 +39,9 @@ import { UndoPill } from "./components/shared/UndoPill";
 import { ForgotCode } from "./components/student/ForgotCode";
 import { CardioV3 } from "./components/student/CardioV3";
 import { CreateExercise } from "./components/professor/CreateExercise";
+import { ExercisePageV3 } from "./components/professor/ExercisePageV3";
+import { EditExerciseList } from "./components/professor/EditExerciseList";
+import { AulaRestV3 } from "./components/professor/AulaRestV3";
 import { DemoPill, DemoEntry } from "./components/professor/DemoPill";
 import { buildDemo } from "./utils/demoData";
 import { DayToolsV3, VolumeFold } from "./components/professor/DayToolsV3";
@@ -104,7 +107,8 @@ function CancioClub() {
     const [adding, setAdding] = useState(false);
     const [undo, setUndo] = useState(null); // design v4 (33b): { label, before, sids, global, at } — a pílula das abas vira Desfazer por 8 s
     const [exSheet, setExSheet] = useState(null);
-    const [creating, setCreating] = useState(null); // design v4 (40b): "Criar do zero" em dois passos
+    const [creating, setCreating] = useState(null);
+    const [openExId, setOpenExId] = useState(null); // design v4 (42b): exercício aberto em página própria // design v4 (40b): "Criar do zero" em dois passos
     // demonstração (design v4 · 32b): troca os dados por alunos fictícios (isSeed: nunca salvos) e guarda os
     // de verdade pra voltar no Sair; enquanto isso a busca na nuvem fica parada
     const [demo, setDemo] = useState(false);
@@ -656,6 +660,10 @@ function CancioClub() {
             return next;
         }));
     };
+    // reordenar arrastando (42b) e duplicar exercício (com Desfazer)
+    const reorderDay = (from, to) => { if (!focusId || from === to) return; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; const arr = [...(w[day] || [])]; const [m] = arr.splice(from, 1); arr.splice(to, 0, m); w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); };
+    const duplicateExercise = (ex) => withUndo(ex.name + " duplicado", [focusId], false, () => setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; const arr = [...(w[day] || [])]; const i = arr.findIndex((e) => e.id === ex.id); const copy = { ...JSON.parse(JSON.stringify(ex)), id: uid(), history: [], setPlan: (ex.setPlan || []).map((x) => ({ ...x, id: uidShort() })) }; arr.splice(i + 1, 0, copy); w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }));
+    useEffect(() => { setOpenExId(null); }, [day, profTab, profView, fichaTab, profId]);
     const openSwap = React.useCallback((ex) => setExSheet({ mode: "swap", ex }), []);
     const removeExercise = React.useCallback((exId) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].filter((e) => e.id !== exId); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
     const updateExercise = React.useCallback((exId, patch) => setData((p) => { const w = { ...p.workouts[focusId] }; w[day] = w[day].map((e) => (e.id === exId ? { ...e, ...patch } : e)); const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }), [focusId, day, syncStudentToCloud]);
@@ -725,7 +733,9 @@ function CancioClub() {
         markWorkoutStarted();
         setData((p) => { const cl = { ...(p.cardioLog || {}) }; const lst = [...(cl[focusId] || [])]; lst.push({ id: uid(), date: dayDate, day, activity, minutes, km, effort }); cl[focusId] = lst; const next = { ...p, cardioLog: cl }; syncStudentToCloud(next, focusId); return next; });
         finalizeWorkout({ leve: "facil", moderado: "medida", forte: "destruidor" }[effort] || null, { silent: true, dayKey: day });
-        setCardioAuto(false); setAlunoTab("hoje"); window.scrollTo(0, 0);
+        setCardioAuto(false);
+        if (role === "prof") { setProfViewMode("edit"); setFichaTab("resumo"); } else setAlunoTab("hoje");
+        window.scrollTo(0, 0);
     };
     // recuperação ativa (dias sem treino de força): 3 marcações simples do dia, guardadas por data — igual ao espírito do cardioLog
     const toggleRecovery = (key) => {
@@ -1308,6 +1318,14 @@ function CancioClub() {
             onEnd: () => { finalizeWorkout(null, { silent: true }); setProfViewMode("edit"); setFichaTab("resumo"); window.scrollTo(0, 0); },
             onExit: () => setProfViewMode("edit"),
         }),
+        // Modo aula em dia de cardio ou de descanso (v4): mesmo cronômetro do aluno, ou os itens da recuperação
+        role === "prof" && profUnlocked && profView === "aluno" && fichaTab === "treino" && profViewMode === "aula" && profStudent && list.length === 0 && React.createElement(AulaRestV3, {
+            key: profId + "|" + day, studentName: profStudent.name, weekday: (["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"])[new Date(dayDate + "T12:00:00").getDay()],
+            cardioPlan: cardioFocus[day] ? (typeof cardioFocus[day] === "object" ? cardioFocus[day] : {}) : null, lastCardio: [...focusCardioLog].reverse().find((c) => c.date < dayDate) || null,
+            recovery: dayRecovery, onToggleRecovery: toggleRecovery,
+            onCloseRest: () => { finalizeWorkout("descanso", { silent: true, dayKey: day }); setProfViewMode("edit"); setFichaTab("resumo"); window.scrollTo(0, 0); },
+            onCardioDone: finishCardio, onExit: () => setProfViewMode("edit"),
+        }),
         role === "aluno" && alunoStudent && fimOpen && (() => {
             // mesmas contas do finalizeWorkout (séries válidas e kg levantados no dia que está sendo finalizado)
             // por exercício, o registro do dia COM séries (entries); só cai no formato antigo se não houver
@@ -1467,7 +1485,7 @@ function CancioClub() {
                         const allEx = []; DAYS.forEach((d) => (wkP[d.key] || []).forEach((e) => allEx.push({ ...e, _day: d.key })));
                         if (fichaTab === "resumo") {
                             body = React.createElement(FichaV3, {
-                                student: ps, week: wkP, dayNames: (data.dayNames && data.dayNames[profId]) || {}, sessions: profSessions, todayKey,
+                                student: ps, week: wkP, dayNames: (data.dayNames && data.dayNames[profId]) || {}, sessions: profSessions, todayKey, cardio: (data.cardio && data.cardio[profId]) || {},
                                 rend: rendSummary({ exercises: allEx, checkins: (data.checkins && data.checkins[profId]) || [], startDate: ps.startDate, week: wkP, cardio: data.cardio && data.cardio[profId] }),
                                 onAula: () => { setDay(todayKey); setExpanded(null); setProfViewMode("aula"); setFichaTab("treino"); window.scrollTo(0, 0); },
                                 onEdit: (k) => { setDay(k); setExpanded(null); setProfViewMode("edit"); setFichaTab("treino"); window.scrollTo(0, 0); },
@@ -1533,9 +1551,11 @@ function CancioClub() {
                             onSwapWith: (k) => withUndo(dayFullOf(day) + " e " + dayFullOf(k) + " trocaram", [profId], false, () => swapDayWith(k)), onCardioPlan: (patch) => setCardioPlan(profId, day, patch), onToggleCardio: () => withUndo(dayFullOf(day) + (cardioFocus[day] ? " não é mais cardio" : " virou dia de cardio"), [profId], false, () => toggleCardio(profId, day)), onSaveTemplate: saveDayTemplateNamed, onPrint: () => printStudent({ student: profStudent, week: (data.workouts && data.workouts[profId]) || emptyWeek(), dayNames: (data.dayNames && data.dayNames[profId]) || {}, includePrivate: true }), onArchive: () => { const lbl = "Fase até " + fmtDate(todayISO()); withUndo("Fase guardada · " + lbl, [profId], false, () => setData((p) => { const snap = JSON.parse(JSON.stringify((p.workouts && p.workouts[profId]) || emptyWeek())); const next = { ...p, archives: { ...(p.archives || {}), [profId]: [...(((p.archives || {})[profId]) || []), { id: uid(), label: lbl, date: new Date().toISOString(), week: snap }] } }; syncStudentToCloud(next, profId); return next; })); }, onClear: () => withUndo(dayFullOf(day) + " ficou vazio", [profId], false, () => replaceDayWith([], null)), onSerie: () => setSerieOpen(true) }),
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 } },
                             list.length === 0 && !adding && React.createElement(PremiumEmptyState, { icon: "dumbbell", title: `Nenhum treino em ${dayFull} \u2014 a ficha t\u00E1 em branco.`, sub: "Monte um exerc\u00EDcio do zero ou aplique um modelo salvo." }),
-                            list.map((ex, i) => profViewMode === "aula"
-                                ? React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate })
-                                : React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "prof", idx: i + 1, expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: removeExerciseU, onSwap: openSwap, onUpdate: updateExercise, onDeleteRecord: deleteRecord, onMove: moveExercise, isFirst: i === 0, isLast: i === list.length - 1, tint: tier.tint, dayDate: dayDate }))),
+                            profViewMode === "aula" ? list.map((ex, i) => React.createElement(ExerciseCard, { key: ex.id, ex: ex, restriction: restrictionFor(ex.name, profStudent, "prof"), role: "aluno", expanded: expanded === ex.id, onToggle: toggleExpanded, onAddLoad: addLoad, onNote: updateExerciseNote, onRemove: noop, onUpdate: updateExercise, onDeleteRecord: noop, onMove: noop, isFirst: true, isLast: true, tint: tier.tint, dayDate: dayDate }))
+                                : React.createElement(EditExerciseList, { list, restrictionOf: (name) => restrictionFor(name, profStudent, "prof"), onOpen: (ex) => setOpenExId(ex.id), onSwap: openSwap, onReorder: reorderDay })),
+                            openExId && profViewMode === "edit" && (() => { const i = list.findIndex((e) => e.id === openExId); const ex = list[i]; if (!ex) return null; return React.createElement(ExercisePageV3, { key: ex.id, ex, idx: i, total: list.length, dayShort: (DAYS.find((d) => d.key === day) || {}).short.toUpperCase(),
+                                onBack: () => setOpenExId(null), onUpdate: (patch) => updateExercise(ex.id, patch), onSwap: () => { setOpenExId(null); openSwap(ex); }, onDuplicate: () => { setOpenExId(null); duplicateExercise(ex); },
+                                onRemove: () => { setOpenExId(null); withUndo(ex.name + " saiu da ficha", [focusId], false, () => retireExercise(ex)); }, onDeleteRecord: (h) => deleteRecord(ex.id, h) }); })(),
                         profViewMode === "edit" && (React.createElement(React.Fragment, null,
                             adding ? (React.createElement("div", { style: { ...glassPanel, borderRadius: 24, padding: 20 } },
                                 library.length > 0 && (React.createElement("div", { style: { marginBottom: 12 } },
