@@ -214,3 +214,11 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Um app só:** dia sem exercício no Treino virou tela própria (cardio feito, recuperação, "Fechar o dia"); o bloco antigo de cardio saiu de baixo do treino de musculação. Botão de voltar único e ícones de verdade no lugar de ›, ✓, ★ e ×. Campos no padrão atual (16 px, sem zoom no iPhone).
 - **Acabamento:** o aluno não baixa mais as telas do professor e as telas ocasionais chegam em segundo plano (pacote principal 253 → 181 KB comprimido). Abertura única (selo que surge, sem anel girando) e troca de abas com esmaecer curto.
 - Cache v64.
+
+## v65 — o app se divulga sozinho
+- **Boas-vindas:** depois da anamnese, o selo surge com o número de membro e "Você está no Club"; dá pra compartilhar a entrada (card de story com selo, nome e "Membro desde").
+- **Recorde:** "Compartilhar recorde" gera um card próprio, com o número grande, quanto subiu e os outros recordes do dia.
+- **Retrospectiva do mês:** do dia 1 ao 7, o Hoje mostra "Seu outubro no Club" (treinos, calendário, horas, séries, toneladas, recordes, dia favorito) com card pra compartilhar. Some depois de aberto.
+- **Indicar um amigo:** no Perfil, abre o compartilhar do celular (ou o WhatsApp) com o convite e o link.
+- **Prévia do link:** imagem e descrição ao mandar o link no WhatsApp/Instagram (`public/og.jpg`).
+- Cache v65.
