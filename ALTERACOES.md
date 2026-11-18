@@ -176,3 +176,11 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Login (46a):** "Esqueci o código" abre o pedido pronto no WhatsApp.
 - **Cardio (39b):** dia de cardio com plano do professor (atividade, alvo, esforço, nota), cronômetro e registro (minutos, km, esforço).
 - Detalhes e decisões em `design/v4/DECISOES.md`. Cache v59.
+
+## v60 — design v4, fases 4 e 5 (professor)
+- **Demonstração (32b):** Mais › Ver demonstração mostra alunos fictícios pra testar ou mostrar o app; nada é salvo e "Sair" volta aos dados reais.
+- **Alunos (51a, 49a, 53a):** vista Semana (grade aluno × dia); Selecionar alunos e Aplicar modelo ou Copiar ficha em lote; reavaliação vencida em "Precisa de atenção" com Feita hoje e Adiar 1 semana.
+- **Ficha (52a, 37a):** card Aula hoje, "Essa semana", Rendimento numa linha e volume feito × prescrito nos 11 grupos.
+- **Editar ficha (54a, 42b, 40b):** Trocar treino com 5 opções e menu ⋯ (modelo, PDF, série, nova fase); linhas que se arrastam pra reordenar; exercício em página própria (Prescrição e Histórico, Duplicar, Tirar); criar do zero em dois passos com parecidos do catálogo.
+- **Modo aula** também em dia de cardio e de descanso.
+- Detalhes em `design/v4/DECISOES.md`. Cache v60.
