@@ -61,4 +61,4 @@ function MemberCard({ student, trainedDays, onClose }) {
                                 [["Nº", no], ["DESDE", since.toUpperCase()], ["PROFESSOR", "CANCIO"]].map(([l, v]) => React.createElement("div", { key: l, style: { display: "flex", flexDirection: "column", gap: 3 } }, React.createElement("span", { style: label }, l), React.createElement("span", { style: val }, v)))))))),
         React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: "#7D8698", textAlign: "center" } }, "Só pra mostrar. Não serve de acesso à academia."));
 }
-export { MemberCard };
+export { MemberCard, Seal };

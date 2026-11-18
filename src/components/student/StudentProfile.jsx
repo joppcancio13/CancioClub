@@ -28,6 +28,13 @@ function Avatar({ src, name, size }) {
     return React.createElement("div", { style: { width: size, height: size, borderRadius: "50%", flexShrink: 0, overflow: "hidden", background: "#1A1D24", boxShadow: `inset 0 0 0 2px ${C.silver}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: size * 0.33, color: C.silver } },
         src ? React.createElement("img", { src, alt: "", style: { width: "100%", height: "100%", objectFit: "cover" } }) : ini);
 }
+// frente 4 (18/nov): convite pelo menu de compartilhar do celular; sem ele, abre o WhatsApp com o texto
+const APP_URL = "https://cancioclub.netlify.app";
+const inviteFriend = async () => {
+    const text = "Tô treinando com o Prof. Cancio pelo Cancio Club: treino montado pra mim, carga, recordes e evolução no celular. Bora treinar junto? Fala com ele que ele monta o seu.";
+    try { if (navigator.share) { await navigator.share({ title: "Cancio Club", text, url: APP_URL }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+    window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + APP_URL), "_blank", "noopener");
+};
 const row = (t, s, onClick, color) => React.createElement("button", { key: t, className: "cc-tap", onClick, style: { minHeight: 56, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "none", borderBottom: `1px solid ${C.line}`, background: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: F.body, color: color || C.text } },
     React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2 } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, t), s && React.createElement("span", { style: { fontSize: 13, color: C.muted } }, s)),
     !color && React.createElement(Icon, { name: "caretRight", size: 16, color: C.text3 }));
@@ -199,6 +206,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
             diaryView && row("Diário", diaryCount ? diaryCount + (diaryCount === 1 ? " treino registrado" : " treinos registrados") : "Seus treinos dia a dia", () => setView("diario")),
             row("Metas", g0 ? (g0.unit ? kgs(g0.cur) + " de " + kgs(g0.target) + " kg" : g0.cur + " de " + g0.target) + " · " + (g0.fixed ? "treinos nesta semana" : g0.name || "sua meta") : "Criar uma meta", () => setView("metas")),
             row("Meu professor", "Mandar recado", onMessage),
+            row("Indicar um amigo", "Convide alguém pra treinar no Club", inviteFriend),
             row("Ajustes", "Contato, anamnese, avisos e seus dados", () => setView("ajustes")))));
 }
 export { StudentProfile, Avatar };

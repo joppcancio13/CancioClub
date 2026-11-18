@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { C, F, SIL_URL, SIL_SMALL_URL, NON_COUNTING_KINDS, SHARE_PHRASES } from "../../styles/tokens";
+import { C, F, SIL_URL, SIL_SMALL_URL, SELO_URL, NON_COUNTING_KINDS, SHARE_PHRASES } from "../../styles/tokens";
 import { computeDayRecords } from "../../utils/records";
 
 /* Rodada 13 — card de compartilhamento do treino do dia (story 1080×1920):
@@ -141,6 +141,50 @@ function drawWeekly(ctx, data, ball) {
     ctx.fillStyle = "#5A6273"; font(ctx, 400, 26); ctx.textAlign = "center"; ctx.fillText("A constância é o único atalho.", W / 2, H - 110);
 }
 
+// frente 4 (18/nov): card de recorde — o número grande em prata, o quanto subiu e os outros do dia
+function silverFill(ctx, x0, y0, x1, y1) { const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, "#FFFFFF"); g.addColorStop(0.55, "#AEB9CB"); g.addColorStop(1, "#6E7889"); return g; }
+function drawRecord(ctx, data, ball) {
+    ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+    const L = 72, R = W - 72, recs = data.records || [], r = recs[0];
+    const glow = ctx.createRadialGradient(W / 2, 640, 40, W / 2, 640, 760); glow.addColorStop(0, "rgba(198,210,228,.18)"); glow.addColorStop(1, "rgba(198,210,228,0)"); ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+    safeDraw(ctx, hq(ball.small, 64), L, SAFE_T - 140, 64, 64);
+    ctx.fillStyle = TEXT; font(ctx, 900, 30, "expanded"); spaced(ctx, "CANCIO CLUB", L + 84, SAFE_T - 96, 5);
+    ctx.fillStyle = MUTED; font(ctx, 500, 26); spaced(ctx, dateTag(data.targetDate), R, SAFE_T - 96, 2, "right");
+    if (!r) return;
+    let y = 560;
+    ctx.fillStyle = "#C6D2E4"; font(ctx, 700, 28); spaced(ctx, recs.length > 1 ? recs.length + " RECORDES NO DIA" : "NOVO RECORDE", L, y, 8);
+    y += 120; ctx.fillStyle = TEXT; const name = r.name.toUpperCase(); fitSize(ctx, name, 900, 92, R - L, 52, "expanded"); ctx.textAlign = "left"; ctx.fillText(fitText(ctx, name, R - L), L, y);
+    y += 300; const big = r.kind === "load" ? fmtKgS(r.load) : String(r.reps), unit = r.kind === "load" ? "kg" : "reps";
+    font(ctx, 900, 330, "condensed"); ctx.fillStyle = silverFill(ctx, L, y - 300, L + 600, y); ctx.fillText(big, L - 8, y);
+    const bw = ctx.measureText(big).width; ctx.fillStyle = TEXT; font(ctx, 800, 72, "expanded"); ctx.fillText(unit, L + bw + 18, y);
+    y += 96; ctx.fillStyle = "#AEB7C6"; font(ctx, 500, 40);
+    ctx.fillText(r.kind === "load" ? `+${fmtKgS(r.delta)} kg sobre ${fmtKgS(r.prevLoad)} kg` : `+${r.delta} ${r.delta === 1 ? "rep" : "reps"} com ${fmtKgS(r.load)} kg`, L, y);
+    if (recs.length > 1) {
+        y += 110; ctx.fillStyle = LINE; ctx.fillRect(L, y, R - L, 2); y += 76;
+        recs.slice(1, 4).forEach((o) => {
+            ctx.fillStyle = TEXT; font(ctx, 600, 38); ctx.textAlign = "left"; ctx.fillText(fitText(ctx, o.name, R - L - 260), L, y);
+            font(ctx, 900, 48, "condensed"); ctx.textAlign = "right"; ctx.fillText(o.kind === "load" ? fmtKgS(o.load) + " kg" : o.reps + " reps", R, y); ctx.textAlign = "left"; y += 82;
+        });
+    }
+    ctx.fillStyle = "#5A6273"; font(ctx, 400, 28); ctx.textAlign = "center"; ctx.fillText(data.firstName ? `${data.firstName} · treino no Cancio Club` : "Treino no Cancio Club", W / 2, SAFE_B + 40); ctx.textAlign = "left";
+}
+const fmtKgS = (v) => { const n = Number(v); return Number.isFinite(n) ? kg(n) : String(v ?? "—"); };
+
+// frente 4: card de entrada no Club — o selo grande, o número de membro e o nome
+function drawMember(ctx, data, ball) {
+    ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createRadialGradient(W / 2, 760, 60, W / 2, 760, 820); glow.addColorStop(0, "rgba(198,210,228,.16)"); glow.addColorStop(1, "rgba(198,210,228,0)"); ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#C6D2E4"; font(ctx, 700, 28); spaced(ctx, data.memberNo != null ? "MEMBRO Nº " + String(data.memberNo).padStart(4, "0") : "NOVO MEMBRO", W / 2, 420, 10, "center");
+    const S = 560; safeDraw(ctx, ball.selo || hq(ball.big, S), W / 2 - S / 2, 500, S, S);
+    const nm = String(data.name || "").toUpperCase();
+    ctx.fillStyle = TEXT; fitSize(ctx, nm, 900, 104, W - 160, 56, "expanded"); ctx.textAlign = "center"; ctx.fillText(nm, W / 2, 1200);
+    ctx.fillStyle = "#AEB7C6"; font(ctx, 500, 38); ctx.fillText(data.sinceLabel ? "Membro desde " + data.sinceLabel : "Entrei para o Club", W / 2, 1272);
+    ctx.fillStyle = LINE; ctx.fillRect(W / 2 - 60, 1360, 120, 2);
+    ctx.fillStyle = TEXT; font(ctx, 700, 40); ctx.fillText("Treino com o Prof. Cancio.", W / 2, 1450);
+    ctx.fillStyle = "#5A6273"; font(ctx, 400, 28); ctx.fillText("cancioclub.netlify.app", W / 2, SAFE_B + 40); ctx.textAlign = "left";
+}
+
 function shadowOn(ctx) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 22; ctx.shadowOffsetY = 3; }
 function shadowOff(ctx) { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
 
@@ -195,24 +239,26 @@ function ShareStudio({ data, onClose }) {
     const [showMissing, setShowMissing] = useState(false);
     const [phrase] = useState(() => SHARE_PHRASES[Math.floor(Math.random() * SHARE_PHRASES.length)]);
     const s = React.useMemo(() => summarize(data, showMissing), [data, showMissing]);
-    useEffect(() => { let off = false; (async () => { try { if (document.fonts) { await document.fonts.load("900 40px Archivo"); await document.fonts.ready; } } catch (e) { } const [big, small] = await Promise.all([loadImg(SIL_URL), loadImg(SIL_SMALL_URL)]); ballRef.current = { big: big || small || null, small: small || big || null }; if (!off) setReady(true); })(); return () => { off = true; }; }, []);
+    useEffect(() => { let off = false; (async () => { try { if (document.fonts) { await document.fonts.load("900 40px Archivo"); await document.fonts.ready; } } catch (e) { } const [big, small, selo] = await Promise.all([loadImg(SIL_URL), loadImg(SIL_SMALL_URL), data.isMember ? loadImg(SELO_URL) : null]); ballRef.current = { big: big || small || null, small: small || big || null, selo }; if (!off) setReady(true); })(); return () => { off = true; }; }, []);
     useEffect(() => {
         if (!ready || !canvasRef.current) return;
         const ctx = canvasRef.current.getContext("2d"); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
         ctx.clearRect(0, 0, W, H);
         if (data.isWeeklySummary) drawWeekly(ctx, data, ballRef.current);
+        else if (data.isRecord) drawRecord(ctx, data, ballRef.current);
+        else if (data.isMember) drawMember(ctx, data, ballRef.current);
         else if (data.isRestDay) drawRest(ctx, data, ballRef.current);
         else if (mode === "card") drawCard(ctx, s, ballRef.current, phrase);
         else { if (photo) drawPhoto(ctx, photo); if (mode === "numeros") drawNumbers(ctx, s, ballRef.current); else drawTiles(ctx, s, ballRef.current); }
     }, [ready, mode, photo, s, phrase]);
     const blob = () => new Promise((r) => canvasRef.current.toBlob(r, "image/png"));
-    const fname = () => `cancio-${mode}${photo && mode !== "card" ? "-foto" : ""}.png`;
+    const fname = () => data.isRecord ? "cancio-recorde.png" : data.isMember ? "cancio-membro.png" : `cancio-${mode}${photo && mode !== "card" ? "-foto" : ""}.png`;
     const flash = (t) => { setToast(t); setTimeout(() => setToast(null), 2200); };
     const download = async () => { setBusy(true); try { const b = await blob(); const url = URL.createObjectURL(b); const a = document.createElement("a"); a.href = url; a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); flash("PNG salvo"); } finally { setBusy(false); } };
     const share = async () => { setBusy(true); try { const b = await blob(); const file = new File([b], fname(), { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); } catch (e) { if (e && e.name !== "AbortError") throw e; } } else { await download(); } } catch (e) { flash("Não deu pra compartilhar. Tente baixar."); } finally { setBusy(false); } };
     const pickPhoto = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const url = URL.createObjectURL(f); loadImg(url).then((img) => { setPhoto(img); if (mode === "card") setMode("numeros"); }); e.target.value = ""; };
 
-    const workout = !data.isRestDay && !data.isWeeklySummary;
+    const workout = !data.isRestDay && !data.isWeeklySummary && !data.isRecord && !data.isMember;
     const idx = MODES.findIndex(([k]) => k === mode);
     const go = (d) => { const n = idx + d; if (n >= 0 && n < MODES.length) setMode(MODES[n][0]); };
     const onTouchStart = (e) => { swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };

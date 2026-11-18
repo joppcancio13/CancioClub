@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { C, F, BALL_URL } from "../../styles/tokens";
 import { fmtKg } from "../../utils/records";
+import { Icon } from "./Icon";
 
 // 9b — celebração única no fim do treino com todos os recordes confirmados do dia
 function RecordCelebration({ records, sound, onShare, onClose }) {
@@ -19,12 +20,12 @@ function RecordCelebration({ records, sound, onShare, onClose }) {
             React.createElement("div", { style: { alignSelf: "stretch", display: "flex", flexDirection: "column", marginTop: 6 } },
                 records.map((r, i) => React.createElement("div", { key: r.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "16px 0", borderTop: `1px solid ${C.line}`, animation: reduce ? "none" : `cc-pop .45s ease ${0.25 + i * 0.12}s both` } },
                     React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 3, minWidth: 0 } },
-                        React.createElement("span", { style: { fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text } }, "\u2605 " + r.name),
+                        React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 6, fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text } }, React.createElement(Icon, { name: "star", size: 13, stroke: 12, fill: true, color: C.text2 }), r.name),
                         React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, r.kind === "load" ? `+${fmtKg(r.delta)} kg sobre ${fmtKg(r.prevLoad)} kg` : `+${r.delta} reps com ${fmtKg(r.load)} kg`)),
                     React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 44, lineHeight: 1, color: C.text, flexShrink: 0 } }, r.kind === "load" ? fmtKg(r.load) : String(r.reps),
                         React.createElement("span", { style: { fontSize: 15, color: C.muted, fontWeight: 600 } }, r.kind === "load" ? " kg" : " reps")))))),
         React.createElement("div", { style: { position: "relative", padding: "12px 20px calc(env(safe-area-inset-bottom) + 20px)", display: "flex", flexDirection: "column", gap: 6 } },
-            React.createElement("button", { className: "cc-tap", onClick: onShare, style: { height: 54, borderRadius: 16, border: "none", background: C.text, color: C.ink, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer" } }, "Compartilhar card"),
+            React.createElement("button", { className: "cc-tap", onClick: onShare, style: { height: 54, borderRadius: 16, border: "none", background: C.text, color: C.ink, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer" } }, n === 1 ? "Compartilhar recorde" : "Compartilhar recordes"),
             React.createElement("button", { className: "cc-tap", onClick: onClose, style: { height: 44, border: "none", background: "transparent", color: C.muted, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "Fechar")));
 }
 export { RecordCelebration };
