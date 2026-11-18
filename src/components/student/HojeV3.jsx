@@ -35,6 +35,7 @@ function HojeV3({ student, greetWord, weekLine, streak, todayKey, dayKey, dayDat
     // dayKey: o dia da ficha que o aluno vai treinar hoje (o da semana, ou o que ele trocou em "Treinar outro dia")
     const k = dayKey || todayKey;
     const [swapOpen, setSwapOpen] = useState(false);
+    const [listOpen, setListOpen] = useState(false); // lista dos exercícios do dia, recolhida
     const list = (week && week[k]) || [];
     const rows = list.map((ex) => describe(ex, dayDate));
     const dayName = (dayNames && dayNames[k]) || "";
@@ -99,12 +100,9 @@ function HojeV3({ student, greetWord, weekLine, streak, todayKey, dayKey, dayDat
 
                 {(state === "train" || state === "done") && rows.length > 0 && (
                     <>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
-                            {[["EXERCÍCIOS", String(rows.length)], ["SÉRIES", state === "done" || inProgress ? doneSets + "/" + totalSets : String(totalSets)], ["DURAÇÃO", estimateMinutes(rows, student.targetDuration)]].map(([l, v]) => (
-                                <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}><span style={colLabel}>{l}</span><span style={{ fontSize: 15, fontWeight: 700, ...num }}>{v}</span></div>
-                            ))}
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontSize: 15, color: C.text2, ...num }}>{[rows.length + (rows.length === 1 ? " exercício" : " exercícios"), (state === "done" || inProgress ? doneSets + " de " + totalSets : totalSets) + " séries", estimateMinutes(rows, student.targetDuration)].join(" · ")}</span>
+                        <button type="button" onClick={() => setListOpen(!listOpen)} aria-expanded={listOpen} style={{ alignSelf: "flex-start", minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{listOpen ? "Esconder os exercícios" : "Ver os exercícios ›"}</button>
+                        {listOpen && <div style={{ display: "flex", flexDirection: "column" }}>
                             {rows.map((r, i) => (
                                 <div key={r.ex.id} style={{ display: "flex", gap: 12, alignItems: "baseline", padding: "9px 0", ...divider }}>
                                     <span style={{ width: 20, fontSize: 13, color: C.text3, ...num }}>{String(i + 1).padStart(2, "0")}</span>
@@ -112,13 +110,13 @@ function HojeV3({ student, greetWord, weekLine, streak, todayKey, dayKey, dayDat
                                     <span style={{ flex: "none", fontSize: 15, fontWeight: 600, fontStretch: "75%", color: C.text3, ...num }}>{r.workCount}×{r.planReps || "—"}{r.planLoad ? " · " + br(r.planLoad) + " kg" : ""}</span>
                                 </div>
                             ))}
-                        </div>
+                        </div>}
                     </>
                 )}
                 {state === "train" && list.length === 0 && <span style={{ fontSize: 15, color: C.text2 }}>Hoje é dia de cardio.</span>}
             </div>
 
-            {lastProfMsg && (
+            {lastProfMsg && unreadFromProf && (
                 <button type="button" onClick={onOpenRecados} style={{ marginTop: 12, width: "100%", padding: "12px 14px", borderRadius: 16, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line}`, display: "flex", gap: 12, textAlign: "left", cursor: "pointer", color: C.text }}>
                     <span style={{ width: 32, height: 32, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>PROF</span>
                     <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>

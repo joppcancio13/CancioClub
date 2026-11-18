@@ -157,6 +157,7 @@ function Stepper({ value, unit, onMinus, onPlus, onType, label }) {
 
 function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinalize, onFinalize, onAddLoad, onSkipSet, onMessage, restrictionOf, bottomOffset = 0, onPickDay }) {
     const [vidId, setVidId] = useState(null); // exercício com a prévia de execução aberta
+    const [moreId, setMoreId] = useState(null); // ⋯ aberto: ações secundárias do exercício
     // correção 18/nov: a barra de registro cobria os últimos exercícios (o espaço no fim da lista era de
     // 40 px). Agora o espaço acompanha a altura real da barra, e ao rolar pra baixo ela encolhe numa linha
     // (série + Feito); volta inteira ao rolar pra cima ou ao tocar nela.
@@ -356,7 +357,7 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
                                                     aria-label={s.done ? "Corrigir " + s.label.toLowerCase() : undefined}
                                                     style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: 0, background: "none", border: "none", textAlign: "left", cursor: s.done ? "pointer" : "default", fontFamily: F.body, fontSize: 15, color: isCur ? C.text : s.done ? C.text3 : C.text4 }}>
                                                     <span style={{ width: 22, fontSize: s.working ? 15 : 11, fontWeight: 800, letterSpacing: "0.04em" }}>{s.n}</span>
-                                                    <span style={{ flex: 1, fontWeight: isCur ? 700 : 400, textDecoration: s.skip ? "line-through" : "none", color: s.skip ? C.text3 : undefined, ...num }}>{br(v.load)} kg × {v.reps}</span>
+                                                    <span style={{ flex: 1, fontWeight: isCur ? 700 : 400, textDecoration: s.skip ? "line-through" : "none", color: s.skip ? C.text3 : s.done || isCur ? undefined : C.text4, ...num }}>{s.done || s.skip || isCur ? br(v.load) + " kg × " + v.reps : (s.target ? "alvo " + String(s.target).replace("-", "–") + " reps" : "—")}</span>
                                                     {s.skip && <span style={{ fontSize: 13, color: C.text3 }}>pulada</span>}
                                                     {s.skip && <span aria-hidden="true" style={{ width: 12, height: 2, borderRadius: 1, background: C.text3 }} />}
                                                     {isCur && !rest && <span style={{ ...colLabel, color: C.text2 }}>{cur.fixing ? "CORRIGINDO" : "AGORA ↓"}</span>}
@@ -365,15 +366,16 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
                                             );
                                         })}
                                     </div>
-                                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                                        <button type="button" style={{ ...btnText, color: C.text3 }} onClick={() => {
+                                    <button type="button" onClick={() => setMoreId(moreId === r.ex.id ? null : r.ex.id)} aria-expanded={moreId === r.ex.id} aria-label="Mais ações deste exercício" style={{ ...btnText, alignSelf: "flex-start", color: C.text3, fontSize: 20, letterSpacing: "0.1em" }}>⋯</button>
+                                    {moreId === r.ex.id && <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                                        <button type="button" style={{ ...btnText, color: C.text3 }} onClick={() => { setMoreId(null);
                                             const s = (cur && cur.r.ex.id === r.ex.id ? cur.s : null) || [...r.sets].reverse().find((y) => y.done) || r.sets[0];
                                             const v = s.log ? s.log : s.suggest;
                                             setSheet({ context: r.ex.name + " · " + s.label.charAt(0) + s.label.slice(1).toLowerCase() + " · " + br(v.load) + " kg × " + v.reps });
                                         }}><IconChat />Recado sobre esta série</button>
                                         {!r.allDone && !isSkipped && <button type="button" style={{ ...btnText, color: C.text4 }} onClick={() => { setSkipped((p) => new Set(p).add(r.ex.id)); setOpenId(null); setRest(null); }}>Pular exercício</button>}
                                         {isSkipped && <button type="button" style={{ ...btnText, color: C.text4 }} onClick={() => setSkipped((p) => { const n = new Set(p); n.delete(r.ex.id); return n; })}>Voltar a fazer</button>}
-                                    </div>
+                                    </div>}
                                 </div>
                             )}
                         </div>

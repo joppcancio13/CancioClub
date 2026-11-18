@@ -153,6 +153,15 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
             React.createElement("div", { style: small }, "Nome e dados de saúde só o professor altera.")));
     }
 
+    // ----- ajustes (corte 18/nov): o que é configuração sai da página principal -----
+    if (view === "ajustes") return shell("AJUSTES", React.createElement("div", { style: { display: "flex", flexDirection: "column" } },
+        row("Contato", [phone, email].filter(Boolean).join(" · ") || "Adicionar telefone e e-mail", () => setView("editar")),
+        row("Minha anamnese", student.assessmentAt ? "Respondida em " + new Date(student.assessmentAt).toLocaleDateString("pt-BR") + " · só leitura" : "Ainda não respondida", () => setView("anamnese")),
+        onOpenAvisos ? row("Avisos", "Recados, ficha, lembrete do treino e horários", onOpenAvisos) : notifPerm !== "unsupported" && row("Notificações", notifPerm === "granted" ? "Ligadas" : notifPerm === "denied" ? "Bloqueadas nos ajustes do celular" : "Ligar recados e lembretes", notifPerm === "default" ? onAskNotify : undefined),
+        row("Selo Cancio Club", "Imagem do selo pra usar ou postar", onOpenSelo),
+        row("Meus dados", "LGPD · baixar ou pedir exclusão", onOpenMyData),
+        row("Sair", null, onLogout, C.warn)));
+
     // ----- perfil -----
     const first = String(student.name || "").trim().split(/\s+/);
     const nameLines = first.length > 1 ? [first[0], first.slice(1).join(" ")] : [first[0] || ""];
@@ -171,35 +180,23 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: nameLines.some((l) => l.length > 9) ? 40 : 52, lineHeight: 0.88, letterSpacing: "-0.02em", textTransform: "uppercase", overflowWrap: "anywhere" } },
                 nameLines[0], nameLines[1] && React.createElement("br"), nameLines[1], React.createElement("img", { src: SIL_URL, alt: "", style: { width: "0.58em", height: "0.58em", marginLeft: "0.1em", verticalAlign: "baseline" } })),
             React.createElement("div", { style: { display: "flex", gap: 28 } }, [[freqTotal, freqTotal === 1 ? "TREINO" : "TREINOS"], [bestStreak, "MAIOR SEQ."], [prCount, prCount === 1 ? "RECORDE" : "RECORDES"]].map(([v, l]) => React.createElement("div", { key: l, style: { display: "flex", flexDirection: "column", gap: 2 } }, React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 40, lineHeight: 1 } }, v), React.createElement("span", { style: { fontSize: 11, letterSpacing: "0.12em", color: C.muted } }, l)))),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 } },
-                React.createElement("button", { className: "cc-tap", onClick: onOpenCard, style: { minHeight: 48, borderRadius: 16, border: "none", background: C.text, color: C.ink, fontFamily: F.body, fontWeight: 700, fontSize: 15, cursor: "pointer" } }, "Carteirinha"),
-                React.createElement("button", { className: "cc-tap", onClick: onOpenSelo, style: { minHeight: 48, borderRadius: 16, border: "none", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}`, color: C.text, fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "Selo"))),
+            React.createElement("button", { className: "cc-tap", onClick: onOpenCard, style: { alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text2, fontFamily: F.body, fontWeight: 700, fontSize: 15, cursor: "pointer" } }, "Ver carteirinha \u203A")),
         React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 } },
-            React.createElement("div", { style: { ...block, gridColumn: "span 2", cursor: "default", gap: 10 } },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } }, React.createElement("span", { style: label }, "FREQUÊNCIA"), React.createElement("span", { style: small }, `${MO[now.getMonth()]} · ${monthSet.size} ${monthSet.size === 1 ? "treino" : "treinos"}`)),
-                React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(16,1fr)", gap: 4 } }, Array.from({ length: dim }, (_, i) => { const on = monthSet.has(i + 1), fut = i + 1 > now.getDate(); return React.createElement("span", { key: i, style: { height: 12, borderRadius: 2, background: on ? TILE_ON : fut ? C.panel : "#1A1D24", boxShadow: on ? "none" : "inset 0 0 0 1px #2A2E37" } }); }))),
-            diaryView && React.createElement("button", { className: "cc-tap", onClick: () => setView("diario"), style: { ...block, gridColumn: "span 2", flexDirection: "row", alignItems: "center", gap: 14 } },
-                React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2 } }, React.createElement("span", { style: label }, "DIÁRIO"), React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, diaryCount ? diaryCount + (diaryCount === 1 ? " treino registrado" : " treinos registrados") : "Seus treinos dia a dia"), React.createElement("span", { style: small }, "Calendário com cada treino, carga e recorde")),
-                React.createElement("span", { "aria-hidden": "true", style: { marginLeft: "auto", fontSize: 18, color: "#7D8698" } }, "›")),
             React.createElement("button", { className: "cc-tap", onClick: () => setView("recordes"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "RECORDES"),
                 top ? React.createElement(React.Fragment, null, React.createElement("span", { style: big }, kgs(top.best), React.createElement("span", { style: unit }, " kg")), React.createElement("span", { style: small }, `${top.name} · sua maior carga`)) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Ainda sem carga registrada")),
             React.createElement("button", { className: "cc-tap", onClick: () => setView("evolucao"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "EVOLUÇÃO"),
                 evo0 && evo0.pts.length > 1 ? React.createElement(React.Fragment, null, React.createElement("div", { style: { marginTop: "auto" } }, React.createElement(Spark, { pts: evo0.pts, h: 44, stroke: 2.5 })), React.createElement("span", { style: small }, `${evo0.name} ${evo0.pts[evo0.pts.length - 1].v - evo0.pts[0].v >= 0 ? "+" : "\u2212"}${kgs(Math.abs(evo0.pts[evo0.pts.length - 1].v - evo0.pts[0].v))} kg`)) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Aparece com 2 registros")),
-            React.createElement("button", { className: "cc-tap", onClick: () => setView("metas"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "METAS"),
-                g0 ? React.createElement(React.Fragment, null, React.createElement("span", { style: big }, g0.unit ? `${kgs(g0.cur)}/${kgs(g0.target)}` : `${g0.cur}/${g0.target}`), React.createElement("span", { style: small }, g0.fixed ? "treinos nesta semana" : g0.name)) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Criar uma meta \u203A")),
             React.createElement("button", { className: "cc-tap", onClick: () => setView("corpo"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "CORPO"),
                 lastM && lastM.peso ? React.createElement(React.Fragment, null, React.createElement("span", { style: big }, kgs(lastM.peso), React.createElement("span", { style: unit }, " kg")), React.createElement("span", { style: small }, (prevM && prevM.peso ? `${lastM.peso - prevM.peso > 0 ? "+" : lastM.peso - prevM.peso < 0 ? "\u2212" : ""}${kgs(Math.abs(lastM.peso - prevM.peso))} kg · ` : "") + dShort(String(lastM.date)))) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Sem medidas ainda")),
-            React.createElement("button", { className: "cc-tap", onClick: () => setView("conquistas"), style: { ...block, gridColumn: "span 2", flexDirection: "row", alignItems: "center", gap: 14 } },
+            React.createElement("button", { className: "cc-tap", onClick: () => setView("conquistas"), style: { ...block, minHeight: 124 } },
                 React.createElement("div", { style: { display: "flex" } }, (won.length ? won.slice(-3) : BADGES.slice(0, 3)).map((b) => React.createElement("div", { key: b.l, style: { marginRight: -10 } }, badge(b, 44)))),
-                React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2, marginLeft: 10 } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, "Conquistas"), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, `${won.length} de ${BADGES.length}` + (next ? ` · próxima: ${next.l}` : ""))),
-                React.createElement("span", { "aria-hidden": "true", style: { marginLeft: "auto", fontSize: 18, color: "#7D8698" } }, "\u203A"))),
+                React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2, marginTop: "auto" } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, "Conquistas"), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, `${won.length} de ${BADGES.length}` + (next ? ` · próxima: ${next.l}` : ""))),
+                null)),
         React.createElement("div", { style: { display: "flex", flexDirection: "column" } },
             onOpenWeek && row("Resumo da semana", "Treinos, recordes e séries da semana", onOpenWeek),
-            row("Meu professor", "Prof. Cancio · mandar recado", onMessage),
-            row("Minha anamnese", student.assessmentAt ? "Respondida em " + new Date(student.assessmentAt).toLocaleDateString("pt-BR") + " · só leitura" : "Ainda não respondida", () => setView("anamnese")),
-            row("Contato", [phone, email].filter(Boolean).join(" · ") || "Adicionar telefone e e-mail", () => setView("editar")),
-            onOpenAvisos ? row("Avisos", "Recados, ficha, lembrete do treino e horários", onOpenAvisos) : notifPerm !== "unsupported" && row("Notificações", notifPerm === "granted" ? "Ligadas" : notifPerm === "denied" ? "Bloqueadas nos ajustes do celular" : "Ligar recados e lembretes", notifPerm === "default" ? onAskNotify : undefined),
-            row("Meus dados", "LGPD · baixar ou pedir exclusão", onOpenMyData),
-            row("Sair", null, onLogout, C.warn))));
+            diaryView && row("Diário", diaryCount ? diaryCount + (diaryCount === 1 ? " treino registrado" : " treinos registrados") : "Seus treinos dia a dia", () => setView("diario")),
+            row("Metas", g0 ? (g0.unit ? kgs(g0.cur) + " de " + kgs(g0.target) + " kg" : g0.cur + " de " + g0.target) + " · " + (g0.fixed ? "treinos nesta semana" : g0.name || "sua meta") : "Criar uma meta", () => setView("metas")),
+            row("Meu professor", "Mandar recado", onMessage),
+            row("Ajustes", "Contato, anamnese, avisos e seus dados", () => setView("ajustes")))));
 }
 export { StudentProfile, Avatar };
