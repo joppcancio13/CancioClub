@@ -44,6 +44,7 @@ import { EditExerciseList } from "./components/professor/EditExerciseList";
 import { AulaRestV3 } from "./components/professor/AulaRestV3";
 import { QuickRepliesV3, repliesOf } from "./components/professor/QuickRepliesV3";
 import { MaisV3 } from "./components/professor/MaisV3";
+import { WeekSummary, weekSummary } from "./components/student/WeekSummary";
 import { DemoPill, DemoEntry } from "./components/professor/DemoPill";
 import { buildDemo } from "./utils/demoData";
 import { DayToolsV3, VolumeFold } from "./components/professor/DayToolsV3";
@@ -110,6 +111,7 @@ function CancioClub() {
     const [undo, setUndo] = useState(null); // design v4 (33b): { label, before, sids, global, at } — a pílula das abas vira Desfazer por 8 s
     const [exSheet, setExSheet] = useState(null);
     const [creating, setCreating] = useState(null);
+    const [weekOpen, setWeekOpen] = useState(false); // design v4 (47b): Resumo da semana do aluno
     const [openExId, setOpenExId] = useState(null); // design v4 (42b): exercício aberto em página própria // design v4 (40b): "Criar do zero" em dois passos
     // demonstração (design v4 · 32b): troca os dados por alunos fictícios (isSeed: nunca salvos) e guarda os
     // de verdade pra voltar no Sair; enquanto isso a busca na nuvem fica parada
@@ -1351,7 +1353,8 @@ function CancioClub() {
                 setShareCard(sd); }, onSkip: () => { const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); } }),
         shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 13, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
-        role === "aluno" && alunoStudent && profileOpen && React.createElement(StudentProfile, { student: alunoStudent, diaryCount: (diary || []).length, diaryView: React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }), week: (data.workouts || {})[alunoId] || emptyWeek(), checkins: (data.checkins || {})[alunoId] || [], freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify: async () => setNotifPerm(await askNotify()), onUpdate: (patch) => updateStudent(alunoId, patch), onOpenCard: () => setMemberCardOpen(true), onOpenSelo: () => setLogoCard(true), onOpenMyData: () => setMyDataOpen(true), onOpenReassess: () => setReassessOpen(true), onMessage: () => { setProfileOpen(false); setAlunoTab("recados"); window.scrollTo(0, 0); }, onLogout: () => { setProfileOpen(false); logout(); }, onClose: () => setProfileOpen(false),
+        role === "aluno" && alunoStudent && weekOpen && React.createElement(WeekSummary, { studentName: alunoStudent.name, week, sessions: (data.sessions || {})[alunoId] || [], weeklyTarget, onClose: () => setWeekOpen(false) }),
+        role === "aluno" && alunoStudent && profileOpen && React.createElement(StudentProfile, { onOpenWeek: () => setWeekOpen(true), student: alunoStudent, diaryCount: (diary || []).length, diaryView: React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }), week: (data.workouts || {})[alunoId] || emptyWeek(), checkins: (data.checkins || {})[alunoId] || [], freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify: async () => setNotifPerm(await askNotify()), onUpdate: (patch) => updateStudent(alunoId, patch), onOpenCard: () => setMemberCardOpen(true), onOpenSelo: () => setLogoCard(true), onOpenMyData: () => setMyDataOpen(true), onOpenReassess: () => setReassessOpen(true), onMessage: () => { setProfileOpen(false); setAlunoTab("recados"); window.scrollTo(0, 0); }, onLogout: () => { setProfileOpen(false); logout(); }, onClose: () => setProfileOpen(false),
             todayDone: todaySessionAluno ? { name: ((data.dayNames || {})[alunoId] || {})[todaySessionAluno.day] || "Treino", onView: () => { setDay(todaySessionAluno.day); setAlunoTab("treino"); setProfileOpen(false); window.scrollTo(0, 0); } } : null }),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         role === "aluno" && alunoStudent && memberCardOpen && React.createElement(MemberCard, { student: alunoStudent, trainedDays: memberTrainedDays, onClose: () => setMemberCardOpen(false) }),
@@ -1598,7 +1601,7 @@ function CancioClub() {
                     // design v3: o título (não lidos + RECADOS) agora vem do próprio ProfInbox
                     React.createElement("div", { style: { marginBottom: 26 } },
                         notifButton,
-                        React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead, quickReplies: repliesOf(data),
+                        React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead, quickReplies: repliesOf(data), onPin: (sid, text) => updateStudent(sid, { pinnedNote: text ? { text, at: new Date().toISOString() } : undefined }),
                             onOpenFicha: (sid) => { setActive(sid); setProfTab("alunos"); setProfView("aluno"); setFichaTab("resumo"); setRendEx(null); setExpanded(null); window.scrollTo(0, 0); } })))),
                 profTab === "respostas" && React.createElement(QuickRepliesV3, { replies: repliesOf(data), onBack: () => setProfTab("painel"), onChange: (q) => setData((p) => { const next = { ...p, quickReplies: q }; syncGlobalToCloud(next); return next; }) }),
                 profTab === "painel" && (React.createElement(React.Fragment, null,
@@ -1652,6 +1655,10 @@ function CancioClub() {
                     onShare: shareTodaySession,
                     onOpenRecados: () => setAlunoTab("recados"),
                     banners: React.createElement(React.Fragment, null,
+                        // domingo (47b): "Sua semana fechou" abre o Resumo da semana
+                        todayKey === "dom" && (() => { const ws = weekSummary({ week, sessions: (data.sessions || {})[alunoId] || [], weeklyTarget }); if (!ws.done) return null; return React.createElement("button", { key: "semana", type: "button", onClick: () => setWeekOpen(true), style: { position: "relative", marginTop: 18, width: "100%", padding: "12px 14px", borderRadius: 20, border: "none", background: "rgba(46,51,61,0.82)", display: "flex", gap: 12, alignItems: "flex-start", textAlign: "left", cursor: "pointer", color: C.text, fontFamily: F.body } },
+                            React.createElement("span", { style: { flex: "none", width: 38, height: 38, borderRadius: 10, background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" } }, React.createElement("img", { src: SIL_URL, alt: "", style: { width: 30, height: 30 } })),
+                            React.createElement("span", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 2 } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 700 } }, "Sua semana fechou"), React.createElement("span", { style: { fontSize: 15, color: "#E3E8F0" } }, ws.done + " de " + (ws.planned || ws.done) + " treinos" + (ws.records.length ? " e " + ws.records.length + (ws.records.length === 1 ? " recorde" : " recordes") : "") + ". Veja o resumo."))); })(),
                         reassessDue(alunoStudent) && React.createElement("button", { className: "cc-tap", onClick: () => setReassessOpen(true), style: { position: "relative", width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", marginTop: 20, borderRadius: 16, border: "none", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.text, cursor: "pointer" } },
                             React.createElement("div", { style: { flex: 1 } },
                                 React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15 } }, "Hora da reavaliação"),
@@ -1668,7 +1675,7 @@ function CancioClub() {
                     React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, marginBottom: 6 } }, "RECADOS"),
                     React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.text3, marginBottom: 16 } }, "Conversa com o seu professor."),
                     notifButton,
-                    React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
+                    React.createElement(StudentMessages, { pinned: alunoStudent.pinnedNote ? alunoStudent.pinnedNote.text : null, messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },

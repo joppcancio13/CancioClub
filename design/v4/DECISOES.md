@@ -78,3 +78,9 @@ Ele foi escrito sobre arquivos que a v55–v58 já trocou. Vale o que existe hoj
 - **Fases (38b):** linha do tempo em Dados do aluno: "Fase atual" no topo (desde a última fase guardada ou o início da ficha) com "Arquivar e começar nova fase"; tocar numa fase antiga abre Restaurar e Apagar. As três ações têm Desfazer e não pedem mais confirmação (Restaurar continua guardando a ficha de antes como fase).
 - **Respostas rápidas (50c):** guardadas na linha global (`quickReplies`, dois jogos). Mais › Respostas rápidas edita, apaga, cria (no grupo escolhido) e reordena com ↑ ↓ (o protótipo arrasta). Na conversa entra o jogo "série" quando o último recado do aluno veio de uma série, senão o "geral".
 - **Mais:** Respostas rápidas · Ver demonstração; Selo e Backup; "Sair da conta" separado. Os Avisos entram na fase 8.
+
+## Notas da fase 7
+- **Resumo da semana (47b):** tela cheia com a semana de segunda a domingo: treinos feitos (sessões que não são descanso) contra a meta (frequência da ficha, ou os dias de treino), a grade dos 7 dias, os recordes da semana (a mesma regra do Fim do treino), as séries válidas contra a semana anterior e o grupo mais treinado (volume pela ativação). Compartilhar gera um PNG 1080×1920 desenhado no app (compartilha pelo celular ou baixa). Abre pelo aviso "Sua semana fechou" no Hoje (aos domingos, quando a semana teve treino) e por Perfil › Resumo da semana. O aviso no celular às 18:00 fica para a fase 8.
+- **Recado fixado:** um combinado por aluno (`pinnedNote` no cadastro, só o professor escreve; a Edge Function já entrega ao aluno). Fica no topo da conversa dos dois lados; o professor toca para escrever, trocar ou tirar.
+- **Cards com foto:** já existiam desde a v54 (Compartilhar › Escolher foto: Números e Pastilhas saem sobre a foto). Nada mudou.
+- **Card 3D / carteirinha:** a carteirinha que vira já existe (`MemberCard`) com número e "desde". O "plano" do protótipo não tem dado no app; ficou de fora.

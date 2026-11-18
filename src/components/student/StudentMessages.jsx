@@ -11,13 +11,20 @@ const time = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit
 const splitContext = (text) => { const m = String(text || "").match(/^(.+? · .+?) — ([\s\S]+)$/); return m ? { link: m[1], body: m[2] } : { link: null, body: text }; };
 const kicker = KICKER;
 
-function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyText, events = [], quick }) {
+function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyText, events = [], quick, pinned, onEditPin }) {
     const [text, setText] = useState("");
     const send = (t) => { const v = (t ?? text).trim(); if (!v) return; onSend(v); setText(""); };
     const items = [...messages.map((m) => ({ kind: "msg", date: m.date, m })), ...events.map((e) => ({ kind: "event", date: e.date, e }))].sort((a, b) => (a.date < b.date ? -1 : 1));
     let lastDay = null;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* recado fixado (v4): o combinado do professor fica no topo da conversa, dos dois lados */}
+            {(pinned || onEditPin) && (
+                <button type="button" onClick={onEditPin || undefined} disabled={!onEditPin} style={{ display: "flex", flexDirection: "column", gap: 4, padding: "12px 14px", borderRadius: 14, border: "none", background: pinned ? C.panel : "transparent", boxShadow: pinned ? `inset 0 0 0 1px ${C.line}` : `inset 0 0 0 1px ${C.outline}`, color: C.text, textAlign: "left", cursor: onEditPin ? "pointer" : "default", fontFamily: F.body }}>
+                    <span style={{ ...kicker, color: C.text3 }}>{pinned ? "Combinado · fixado pelo professor" : "Fixar um combinado"}</span>
+                    <span style={{ fontSize: 15, lineHeight: 1.4, color: pinned ? C.text : C.text3, whiteSpace: "pre-wrap" }}>{pinned || "Ex.: treinos seg, qua e sex; mandar recado se sentir dor."}</span>
+                </button>
+            )}
             {items.length === 0 && <div style={{ fontFamily: F.body, fontSize: 13, color: C.text3, textAlign: "center", padding: "18px 0" }}>{emptyText ?? "Conte ao professor como foi: dor, carga, falta."}</div>}
             {items.map((it) => {
                 const dl = dayLabel(it.date); const head = dl !== lastDay; lastDay = dl;

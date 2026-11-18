@@ -11,7 +11,8 @@ const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).m
 const kicker = KICKER;
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
 
-function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFicha, quickReplies }) {
+function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFicha, quickReplies, onPin }) {
+    const [pinEdit, setPinEdit] = useState(null); // texto do combinado sendo editado
     const [openId, setOpenId] = useState(initialOpen || null);
     const [picking, setPicking] = useState(false); // "+ Nova conversa": escolher o aluno
     const [q, setQ] = useState("");
@@ -30,7 +31,16 @@ function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFic
                 <span style={{ flex: 1, minWidth: 0, fontFamily: F.body, fontWeight: 700, fontSize: 15 }}>{name(open)}</span>
                 {open.st && onOpenFicha && <button type="button" onClick={() => onOpenFicha(open.sid)} style={{ minHeight: 44, padding: 0, border: "none", background: "none", color: C.text2, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Abrir ficha ›</button>}
             </div>
-            <StudentMessages messages={open.ms} side="prof" quick={(() => { if (!quickReplies) return undefined; const lastIn = [...open.ms].filter((m) => !m.fromProf).sort((a, b) => (a.date < b.date ? -1 : 1)).pop(); return lastIn && splitContext(lastIn.text).link ? quickReplies.serie : quickReplies.geral; })()} onSend={(t) => onReply(t, open.sid)} placeholder={"Responder " + name(open).split(" ")[0]} emptyText={"Nenhum recado ainda. Escreva pra " + name(open).split(" ")[0] + " — chega na aba Recados do app."} />
+            {pinEdit !== null && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <textarea autoFocus value={pinEdit} onChange={(e) => setPinEdit(e.target.value)} rows={3} placeholder="O combinado que fica no topo da conversa" aria-label="Combinado fixado" style={{ boxSizing: "border-box", width: "100%", padding: 12, borderRadius: 12, border: "none", outline: "none", resize: "none", background: C.panel, color: C.text, fontFamily: F.body, fontSize: 15, lineHeight: 1.4 }} />
+                    <div style={{ display: "flex", gap: 8 }}>
+                        <button type="button" onClick={() => { onPin(open.sid, pinEdit.trim() || null); setPinEdit(null); }} style={{ flex: 2, minHeight: 44, borderRadius: 12, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{pinEdit.trim() ? "Fixar" : "Tirar o combinado"}</button>
+                        <button type="button" onClick={() => setPinEdit(null)} style={{ flex: 1, minHeight: 44, borderRadius: 12, border: "none", background: C.raised, color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancelar</button>
+                    </div>
+                </div>
+            )}
+            <StudentMessages messages={open.ms} side="prof" pinned={open.st && open.st.pinnedNote ? open.st.pinnedNote.text : null} onEditPin={onPin && pinEdit === null ? () => setPinEdit((open.st && open.st.pinnedNote && open.st.pinnedNote.text) || "") : undefined} quick={(() => { if (!quickReplies) return undefined; const lastIn = [...open.ms].filter((m) => !m.fromProf).sort((a, b) => (a.date < b.date ? -1 : 1)).pop(); return lastIn && splitContext(lastIn.text).link ? quickReplies.serie : quickReplies.geral; })()} onSend={(t) => onReply(t, open.sid)} placeholder={"Responder " + name(open).split(" ")[0]} emptyText={"Nenhum recado ainda. Escreva pra " + name(open).split(" ")[0] + " — chega na aba Recados do app."} />
         </div>
     );
 

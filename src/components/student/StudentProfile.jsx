@@ -47,7 +47,7 @@ function Spark({ pts, h, stroke }) {
     return React.createElement("svg", { viewBox: `0 0 320 ${h}`, width: "100%", height: h, preserveAspectRatio: "none", "aria-hidden": "true" }, React.createElement("polyline", { points: d, fill: "none", stroke: C.silver, strokeWidth: stroke || 2.5, strokeLinejoin: "round", vectorEffect: "non-scaling-stroke" }));
 }
 
-function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone, diaryView, diaryCount }) {
+function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone, diaryView, diaryCount, onOpenWeek }) {
     const [view, setView] = useState(null);
     const [evoIdx, setEvoIdx] = useState(0);
     const [contact, setContact] = useState(null);
@@ -194,6 +194,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
                 React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2, marginLeft: 10 } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, "Conquistas"), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, `${won.length} de ${BADGES.length}` + (next ? ` · próxima: ${next.l}` : ""))),
                 React.createElement("span", { "aria-hidden": "true", style: { marginLeft: "auto", fontSize: 18, color: "#7D8698" } }, "\u203A"))),
         React.createElement("div", { style: { display: "flex", flexDirection: "column" } },
+            onOpenWeek && row("Resumo da semana", "Treinos, recordes e séries da semana", onOpenWeek),
             row("Meu professor", "Prof. Cancio · mandar recado", onMessage),
             row("Minha anamnese", student.assessmentAt ? "Respondida em " + new Date(student.assessmentAt).toLocaleDateString("pt-BR") + " · só leitura" : "Ainda não respondida", () => setView("anamnese")),
             row("Contato", [phone, email].filter(Boolean).join(" · ") || "Adicionar telefone e e-mail", () => setView("editar")),
