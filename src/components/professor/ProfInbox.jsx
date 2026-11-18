@@ -11,7 +11,7 @@ const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).m
 const kicker = KICKER;
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
 
-function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFicha }) {
+function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFicha, quickReplies }) {
     const [openId, setOpenId] = useState(initialOpen || null);
     const [picking, setPicking] = useState(false); // "+ Nova conversa": escolher o aluno
     const [q, setQ] = useState("");
@@ -30,7 +30,7 @@ function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFic
                 <span style={{ flex: 1, minWidth: 0, fontFamily: F.body, fontWeight: 700, fontSize: 15 }}>{name(open)}</span>
                 {open.st && onOpenFicha && <button type="button" onClick={() => onOpenFicha(open.sid)} style={{ minHeight: 44, padding: 0, border: "none", background: "none", color: C.text2, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Abrir ficha ›</button>}
             </div>
-            <StudentMessages messages={open.ms} side="prof" onSend={(t) => onReply(t, open.sid)} placeholder={"Responder " + name(open).split(" ")[0]} emptyText={"Nenhum recado ainda. Escreva pra " + name(open).split(" ")[0] + " — chega na aba Recados do app."} />
+            <StudentMessages messages={open.ms} side="prof" quick={(() => { if (!quickReplies) return undefined; const lastIn = [...open.ms].filter((m) => !m.fromProf).sort((a, b) => (a.date < b.date ? -1 : 1)).pop(); return lastIn && splitContext(lastIn.text).link ? quickReplies.serie : quickReplies.geral; })()} onSend={(t) => onReply(t, open.sid)} placeholder={"Responder " + name(open).split(" ")[0]} emptyText={"Nenhum recado ainda. Escreva pra " + name(open).split(" ")[0] + " — chega na aba Recados do app."} />
         </div>
     );
 

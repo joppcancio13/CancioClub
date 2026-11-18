@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { C, DAYS, F, KICKER } from "../../styles/tokens";
 import { planSummary } from "../../utils/workout";
 import { haptic } from "../../utils/misc";
-import { TemplateBuilder } from "./TemplateBuilder";
+import { TemplateEditorV3, NewTemplateSheet } from "./TemplateEditorV3";
 import { MediaEmbed } from "../shared/MediaEmbed";
 import { PremiumEmptyState } from "../shared/PremiumEmptyState";
 
@@ -25,7 +25,7 @@ function TplCard({ tpl, open, onToggle, inUse, students, defaultStudent, onApply
     const [confirmDel, setConfirmDel] = useState(false);
     const st = students.find((s) => s.id === sid);
     const close = () => { setPicking(false); setDk(null); setConfirmDel(false); };
-    const sub = (open ? "" : plural(tpl.exercises.length, "exercício", "exercícios") + " · ") + (inUse ? (open ? "em uso · " : "") + plural(inUse, "aluno", "alunos") : "sem uso") + (open ? "" : " ›");
+    const sub = (tpl.level && !open ? tpl.level + " · " : "") + (open ? "" : plural(tpl.exercises.length, "exercício", "exercícios") + " · ") + (inUse ? (open ? "em uso · " : "") + plural(inUse, "aluno", "alunos") : "sem uso") + (open ? "" : " ›");
     return (
         <div style={{ borderRadius: 16, background: open ? C.panel : "transparent", boxShadow: open ? "none" : `inset 0 0 0 1px ${C.line}`, overflow: "hidden" }}>
             <button type="button" onClick={() => { close(); setApplied(null); onToggle(); }} aria-expanded={open}
@@ -129,7 +129,8 @@ function LibRow({ item, uses, onUpdate, onRemove }) {
 function BibliotecaV3({ templates, library, students, workouts, dayNames, defaultStudent, onApplyTemplate, onAddTemplate, onUpdateTemplate, onRemoveTemplate, onAddLib, onUpdateLib, onRemoveLib }) {
     const [tab, setTab] = useState("modelos");
     const [openTpl, setOpenTpl] = useState(null);
-    const [editing, setEditing] = useState(null); // null · "new" · id do modelo
+    const [editing, setEditing] = useState(null); // null · { id } (editar) · { draft } (novo, já com a origem escolhida)
+    const [newOpen, setNewOpen] = useState(false); // "+ Novo modelo": de onde começar (41d)
     const [q, setQ] = useState("");
 
     // uso: modelo = alunos com algum dia batizado com o nome do modelo; exercício = fichas (alunos) que o têm
@@ -141,14 +142,11 @@ function BibliotecaV3({ templates, library, students, workouts, dayNames, defaul
     const rows = library.filter((e) => norm(e.name).includes(qq)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     const canCreate = qq && !library.some((e) => norm(e.name) === qq);
     const create = () => { if (!canCreate) return; haptic("confirm"); onAddLib(q.trim(), "", ""); setQ(""); };
-    const editTpl = editing && editing !== "new" ? templates.find((t) => t.id === editing) : null;
+    const editTpl = editing && editing.id ? templates.find((t) => t.id === editing.id) : null;
 
     if (editing) return (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-            <button type="button" onClick={() => setEditing(null)} style={{ alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 15, cursor: "pointer" }}>‹ Biblioteca</button>
-            <TemplateBuilder key={editing} library={library} initial={editTpl || undefined} onCancel={() => setEditing(null)}
-                onSave={(name, exs) => { if (editTpl) onUpdateTemplate(editTpl.id, name, exs); else onAddTemplate(name, exs); setEditing(null); }} />
-        </div>
+        <TemplateEditorV3 key={editing.id || "novo"} isNew={!editTpl} initial={editTpl || editing.draft} inUse={editTpl ? tplUse(editTpl) : 0} library={library} onCancel={() => setEditing(null)}
+            onSave={(name, exs, level) => { if (editTpl) onUpdateTemplate(editTpl.id, name, exs, level); else onAddTemplate(name, exs, level); setEditing(null); }} />
     );
 
     return (
@@ -168,10 +166,11 @@ function BibliotecaV3({ templates, library, students, workouts, dayNames, defaul
                         {templates.map((t) => (
                             <TplCard key={t.id} tpl={t} open={openTpl === t.id} onToggle={() => setOpenTpl(openTpl === t.id ? null : t.id)} inUse={tplUse(t)}
                                 students={students} defaultStudent={defaultStudent}
-                                onApply={(sid, dk) => onApplyTemplate(t, sid, dk)} onEdit={() => setEditing(t.id)} onRemove={() => { setOpenTpl(null); onRemoveTemplate(t.id); }} />
+                                onApply={(sid, dk) => onApplyTemplate(t, sid, dk)} onEdit={() => setEditing({ id: t.id })} onRemove={() => { setOpenTpl(null); onRemoveTemplate(t.id); }} />
                         ))}
                     </div>
-                    <button type="button" onClick={() => setEditing("new")} style={{ ...ghost, marginTop: 12, minHeight: 48, borderRadius: 10, color: C.text2 }}>+ Novo modelo</button>
+                    <button type="button" onClick={() => setNewOpen(true)} style={{ ...ghost, marginTop: 12, minHeight: 48, borderRadius: 10, color: C.text2 }}>+ Novo modelo</button>
+                    {newOpen && <NewTemplateSheet students={students} workouts={workouts || {}} dayNames={dayNames || {}} templates={templates} onClose={() => setNewOpen(false)} onPick={(draft) => { setNewOpen(false); setEditing({ draft }); }} />}
                 </>
             )}
 

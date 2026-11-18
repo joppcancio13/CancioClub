@@ -47,6 +47,7 @@ function Sheet({ title, onClose, children }) {
 function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyTemplate, onCopyFrom, onSwapWith, onToggleCardio, onSaveTemplate, onClear, onSerie, onPrint, onArchive, startStep, menu }) {
     const [step, setStep] = useState(startStep || null); // null · "modelo" · "copiar" · "trocar" · "salvar"
     const [tplName, setTplName] = useState(nameOf(dayNames, day));
+    const [tplLevel, setTplLevel] = useState("Intermediário");
     const dayFull = (DAYS.find((d) => d.key === day) || {}).full;
     const list = week[day] || [];
     const others = DAYS.filter((d) => d.key !== day);
@@ -105,9 +106,11 @@ function TrocarSheet({ week, day, dayNames, cardio, templates, onClose, onApplyT
                 <>
                     {!menu && back}
                     {menu && <button type="button" onClick={() => setStep(null)} style={{ alignSelf: "flex-start", minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>‹ Voltar</button>}
+                    <div style={{ display: "flex", gap: 6 }}>{["Iniciante", "Intermediário", "Avançado"].map((l) => <button key={l} type="button" aria-pressed={tplLevel === l} onClick={() => setTplLevel(l)} style={{ flex: 1, minHeight: 44, borderRadius: 12, border: "none", background: tplLevel === l ? C.text : C.bg, color: tplLevel === l ? C.bg : C.text, fontFamily: F.body, fontSize: 13, fontWeight: tplLevel === l ? 800 : 600, cursor: "pointer" }}>{l}</button>)}</div>
+                    <span style={{ fontSize: 13, color: C.text3 }}>As cargas do aluno não vão junto.</span>
                     <input autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="Nome do modelo" aria-label="Nome do modelo"
                         style={{ boxSizing: "border-box", width: "100%", minHeight: 48, padding: "0 14px", borderRadius: 10, border: "none", outline: "none", background: C.bg, boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 15 }} />
-                    <button type="button" disabled={!tplName.trim()} onClick={() => done(() => onSaveTemplate(tplName.trim()))}
+                    <button type="button" disabled={!tplName.trim()} onClick={() => done(() => onSaveTemplate(tplName.trim(), tplLevel))}
                         style={{ marginTop: 6, height: 52, borderRadius: 16, border: "none", background: tplName.trim() ? C.text : C.raised, color: tplName.trim() ? C.bg : C.text4, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Salvar modelo</button>
                 </>
             )}

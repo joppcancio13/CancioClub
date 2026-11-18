@@ -44,7 +44,8 @@ function Sheet({ title, onClose, onSave, children }) {
     );
 }
 
-function DadosV3({ student: st, onSave, onPrint, onDelete }) {
+function DadosV3({ student: st, onSave, onPrint, onDelete, archives = [], onArchive, onRestoreArchive, onDeleteArchive }) {
+    const [faseOpen, setFaseOpen] = useState(null);
     const [sheet, setSheet] = useState(null); // "nome" | "alerta" | "goal" | "freq" | "inicio" | "obs"
     const [draft, setDraft] = useState({});
     const [anamOpen, setAnamOpen] = useState(false);
@@ -108,6 +109,41 @@ function DadosV3({ student: st, onSave, onPrint, onDelete }) {
                 <span style={{ ...kicker, display: "flex", alignItems: "center", gap: 6 }}>OBSERVAÇÕES<span style={{ fontFamily: F.body, fontWeight: 400, letterSpacing: 0, fontSize: 12, color: C.text3 }}>{"· " + (first || "o aluno") + " vê"}</span></span>
                 <span style={{ fontSize: 15, lineHeight: 1.45, color: st.obs ? C.text : C.text4, whiteSpace: "pre-wrap" }}>{st.obs || "Preferências, histórico… Toque pra escrever."}</span>
             </button>
+
+            {onArchive && (() => {
+                // fases (38b): linha do tempo, fase atual no topo; tocar numa antiga abre Restaurar e Apagar
+                const old = [...archives].sort((a, b) => (a.date < b.date ? 1 : -1));
+                const since = old[0] ? old[0].date : st.startDate;
+                const fmt = (iso) => (iso ? new Date(iso.length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "");
+                const info = (a) => { const days = Object.values(a.week || {}).filter((l) => Array.isArray(l) && l.length).length; const ex = Object.values(a.week || {}).reduce((n, l) => n + (Array.isArray(l) ? l.length : 0), 0); return days + (days === 1 ? " dia · " : " dias · ") + ex + (ex === 1 ? " exercício" : " exercícios"); };
+                const items = [{ id: "cur", label: "Fase atual", sub: since ? "desde " + fmt(since) : "a ficha de agora", cur: true }, ...old.map((a) => ({ id: a.id, label: a.label, sub: "guardada em " + fmt(a.date) + " · " + info(a), a }))];
+                return (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ ...kicker, marginBottom: 8 }}>FASES</span>
+                        {items.map((it, i) => { const open = faseOpen === it.id && !it.cur; return (
+                            <div key={it.id} style={{ display: "flex", gap: 12 }}>
+                                <span aria-hidden="true" style={{ width: 14, flex: "none", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <span style={{ marginTop: 6, width: 12, height: 12, borderRadius: "50%", background: it.cur ? C.text : "transparent", boxShadow: it.cur ? "none" : "inset 0 0 0 2px #3A404C" }} />
+                                    <span style={{ flex: 1, width: 2, background: i === items.length - 1 ? "transparent" : C.line }} />
+                                </span>
+                                <div style={{ flex: 1, minWidth: 0, paddingBottom: 16, display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <button type="button" disabled={it.cur} onClick={() => setFaseOpen(open ? null : it.id)} aria-expanded={it.cur ? undefined : open} style={{ padding: 0, minHeight: 32, border: "none", background: "none", color: C.text, textAlign: "left", cursor: it.cur ? "default" : "pointer", fontFamily: F.body }}>
+                                        <span style={{ display: "block", fontSize: 15, fontWeight: it.cur ? 800 : 600 }}>{it.label}</span>
+                                        <span style={{ display: "block", fontSize: 13, color: C.text3 }}>{it.sub}</span>
+                                    </button>
+                                    {it.cur && <button type="button" onClick={onArchive} style={{ alignSelf: "flex-start", marginTop: 6, minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", background: "transparent", boxShadow: "inset 0 0 0 1px #3A404C", color: C.text, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Arquivar e começar nova fase</button>}
+                                    {open && (
+                                        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                                            <button type="button" onClick={() => { setFaseOpen(null); onRestoreArchive(it.a); }} style={{ minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: C.text, color: C.bg, fontFamily: F.body, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Restaurar</button>
+                                            <button type="button" onClick={() => { setFaseOpen(null); onDeleteArchive(it.id); }} style={{ minHeight: 44, padding: "0 16px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.accentLine}`, color: C.accent, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Apagar</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ); })}
+                    </div>
+                );
+            })()}
 
             {onPrint && (
                 <button type="button" onClick={onPrint} style={{ minHeight: 48, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 10, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text2, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>

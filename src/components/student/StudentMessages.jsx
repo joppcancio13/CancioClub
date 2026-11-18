@@ -11,7 +11,7 @@ const time = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit
 const splitContext = (text) => { const m = String(text || "").match(/^(.+? · .+?) — ([\s\S]+)$/); return m ? { link: m[1], body: m[2] } : { link: null, body: text }; };
 const kicker = KICKER;
 
-function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyText, events = [] }) {
+function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyText, events = [], quick }) {
     const [text, setText] = useState("");
     const send = (t) => { const v = (t ?? text).trim(); if (!v) return; onSend(v); setText(""); };
     const items = [...messages.map((m) => ({ kind: "msg", date: m.date, m })), ...events.map((e) => ({ kind: "event", date: e.date, e }))].sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -47,7 +47,7 @@ function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyT
                 );
             })}
             <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", paddingTop: 6 }}>
-                {QUICK[side].map((q) => (
+                {(quick || QUICK[side]).map((q) => (
                     <button key={q} type="button" onClick={() => (side === "prof" ? send(q) : setText((t) => (t ? t + " " : "") + q + ". "))}
                         style={{ flex: "none", minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${q === "Senti dor" ? C.accentLine : C.outline}`, color: q === "Senti dor" ? C.accent : C.text, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>{q}</button>
                 ))}

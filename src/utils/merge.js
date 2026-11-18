@@ -6,6 +6,7 @@ function splitGlobalForCloud(d) {
         soundOn: d.soundOn !== undefined ? d.soundOn : true,
         library: d.library || [],
         templates: d.templates || [],
+        quickReplies: d.quickReplies, // design v4 (50c): respostas rápidas do professor
         activeStudentId: d.activeStudentId,
     };
 }
@@ -42,6 +43,7 @@ function mergeCloudRows(rows) {
             out.soundOn = rd.soundOn !== undefined ? rd.soundOn : true;
             out.library = rd.library || [];
             out.templates = rd.templates || [];
+            out.quickReplies = rd.quickReplies;
             out.activeStudentId = rd.activeStudentId;
         }
         else if (String(r.id).indexOf("student_") === 0) {
@@ -189,6 +191,7 @@ function applyGlobalToLocal(local, globalData) {
         soundOn: globalData.soundOn !== undefined ? globalData.soundOn : true,
         library: globalData.library || [],
         templates: globalData.templates || [],
+        quickReplies: globalData.quickReplies !== undefined ? globalData.quickReplies : base.quickReplies,
         activeStudentId: globalData.activeStudentId !== undefined ? globalData.activeStudentId : base.activeStudentId,
     };
 }
