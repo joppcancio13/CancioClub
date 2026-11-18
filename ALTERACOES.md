@@ -222,3 +222,12 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Indicar um amigo:** no Perfil, abre o compartilhar do celular (ou o WhatsApp) com o convite e o link.
 - **Prévia do link:** imagem e descrição ao mandar o link no WhatsApp/Instagram (`public/og.jpg`).
 - Cache v65.
+
+## v66 — ajustes pedidos pelo professor
+- **Dados do aluno:** objetivo longo quebra a linha dentro do cartão.
+- **Recados:** campo de digitar preso embaixo (acima das abas) e conversa abrindo na última mensagem. Fotos: a do aluno na lista e na conversa; a do professor em Mais › Sua foto, que o aluno vê nos Recados (a função `student` v9 devolve no login).
+- **Alunos:** "Ignorar por 7 dias" em cada aviso de atenção (volta se o motivo mudar; vale em todos os aparelhos). Filtros numa linha e Lista/Semana na de baixo.
+- **Biblioteca · Exercícios:** o catálogo do volume por grupo muscular + os exercícios criados; "Sem vínculo" mostra o que está nas fichas e não conta no volume. Ligar ao catálogo vale pra todas as fichas com aquele nome.
+- **Evolução:** recorde em destaque, linha do recorde (só sobe), carga de cada treino (sem aquecimento), escala honesta e últimos treinos com a diferença.
+- **Corpo:** fotos de corpo (antes e agora, galeria, "Adicionar foto de hoje"), junto com as da reavaliação.
+- Cache v66.
