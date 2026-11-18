@@ -102,7 +102,7 @@ function weekCount(st: any, localDate: string) {
 }
 function reassessDue(st: any) {
   if (!st || !st.assessmentAt) return false;
-  const list = st.reassessments || [];
+  const list = (st.reassessments || []).filter((r: any) => !r.onlyPhoto); // só foto (Corpo) não conta
   const dates = [st.assessmentAt, list.length ? list[list.length - 1].date : null, st.reassessDoneAt].filter(Boolean).map((x: string) => new Date(x).getTime());
   let next = Math.max(...dates) + (Number(st.reassessEvery) || 6) * 7 * 864e5;
   if (st.reassessSnoozeUntil) next = Math.max(next, new Date(st.reassessSnoozeUntil).getTime());

@@ -21,7 +21,7 @@ const inp = { width: "100%", boxSizing: "border-box", minHeight: 48, padding: 13
 
 function reassessLabel(st) {
     if (!st.assessmentAt) return "sem anamnese";
-    const list = st.reassessments || [];
+    const list = (st.reassessments || []).filter((r) => !r.onlyPhoto); // só foto não conta como reavaliação
     const last = list.length ? list[list.length - 1].date : st.assessmentAt;
     const due = new Date(last).getTime() + (Number(st.reassessEvery) || 6) * 7 * 864e5;
     const d = Math.ceil((due - Date.now()) / 864e5);
@@ -98,9 +98,10 @@ function DadosV3({ student: st, onSave, onPrint, onDelete, archives = [], onArch
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
                 {cells.map(([l, v, k]) => (
                     <button key={l} type="button" disabled={!k} onClick={() => (k === "anam" ? setAnamOpen(true) : open(k))}
-                        style={{ minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 6, padding: "12px 14px", borderRadius: 14, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line}`, color: C.text, textAlign: "left", cursor: k ? "pointer" : "default" }}>
+                        style={{ minWidth: 0, minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 6, padding: "12px 14px", borderRadius: 14, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line}`, color: C.text, textAlign: "left", cursor: k ? "pointer" : "default" }}>
                         <span style={kicker}>{l}</span>
-                        <span style={{ fontSize: 16, fontWeight: 700, fontStretch: "110%", fontVariantNumeric: "tabular-nums" }}>{v}</span>
+                        {/* objetivo longo ("Força/Condicionamento") passava por cima do card ao lado: quebra na barra e no fim do card */}
+                        <span style={{ maxWidth: "100%", fontSize: 16, fontWeight: 700, fontStretch: "110%", fontVariantNumeric: "tabular-nums", lineHeight: 1.25, overflowWrap: "anywhere" }}>{String(v).replace(/\//g, "/​")}</span>
                     </button>
                 ))}
             </div>

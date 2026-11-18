@@ -40,7 +40,7 @@ function ExerciseSheet({ mode, swapEx, dayList, week, library, dayLabel, onAdd, 
     const inDayNames = new Set((dayList || []).map((e) => normalize(e.name).trim()));
     // última prescrição do exercício nesta ficha (outro dia), pra "da última vez"
     const lastPlan = (name) => { let hit = null; Object.values(week || {}).forEach((l) => (l || []).forEach((e) => { if (normalize(e.name).trim() === normalize(name).trim()) hit = e; })); return hit; };
-    const libEntry = (it) => suggestCatalogMatch(it.name, exerciseCatalog);
+    const libEntry = (it) => (it.catalogId && exerciseCatalog[it.catalogId]) || suggestCatalogMatch(it.name, exerciseCatalog); // vínculo da Biblioteca primeiro
     const query = q.trim();
 
     const libRows = (library || []).filter((it) => !inDayNames.has(normalize(it.name).trim())).filter((it) => {

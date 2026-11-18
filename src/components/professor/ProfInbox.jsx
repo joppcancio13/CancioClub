@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { C, F, KICKER } from "../../styles/tokens";
 import { PremiumEmptyState } from "../shared/PremiumEmptyState";
 import { StudentMessages, splitContext } from "../student/StudentMessages";
+import { Face } from "../shared/Face";
 
 // Recados do professor — design v3 (README · Professor 7 "Recados" e "Conversa"): contador de não
 // lidos, lista de conversas por aluno e a conversa no mesmo padrão de balões do app da aluna.
 
 const when = (iso) => { const d = new Date(iso); const t = new Date(); return d.toDateString() === t.toDateString() ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(/\./g, ""); };
-const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("");
 const kicker = KICKER;
 const divider = { background: `linear-gradient(to right,${C.line},${C.line} calc(100% - 48px),transparent) no-repeat bottom/100% 1px` };
 
@@ -27,7 +27,7 @@ function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFic
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 10, boxShadow: `inset 0 -1px 0 ${C.line}` }}>
                 <button type="button" onClick={() => setOpenId(null)} aria-label="Voltar" style={{ minHeight: 44, padding: "0 10px 0 0", border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 15, cursor: "pointer" }}>‹</button>
-                <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{initials(name(open))}</span>
+                <Face src={open.st && open.st.photo} name={name(open)} size={36} />
                 <span style={{ flex: 1, minWidth: 0, fontFamily: F.body, fontWeight: 700, fontSize: 15 }}>{name(open)}</span>
                 {open.st && onOpenFicha && <button type="button" onClick={() => onOpenFicha(open.sid)} style={{ minHeight: 44, padding: 0, border: "none", background: "none", color: C.text2, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Abrir ficha ›</button>}
             </div>
@@ -40,7 +40,7 @@ function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFic
                     </div>
                 </div>
             )}
-            <StudentMessages messages={open.ms} side="prof" pinned={open.st && open.st.pinnedNote ? open.st.pinnedNote.text : null} onEditPin={onPin && pinEdit === null ? () => setPinEdit((open.st && open.st.pinnedNote && open.st.pinnedNote.text) || "") : undefined} quick={(() => { if (!quickReplies) return undefined; const lastIn = [...open.ms].filter((m) => !m.fromProf).sort((a, b) => (a.date < b.date ? -1 : 1)).pop(); return lastIn && splitContext(lastIn.text).link ? quickReplies.serie : quickReplies.geral; })()} onSend={(t) => onReply(t, open.sid)} placeholder={"Responder " + name(open).split(" ")[0]} emptyText={"Nenhum recado ainda. Escreva pra " + name(open).split(" ")[0] + " — chega na aba Recados do app."} />
+            <StudentMessages messages={open.ms} side="prof" pinned={open.st && open.st.pinnedNote ? open.st.pinnedNote.text : null} onEditPin={onPin && pinEdit === null ? () => setPinEdit((open.st && open.st.pinnedNote && open.st.pinnedNote.text) || "") : undefined} quick={(() => { if (!quickReplies) return undefined; const lastIn = [...open.ms].filter((m) => !m.fromProf).sort((a, b) => (a.date < b.date ? -1 : 1)).pop(); return lastIn && splitContext(lastIn.text).link ? quickReplies.serie : quickReplies.geral; })()} onSend={(t) => onReply(t, open.sid)} docked otherPhoto={open.st && open.st.photo} otherName={name(open)} placeholder={"Responder " + name(open).split(" ")[0]} emptyText={"Nenhum recado ainda. Escreva pra " + name(open).split(" ")[0] + " — chega na aba Recados do app."} />
         </div>
     );
 
@@ -59,7 +59,7 @@ function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFic
                     {list.map((x) => (
                         <button key={x.id} type="button" onClick={() => { setPicking(false); setQ(""); setOpenId(x.id); if (by[x.id] && by[x.id].some((m) => !m.read && !m.fromProf)) onOpen(x.id); }}
                             style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", border: "none", ...divider, color: C.text, textAlign: "left", cursor: "pointer" }}>
-                            <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{initials(x.name)}</span>
+                            <Face src={x.photo} name={x.name} size={36} />
                             <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600 }}>{x.name}</span>
                             <span style={{ fontSize: 13, color: C.text3 }}>{by[x.id] ? "conversa aberta" : ""}</span>
                         </button>
@@ -85,7 +85,7 @@ function ProfInbox({ messages, students, onReply, onOpen, initialOpen, onOpenFic
                     return (
                         <button key={t.sid} type="button" onClick={() => { setOpenId(t.sid); if (t.unread) onOpen(t.sid); }}
                             style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", border: "none", ...divider, color: C.text, textAlign: "left", cursor: "pointer" }}>
-                            <span style={{ width: 40, height: 40, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{initials(name(t))}</span>
+                            <Face src={t.st && t.st.photo} name={name(t)} size={40} />
                             <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                                 <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                                     <span style={{ flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 15, fontWeight: t.unread ? 700 : 600 }}>{name(t)}</span>

@@ -55,6 +55,7 @@ import { RendimentoV3 } from "./components/professor/RendimentoV3";
 import { AulaV3 } from "./components/professor/AulaV3";
 import { StudentMessages } from "./components/student/StudentMessages";
 import { ProfInbox } from "./components/professor/ProfInbox";
+import { Face } from "./components/shared/Face";
 import { Reassessment, reassessDue, nextReassess } from "./components/student/Reassessment";
 import { MyData } from "./components/student/MyData";
 import { MemberCard } from "./components/student/MemberCard";
@@ -386,7 +387,21 @@ function CancioClub() {
         sc[dk] = true; cd[sid] = sc; const next = { ...p, cardio: cd }; syncStudentToCloud(next, sid); return next; });
     const setCardioPlan = (sid, dk, patch) => setData((p) => { const cd = { ...(p.cardio || {}) }; const sc = { ...(cd[sid] || {}) }; const cur = sc[dk] && typeof sc[dk] === "object" ? sc[dk] : {}; sc[dk] = { ...cur, ...patch }; cd[sid] = sc; const next = { ...p, cardio: cd }; syncStudentToCloud(next, sid); return next; });
     const [cardioAuto, setCardioAuto] = useState(false); // "Começar cardio" no Hoje já liga o cronômetro
-    const addLibrary = (name, url, tag) => setData((p) => { const next = { ...p, library: [...(p.library || []), { id: uid(), name, url: url || "", tag: tag || "" }] }; syncGlobalToCloud(next); return next; });
+    const addLibrary = (name, url, tag, catalogId) => setData((p) => { const next = { ...p, library: [...(p.library || []), { id: uid(), name, url: url || "", tag: tag || "", ...(catalogId ? { catalogId } : {}) }] }; syncGlobalToCloud(next); return next; });
+    // Biblioteca › "Ligar pela sugestão": põe o catalogId nos exercícios das fichas (por nome) que
+    // ainda não tinham — é o vínculo que faz o exercício contar no volume por músculo
+    const linkFichasToCatalog = (pairs) => setData((p) => {
+        const key = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").trim();
+        const workouts = { ...(p.workouts || {}) }; const changed = [];
+        Object.keys(workouts).forEach((sid) => {
+            let ch = false; const wk = { ...workouts[sid] };
+            Object.keys(wk).forEach((dk) => { if (!Array.isArray(wk[dk])) return; wk[dk] = wk[dk].map((e) => { if (e.catalogId) return e; const id = pairs[key(e.name)]; if (!id) return e; ch = true; return { ...e, catalogId: id }; }); });
+            if (ch) { workouts[sid] = wk; changed.push(sid); }
+        });
+        const next = { ...p, workouts };
+        changed.forEach((sid) => syncStudentToCloud(next, sid));
+        return next;
+    });
     const updateLibrary = (id, patch) => setData((p) => { const next = { ...p, library: (p.library || []).map((e) => (e.id === id ? { ...e, ...patch } : e)) }; syncGlobalToCloud(next); return next; });
     const removeLibrary = (id) => setData((p) => { const next = { ...p, library: (p.library || []).filter((e) => e.id !== id) }; syncGlobalToCloud(next); return next; });
     const focusId = role === "prof" ? profId : alunoId;
@@ -1150,7 +1165,7 @@ function CancioClub() {
                     // biblioteca/modelos/som: os deste aparelho continuam valendo (é onde o professor edita);
                     // só num aparelho com dados de exemplo é que vêm da linha global da nuvem
                     const g = p && !p.isSeed ? p : cloud;
-                    const merged = { ...cloud, profKey: g.profKey, soundOn: g.soundOn, library: g.library, templates: g.templates, quickReplies: g.quickReplies, activeStudentId: local.activeStudentId || (cloud.students[0] && cloud.students[0].id), students: [...cloud.students, ...localOnly] };
+                    const merged = { ...cloud, profKey: g.profKey, soundOn: g.soundOn, library: g.library, templates: g.templates, quickReplies: g.quickReplies, profPhoto: (p && !p.isSeed && p.profPhoto) || cloud.profPhoto || null, activeStudentId: local.activeStudentId || (cloud.students[0] && cloud.students[0].id), students: [...cloud.students, ...localOnly] };
                     const activityAdded = new Set();
                     cloud.students.forEach((s) => { if (mergeLocalActivityInto(merged, local, s.id)) activityAdded.add(s.id); });
                     localOnly.forEach((s) => {
@@ -1498,15 +1513,23 @@ function CancioClub() {
                                 const unreadN = messages.filter((m) => m.studentId === s.id && !m.read && !m.fromProf).length;
                                 const newAnam = s.assessmentAt && Date.now() - new Date(s.assessmentAt).getTime() < 7 * 864e5;
                                 // só o que pede ação hoje — o alerta clínico é permanente e fica na ficha, senão ocupa a faixa pra sempre
+                                // `sig` = a situação que o professor ignorou ("Ignorar"): o aviso some até ela mudar
+                                // (recado novo, treino novo, outra reavaliação...). Pedido de exclusão (LGPD) não se ignora.
+                                const allSess = (data.sessions && data.sessions[s.id]) || [];
+                                const lastSessDate = allSess.length ? allSess[allSess.length - 1].date : "nunca";
+                                const lastUnread = messages.filter((m) => m.studentId === s.id && !m.read && !m.fromProf).slice(-1)[0];
+                                const realReav = (s.reassessments || []).filter((x) => !x.onlyPhoto);
+                                const lastReav = realReav[realReav.length - 1];
+                                const ign = s.attnIgnored || {};
                                 const reasons = [
                                     s.deletionRequestedAt && { k: "LGPD", t: "Pediu exclus\u00E3o dos dados" },
-                                    unreadN > 0 && { k: "RECADO", t: unreadN + (unreadN > 1 ? " recados sem resposta" : " recado sem resposta") },
-                                    lastEffortFor(s.id) === "destruidor" && { k: "FADIGA", t: "\u00DAltimo treino veio como Destruidor" },
-                                    st.week === 0 && planned > 0 && { k: "SUMIDO", t: "Nenhum treino nos \u00FAltimos 7 dias" },
-                                    reassessDue(s) && { k: "REAV", t: "Reavaliação vencida há " + Math.max(1, Math.floor((Date.now() - nextReassess(s)) / 864e5)) + (Math.floor((Date.now() - nextReassess(s)) / 864e5) > 1 ? " dias" : " dia") },
-                                    newAnam && { k: "ANAMNESE", t: "Respondeu a anamnese \u2014 vale revisar" },
-                                    (() => { const rl = s.reassessments || []; const lr = rl[rl.length - 1]; return lr && Date.now() - new Date(lr.date).getTime() < 7 * 864e5 && { k: "REAVALIA\u00C7\u00C3O", t: "Mandou peso e medidas novas" }; })(),
-                                ].filter(Boolean);
+                                    unreadN > 0 && { k: "RECADO", t: unreadN + (unreadN > 1 ? " recados sem resposta" : " recado sem resposta"), sig: lastUnread && lastUnread.id },
+                                    lastEffortFor(s.id) === "destruidor" && { k: "FADIGA", t: "\u00DAltimo treino veio como Destruidor", sig: lastSessDate },
+                                    st.week === 0 && planned > 0 && { k: "SUMIDO", t: "Nenhum treino nos \u00FAltimos 7 dias", sig: lastSessDate },
+                                    reassessDue(s) && { k: "REAV", t: "Reavaliação vencida há " + Math.max(1, Math.floor((Date.now() - nextReassess(s)) / 864e5)) + (Math.floor((Date.now() - nextReassess(s)) / 864e5) > 1 ? " dias" : " dia"), sig: String(nextReassess(s)) },
+                                    newAnam && { k: "ANAMNESE", t: "Respondeu a anamnese \u2014 vale revisar", sig: s.assessmentAt },
+                                    lastReav && Date.now() - new Date(lastReav.date).getTime() < 7 * 864e5 && { k: "REAVALIA\u00C7\u00C3O", t: "Mandou peso e medidas novas", sig: lastReav.date },
+                                ].filter(Boolean).filter((x) => !(x.sig && ign[x.k] === x.sig));
                                 const alert = reasons[0] ? { ...reasons[0], more: reasons.length - 1 } : null;
                                 return { s, st, planned, sub, done: r && r.done, wait: r && !r.done, alert, order: r ? (r.done ? 1 : 0) : 2 };
                             });
@@ -1518,6 +1541,7 @@ function CancioClub() {
                                 React.createElement(AlunosV3, { rows, data, now: liveNow, search: studentSearch, onSearch: setStudentSearch, onAdd: () => setAddStudentOpen(true), onOpen: (s) => { setLiveStudentId(null); open(s); },
                                     onAttn: (r) => { if (r.alert.k === "RECADO" || r.alert.k === "SUMIDO") { setInboxFocus(r.s.id); setProfTab("recados"); markThreadRead(r.s.id); } else open(r.s); },
                                     onReav: (sid, act) => { const st = students.find((x) => x.id === sid); if (!st) return; const patch = act === "done" ? { reassessDoneAt: new Date().toISOString(), reassessSnoozeUntil: undefined } : { reassessSnoozeUntil: new Date(Date.now() + 7 * 864e5).toISOString() }; const nx = nextReassess({ ...st, ...patch }); const lbl = "Próxima em " + new Date(nx).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(/\./g, ""); withUndo(lbl, [sid], false, () => updateStudent(sid, patch)); },
+                                    onIgnore: (r) => { const st = students.find((x) => x.id === r.s.id); if (!st || !r.alert.sig) return; withUndo(String(st.name).split(" ")[0] + " saiu de Precisa de atenção", [st.id], false, () => updateStudent(st.id, { attnIgnored: { ...(st.attnIgnored || {}), [r.alert.k]: r.alert.sig } })); },
                                     onBatch: runBatch, templates,
                                     liveId: liveStudentId, onLive: (id) => { setLiveStudentId(id); window.scrollTo(0, 0); },
                                     onMessage: (s) => { setLiveStudentId(null); setInboxFocus(s.id); setProfTab("recados"); markThreadRead(s.id); } }),
@@ -1667,10 +1691,11 @@ function CancioClub() {
                             React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), onSend: (text) => sendMessage(text, profId) }))))))),
                 (profTab === "modelos" || profTab === "biblioteca") && React.createElement(BibliotecaV3, { templates, library, students, workouts: data.workouts, dayNames: data.dayNames, defaultStudent: profId || undefined,
                     onApplyTemplate: (t, sid, dk) => { const st = students.find((x) => x.id === sid); withUndo(t.name + " entrou na ficha de " + (st ? st.name.split(" ")[0] : "aluno"), [sid], false, () => applyTemplate(t, dk, sid)); },
-                    onAddTemplate: addTemplate, onUpdateTemplate: updateTemplate, onRemoveTemplate: (id) => { const t = templates.find((x) => x.id === id); withUndo((t ? t.name : "Modelo") + " foi apagado", [], true, () => deleteTemplate(id)); }, onAddLib: addLibrary, onUpdateLib: updateLibrary, onRemoveLib: (id) => { const it = library.find((x) => x.id === id); withUndo((it ? it.name : "Exercício") + " saiu da biblioteca", [], true, () => removeLibrary(id)); } }),
+                    onAddTemplate: addTemplate, onUpdateTemplate: updateTemplate, onRemoveTemplate: (id) => { const t = templates.find((x) => x.id === id); withUndo((t ? t.name : "Modelo") + " foi apagado", [], true, () => deleteTemplate(id)); }, onAddLib: addLibrary, onUpdateLib: updateLibrary,
+                    onLinkFichas: (pairs, n) => withUndo(n + (n === 1 ? " exercício passou" : " exercícios passaram") + " a contar no volume", students.map((x) => x.id), false, () => linkFichasToCatalog(pairs)), onRemoveLib: (id) => { const it = library.find((x) => x.id === id); withUndo((it ? it.name : "Exercício") + " saiu da biblioteca", [], true, () => removeLibrary(id)); } }),
                 profTab === "recados" && (React.createElement(React.Fragment, null,
                     // design v3: o título (não lidos + RECADOS) agora vem do próprio ProfInbox
-                    React.createElement("div", { style: { marginBottom: 26 } },
+                    React.createElement("div", null,
                         notifButton,
                         React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead, quickReplies: repliesOf(data), onPin: (sid, text) => updateStudent(sid, { pinnedNote: text ? { text, at: new Date().toISOString() } : undefined }),
                             onOpenFicha: (sid) => { setActive(sid); setProfTab("alunos"); setProfView("aluno"); setFichaTab("resumo"); setRendEx(null); setExpanded(null); window.scrollTo(0, 0); } })))),
@@ -1679,6 +1704,9 @@ function CancioClub() {
                 profTab === "painel" && (React.createElement(React.Fragment, null,
                     // design v4: Mais reorganizado — Respostas rápidas, demonstração, selo, backup e Sair da conta
                     React.createElement(MaisV3, { repliesCount: repliesOf(data).serie.length + repliesOf(data).geral.length, demo, advOpen,
+                        profPhoto: data.profPhoto || null,
+                        // a foto vai na linha global e na de cada aluno (é por ela que o celular do aluno recebe)
+                        onProfPhoto: demo ? undefined : (src) => setData((p) => { const next = { ...p, profPhoto: src }; syncGlobalToCloud(next); (next.students || []).forEach((st) => syncStudentToCloud(next, st.id)); return next; }),
                         onAvisos: () => setProfTab("avisos"), onReplies: () => setProfTab("respostas"), onDemo: enterDemo, onSelo: () => setLogoCard(true), onBackup: () => setAdvOpen((v) => !v), onLogout: lockProf },
                     React.createElement(React.Fragment, null,
                     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
@@ -1743,11 +1771,16 @@ function CancioClub() {
                 alunoTab === "diario" && React.createElement("div", { style: { paddingBottom: 110 } },
                     React.createElement("button", { className: "cc-tap", onClick: () => setAlunoTab("hoje"), style: { minHeight: 44, padding: 0, marginBottom: 8, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "‹ Hoje"),
                     React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth })),
-                alunoTab === "recados" && React.createElement("div", { id: "cc-chat", style: { paddingBottom: 110 } },
-                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, marginBottom: 6 } }, "RECADOS"),
-                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.text3, marginBottom: 16 } }, "Conversa com o seu professor."),
+                alunoTab === "recados" && React.createElement("div", { id: "cc-chat" },
+                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, marginBottom: 14 } }, "RECADOS"),
+                    // topo da conversa com a foto do professor (Mais › Sua foto, do lado dele)
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, paddingBottom: 12, marginBottom: 14, boxShadow: `inset 0 -1px 0 ${C.line}` } },
+                        React.createElement(Face, { src: alunoStudent.profPhoto, name: "Prof Cancio", size: 44, ring: true }),
+                        React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2 } },
+                            React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15 } }, "Prof. Cancio"),
+                            React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.text3 } }, "Seu professor · responde por aqui"))),
                     notifButton,
-                    React.createElement(StudentMessages, { pinned: alunoStudent.pinnedNote ? alunoStudent.pinnedNote.text : null, messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
+                    React.createElement(StudentMessages, { docked: true, otherPhoto: alunoStudent.profPhoto, otherName: "Prof Cancio", pinned: alunoStudent.pinnedNote ? alunoStudent.pinnedNote.text : null, messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },

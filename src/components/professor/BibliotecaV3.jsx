@@ -5,6 +5,7 @@ import { haptic } from "../../utils/misc";
 import { TemplateEditorV3, NewTemplateSheet } from "./TemplateEditorV3";
 import { MediaEmbed } from "../shared/MediaEmbed";
 import { PremiumEmptyState } from "../shared/PremiumEmptyState";
+import { BibliotecaExercicios } from "./BibliotecaExercicios";
 
 // Biblioteca — design v3 (README · Professor 8, protótipo 25b): abas Modelos (primeiro) e Exercícios.
 // Modelos: cartões que abrem a lista, "Aplicar em um aluno" (escolhe aluno e dia ali mesmo) e "Editar".
@@ -84,64 +85,15 @@ function TplCard({ tpl, open, onToggle, inUse, students, defaultStudent, onApply
     );
 }
 
-function LibRow({ item, uses, onUpdate, onRemove }) {
-    const [open, setOpen] = useState(false);
-    const [f, setF] = useState({ name: item.name || "", url: item.url || "", tag: item.tag || "" });
-    const [show, setShow] = useState(false);
-    const inp = { width: "100%", boxSizing: "border-box", minHeight: 44, padding: "0 12px", borderRadius: 10, border: "none", outline: "none", background: C.bg, boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 15 };
-    const field = (k, label, ph, flex) => (
-        <label style={{ flex, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={kicker}>{label}</span>
-            <input value={f[k]} placeholder={ph} onChange={(e) => setF({ ...f, [k]: e.target.value })}
-                onBlur={() => { const v = f[k].trim(); if (k === "name" && !v) return setF({ ...f, name: item.name }); if (v !== (item[k] || "")) onUpdate(item.id, { [k]: v }); }} style={inp} />
-        </label>
-    );
-    const sub = [item.tag || "sem grupo", uses ? "em " + plural(uses, "ficha", "fichas") : "sem uso", item.url ? "vídeo" : null].filter(Boolean).join(" · ");
-    return (
-        <div style={divider}>
-            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
-                style={{ width: "100%", minHeight: 44, display: "flex", alignItems: "center", gap: 10, padding: "12px 0", border: "none", background: "none", textAlign: "left", cursor: "pointer" }}>
-                <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontFamily: F.body, fontSize: 16, fontWeight: 700, fontStretch: "110%", color: uses ? C.text : C.text4 }}>{item.name}</span>
-                    <span style={{ fontFamily: F.body, fontSize: 13, color: C.text3 }}>{sub}</span>
-                </span>
-                <span aria-hidden="true" style={{ color: C.text4, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s ease" }}>›</span>
-            </button>
-            {open && (
-                <div style={{ padding: "0 0 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-                    {field("name", "NOME", "", "1 1 auto")}
-                    <div style={{ display: "flex", gap: 8 }}>
-                        {field("url", "VÍDEO", "cole o link", "2 1 0")}
-                        {field("tag", "GRUPO", "Peito", "1 1 0")}
-                    </div>
-                    {item.url && show && <MediaEmbed url={item.url} />}
-                    <div style={{ display: "flex", gap: 8 }}>
-                        {item.url && <button type="button" onClick={() => setShow(!show)} style={{ ...ghost, flex: 1, minHeight: 44, borderRadius: 10 }}>{show ? "Ocultar vídeo" : "Ver vídeo"}</button>}
-                        <button type="button" onClick={onRemove} style={{ ...ghost, flex: 1, minHeight: 44, borderRadius: 10, boxShadow: `inset 0 0 0 1px ${C.accentLine}`, color: C.accent }}>Remover da biblioteca</button>
-                    </div>
-                    {uses > 0 && <span style={{ fontSize: 13, color: C.text3 }}>Remover daqui não tira o exercício das fichas que já usam.</span>}
-                </div>
-            )}
-        </div>
-    );
-}
-
-function BibliotecaV3({ templates, library, students, workouts, dayNames, defaultStudent, onApplyTemplate, onAddTemplate, onUpdateTemplate, onRemoveTemplate, onAddLib, onUpdateLib, onRemoveLib }) {
+function BibliotecaV3({ templates, library, students, workouts, dayNames, defaultStudent, onApplyTemplate, onAddTemplate, onUpdateTemplate, onRemoveTemplate, onAddLib, onUpdateLib, onRemoveLib, onLinkFichas }) {
     const [tab, setTab] = useState("modelos");
     const [openTpl, setOpenTpl] = useState(null);
     const [editing, setEditing] = useState(null); // null · { id } (editar) · { draft } (novo, já com a origem escolhida)
     const [newOpen, setNewOpen] = useState(false); // "+ Novo modelo": de onde começar (41d)
-    const [q, setQ] = useState("");
 
     // uso: modelo = alunos com algum dia batizado com o nome do modelo; exercício = fichas (alunos) que o têm
     const tplUse = (t) => students.filter((s) => Object.values((dayNames || {})[s.id] || {}).some((n) => norm(n) === norm(t.name))).length;
-    const libUse = {};
-    students.forEach((s) => { const seen = new Set(); Object.values((workouts || {})[s.id] || {}).forEach((list) => (list || []).forEach((e) => seen.add(norm(e.name)))); seen.forEach((n) => { libUse[n] = (libUse[n] || 0) + 1; }); });
 
-    const qq = norm(q);
-    const rows = library.filter((e) => norm(e.name).includes(qq)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-    const canCreate = qq && !library.some((e) => norm(e.name) === qq);
-    const create = () => { if (!canCreate) return; haptic("confirm"); onAddLib(q.trim(), "", ""); setQ(""); };
     const editTpl = editing && editing.id ? templates.find((t) => t.id === editing.id) : null;
 
     if (editing) return (
@@ -174,18 +126,7 @@ function BibliotecaV3({ templates, library, students, workouts, dayNames, defaul
                 </>
             )}
 
-            {tab === "exercicios" && (
-                <>
-                    <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && create()} placeholder="Buscar ou criar exercício" aria-label="Buscar ou criar exercício"
-                        style={{ marginTop: 16, width: "100%", boxSizing: "border-box", height: 48, padding: "0 14px", borderRadius: 10, border: "none", outline: "none", background: C.panel, boxShadow: `inset 0 0 0 1.5px ${C.text2}`, color: C.text, fontFamily: F.body, fontSize: 15 }} />
-                    <span style={{ ...kicker, marginTop: 14 }}>{plural(library.length, "EXERCÍCIO", "EXERCÍCIOS")}</span>
-                    <div style={{ marginTop: 2, display: "flex", flexDirection: "column" }}>
-                        {rows.map((it) => <LibRow key={it.id} item={it} uses={libUse[norm(it.name)] || 0} onUpdate={onUpdateLib} onRemove={() => onRemoveLib(it.id)} />)}
-                    </div>
-                    {canCreate && <button type="button" onClick={create} style={{ ...ghost, marginTop: 12, minHeight: 48, borderRadius: 10 }}>{"+ Criar “" + q.trim() + "” na biblioteca"}</button>}
-                    {!qq && library.length === 0 && <div style={{ marginTop: 12 }}><PremiumEmptyState title="A biblioteca está vazia" sub="Digite o nome de um exercício acima pra criar o primeiro." /></div>}
-                </>
-            )}
+            {tab === "exercicios" && <BibliotecaExercicios library={library} students={students} workouts={workouts} onAddLib={onAddLib} onUpdateLib={onUpdateLib} onRemoveLib={onRemoveLib} onLinkFichas={onLinkFichas} />}
         </div>
     );
 }

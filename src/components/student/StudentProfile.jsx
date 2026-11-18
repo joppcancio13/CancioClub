@@ -4,6 +4,9 @@ import { fmtMemberNo, fmtSince } from "../../utils/members";
 import { todayISO } from "../../utils/date";
 import { computeDayRecords } from "../../utils/records";
 import { AssessmentSummary } from "../assessment/AssessmentSummary";
+import { EvolutionView } from "./EvolutionView";
+import { BodyView } from "./BodyView";
+import { photosOf } from "./Reassessment";
 
 // Perfil do aluno (versão 1c): topo "pôster" + blocos que abrem o detalhe.
 // Aluno edita foto, contato e metas de carga. A meta de frequência vem da ficha (professor).
@@ -14,8 +17,8 @@ const kgs = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
 const dShort = (iso) => { if (!iso) return ""; const [y, m, d] = iso.slice(0, 10).split("-").map(Number); return `${d} ${MO[m - 1]}`; };
 const label = { fontFamily: F.body, fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: C.muted };
 const block = { padding: 16, borderRadius: 16, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}`, display: "flex", flexDirection: "column", gap: 6, border: "none", textAlign: "left", cursor: "pointer", color: C.text, fontFamily: F.body };
-const big = { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 36, lineHeight: 1, marginTop: "auto" };
-const small = { fontSize: 13, color: "#AEB7C6" };
+const big = { position: "relative", fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 36, lineHeight: 1, marginTop: "auto" };
+const small = { position: "relative", fontSize: 13, color: "#AEB7C6" };
 const unit = { fontSize: 15, color: C.muted, fontWeight: 500 };
 
 function readPhoto(file) {
@@ -49,7 +52,7 @@ function Spark({ pts, h, stroke }) {
 
 function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone, diaryView, diaryCount, onOpenWeek, onOpenAvisos }) {
     const [view, setView] = useState(null);
-    const [evoIdx, setEvoIdx] = useState(0);
+    const [evoOpen, setEvoOpen] = useState(null); // exercício aberto no detalhe da Evolução
     const [contact, setContact] = useState(null);
     const [goalForm, setGoalForm] = useState(null);
     const series = useMemo(() => loadSeries(week), [week]);
@@ -69,7 +72,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
     const now = new Date(), ym = todayISO().slice(0, 7), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const monthSet = new Set((checkins || []).filter((d) => String(d).startsWith(ym)).map((d) => Number(String(d).slice(8, 10))));
     const a = student.assessment || {};
-    const measures = [{ date: student.assessmentAt, peso: num(a.peso), base: true }, ...(student.reassessments || [])].filter((x) => x.date);
+    const measures = [{ date: student.assessmentAt, peso: num(a.peso), base: true }, ...(student.reassessments || []).filter((r) => !r.onlyPhoto)].filter((x) => x.date);
     const lastM = measures[measures.length - 1], prevM = measures[measures.length - 2];
     const goals = student.goals || [];
     const goalRows = [
@@ -87,7 +90,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
     const shell = (title, body) => React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 96, background: C.ink, overflowY: "auto" } },
         React.createElement("div", { style: { maxWidth: 540, margin: "0 auto", padding: "calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 32px)", display: "flex", flexDirection: "column", gap: 20, color: C.text, fontFamily: F.body } },
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                React.createElement("button", { className: "cc-tap", onClick: () => (view ? setView(null) : onClose()), style: { minHeight: 44, padding: 0, border: "none", background: "none", color: C.muted, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, view ? "\u2039 Perfil" : "\u2039 Treino"),
+                React.createElement("button", { className: "cc-tap", onClick: () => (view === "evolucao" && evoOpen ? setEvoOpen(null) : view ? setView(null) : onClose()), style: { minHeight: 44, padding: 0, border: "none", background: "none", color: C.muted, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, view === "evolucao" && evoOpen ? "\u2039 Evolução" : view ? "\u2039 Perfil" : "\u2039 Treino"),
                 !view && React.createElement("button", { className: "cc-tap", onClick: () => setView("editar"), style: { minHeight: 44, padding: 0, border: "none", background: "none", color: C.silver, fontWeight: 600, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "Editar")),
             title && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1 } }, title),
             body));
@@ -99,14 +102,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
         React.createElement("span", { style: { display: "flex", alignItems: "baseline", gap: 8, flexShrink: 0 } }, React.createElement("span", { style: { fontSize: 13, color: C.muted } }, dShort(r.date)), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24 } }, kgs(r.best)), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, "kg")))))
         : React.createElement("div", { style: small }, "Seus recordes aparecem aqui assim que você registrar carga."));
 
-    if (view === "evolucao") {
-        const s = evo[Math.min(evoIdx, evo.length - 1)];
-        return shell("EVOLUÇÃO", !s ? React.createElement("div", { style: small }, "Registre carga em mais de um dia pra ver a evolução.") : React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 } }, evo.map((x, i) => React.createElement("button", { key: x.name, className: "cc-tap", onClick: () => setEvoIdx(i), style: { flexShrink: 0, minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontWeight: 600, fontSize: 13, background: i === evoIdx ? C.text : C.panel, color: i === evoIdx ? C.ink : "#AEB7C6", boxShadow: i === evoIdx ? "none" : `inset 0 0 0 1px ${C.line}` } }, x.name))),
-            React.createElement("div", { style: { ...block, cursor: "default", padding: "16px 16px 10px" } }, React.createElement(Spark, { pts: s.pts, h: 160 }),
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, color: C.muted } }, React.createElement("span", null, dShort(s.pts[0].date)), React.createElement("span", null, dShort(s.pts[s.pts.length - 1].date)))),
-            React.createElement("div", { style: { fontSize: 15, color: "#AEB7C6" } }, "De ", React.createElement("b", { style: { color: C.text } }, kgs(s.pts[0].v) + " kg"), " pra ", React.createElement("b", { style: { color: C.text } }, kgs(s.pts[s.pts.length - 1].v) + " kg"), ` em ${s.pts.length} ${s.pts.length === 1 ? "registro" : "registros"}`)));
-    }
+    if (view === "evolucao") return shell(evoOpen ? null : "EVOLUÇÃO", React.createElement(EvolutionView, { week, open: evoOpen, onOpen: setEvoOpen }));
 
     if (view === "metas") {
         const opts = records.map((r) => r.name);
@@ -126,13 +122,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
                 : opts.length > 0 && React.createElement("button", { className: "cc-tap", onClick: () => setGoalForm({ exercise: opts[0], target: "" }), style: { minHeight: 52, borderRadius: 16, border: "none", background: C.text, color: C.ink, fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: "pointer" } }, "Adicionar meta de carga")));
     }
 
-    if (view === "corpo") {
-        const keys = [["peso", "Peso", "kg"], ["cintura", "Cintura", "cm"], ["quadril", "Quadril", "cm"], ["braco", "Braço", "cm"], ["coxa", "Coxa", "cm"]];
-        return shell("CORPO", React.createElement(React.Fragment, null,
-            lastM ? React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 } }, keys.filter(([k]) => lastM[k] != null).map(([k, l, u]) => { const d = prevM && prevM[k] != null ? lastM[k] - prevM[k] : null; return React.createElement("div", { key: k, style: { ...block, cursor: "default", padding: 12, gap: 2 } }, React.createElement("span", { style: { fontSize: 11, color: C.muted } }, l), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24 } }, kgs(lastM[k])), React.createElement("span", { style: { fontSize: 11, color: "#AEB7C6" } }, d == null ? u : `${d > 0 ? "+" : d < 0 ? "\u2212" : ""}${kgs(Math.abs(d))} ${u}`)); })) : React.createElement("div", { style: small }, "Sem medidas ainda."),
-            React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, [...measures].reverse().map((m, i) => React.createElement("div", { key: i, style: { minHeight: 52, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.line}` } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, m.base ? "Anamnese" : "Reavaliação"), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, new Date(m.date).toLocaleDateString("pt-BR") + (m.peso ? ` · ${kgs(m.peso)} kg` : ""))))),
-            React.createElement("button", { className: "cc-tap", onClick: onOpenReassess, style: { minHeight: 52, borderRadius: 16, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "Fazer reavaliação")));
-    }
+    if (view === "corpo") return shell("CORPO", React.createElement(BodyView, { student, onUpdate, onOpenReassess }));
 
     if (view === "conquistas") return shell("CONQUISTAS", React.createElement(React.Fragment, null,
         React.createElement("div", { style: small }, `${won.length} de ${BADGES.length}` + (next ? ` · próxima: ${next.l}` : "")),
@@ -157,6 +147,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
     const first = String(student.name || "").trim().split(/\s+/);
     const nameLines = first.length > 1 ? [first[0], first.slice(1).join(" ")] : [first[0] || ""];
     const top = records[0], evo0 = evo[0];
+    const lastShot = (() => { const all = [...(student.reassessments || [])].reverse(); for (const r of all) { const ph = photosOf(r); if (ph.length) return ph[0].src; } return null; })();
     const g0 = goalRows[0];
     return shell(null, React.createElement(React.Fragment, null,
         todayDone && React.createElement("button", { className: "cc-tap", onClick: todayDone.onView, style: { display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderRadius: 16, border: "none", cursor: "pointer", textAlign: "left", background: C.text, color: C.ink, fontFamily: F.body } },
@@ -187,7 +178,9 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
                 evo0 && evo0.pts.length > 1 ? React.createElement(React.Fragment, null, React.createElement("div", { style: { marginTop: "auto" } }, React.createElement(Spark, { pts: evo0.pts, h: 44, stroke: 2.5 })), React.createElement("span", { style: small }, `${evo0.name} ${evo0.pts[evo0.pts.length - 1].v - evo0.pts[0].v >= 0 ? "+" : "\u2212"}${kgs(Math.abs(evo0.pts[evo0.pts.length - 1].v - evo0.pts[0].v))} kg`)) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Aparece com 2 registros")),
             React.createElement("button", { className: "cc-tap", onClick: () => setView("metas"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "METAS"),
                 g0 ? React.createElement(React.Fragment, null, React.createElement("span", { style: big }, g0.unit ? `${kgs(g0.cur)}/${kgs(g0.target)}` : `${g0.cur}/${g0.target}`), React.createElement("span", { style: small }, g0.fixed ? "treinos nesta semana" : g0.name)) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Criar uma meta \u203A")),
-            React.createElement("button", { className: "cc-tap", onClick: () => setView("corpo"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "CORPO"),
+            React.createElement("button", { className: "cc-tap", onClick: () => setView("corpo"), style: { ...block, minHeight: 124, position: "relative", overflow: "hidden" } },
+                lastShot && React.createElement("img", { src: lastShot, alt: "", "aria-hidden": "true", style: { position: "absolute", right: 0, top: 0, bottom: 0, width: "48%", height: "100%", objectFit: "cover", opacity: 0.55, maskImage: "linear-gradient(to right, transparent, #000 60%)", WebkitMaskImage: "linear-gradient(to right, transparent, #000 60%)" } }),
+                React.createElement("span", { style: { ...label, position: "relative" } }, "CORPO"),
                 lastM && lastM.peso ? React.createElement(React.Fragment, null, React.createElement("span", { style: big }, kgs(lastM.peso), React.createElement("span", { style: unit }, " kg")), React.createElement("span", { style: small }, (prevM && prevM.peso ? `${lastM.peso - prevM.peso > 0 ? "+" : lastM.peso - prevM.peso < 0 ? "\u2212" : ""}${kgs(Math.abs(lastM.peso - prevM.peso))} kg · ` : "") + dShort(String(lastM.date)))) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Sem medidas ainda")),
             React.createElement("button", { className: "cc-tap", onClick: () => setView("conquistas"), style: { ...block, gridColumn: "span 2", flexDirection: "row", alignItems: "center", gap: 14 } },
                 React.createElement("div", { style: { display: "flex" } }, (won.length ? won.slice(-3) : BADGES.slice(0, 3)).map((b) => React.createElement("div", { key: b.l, style: { marginRight: -10 } }, badge(b, 44)))),

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { C, DAYS, F, JS2KEY, PILL_V3, PROGRESS, KICKER } from "../../styles/tokens";
 import { describe } from "../student/WorkoutV3";
+import { Face } from "../shared/Face";
 
 // Início do professor — design v3 (design/v3/README.md · Professor 1 "Alunos" 16b e 2 "Ao vivo";
 // decisões em design/v3/DECISOES.md · 2: "na pista" atualiza a cada 30 s com a tela aberta).
@@ -42,7 +43,7 @@ function Ring({ pct, label }) {
     );
 }
 
-function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, onReav, onBatch, templates = [], liveId, onLive, onMessage }) {
+function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, onReav, onIgnore, onBatch, templates = [], liveId, onLive, onMessage }) {
     const [view, setView] = useState("lista"); // Lista | Semana (51a)
     const [sel, setSel] = useState(null); // seleção em lote (49a): null = desligada; senão os ids marcados
     const [batch, setBatch] = useState(null); // gaveta do lote: { kind: "model" | "copy", pick, mode, dayKey }
@@ -110,7 +111,7 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
     const ACTION = { RECADO: "Responder", SUMIDO: "Chamar", LGPD: "Ver", FADIGA: "Ver", ANAMNESE: "Revisar", "REAVALIAÇÃO": "Ver", REAV: "Ver" };
     const WARN = new Set(["SUMIDO", "LGPD", "FADIGA", "REAV"]);
     const trainsToday = (r) => !!(r.done || r.wait || r.live);
-    const FILTERS = [["todos", "Todos", enriched.length], ["hoje", "Treinam hoje", enriched.filter(trainsToday).length], ["atencao", "Atenção", attn.length]];
+    const FILTERS = [["todos", "Todos", enriched.length], ["hoje", "Hoje", enriched.filter(trainsToday).length], ["atencao", "Atenção", attn.length]];
     const list = enriched.filter((r) => (!q || r.s.name.toLowerCase().includes(q)) && (filter === "todos" || (filter === "hoje" ? trainsToday(r) : !!r.alert)))
         .sort((a, b) => String(a.s.name).localeCompare(String(b.s.name), "pt-BR"));
     const status = (r) => {
@@ -119,8 +120,7 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
         if (r.alert) return { t: r.alert.t, warn: WARN.has(r.alert.k) };
         return { t: r.sub || "" };
     };
-    const chip = (on) => ({ flex: "none", minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontSize: 13, ...(on ? { background: C.text, color: C.bg, fontWeight: 700 } : { background: "transparent", color: C.text2, boxShadow: `inset 0 0 0 1px ${C.outline}` }) });
-    const avatar = (name) => <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", background: C.raised, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{initials(name)}</span>;
+    const avatar = (st) => <Face src={st.photo} name={st.name} size={36} />;
 
     return (
         <section style={{ paddingBottom: 20 }}>
@@ -156,16 +156,23 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
                 <>
                     <div style={{ ...kicker, marginTop: 22, color: C.accent }}>Precisa de atenção · {attn.length}</div>
                     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, borderRadius: 16, overflow: "hidden" }}>
-                        {(attnAll ? attn : attn.slice(0, 3)).map((r) => (
+                        {(attnAll ? attn : attn.slice(0, 2)).map((r) => (
                             <div key={r.s.id} style={{ display: "flex", flexDirection: "column", background: C.panel }}>
-                            <button type="button" onClick={() => onAttn(r)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer" }}>
-                                {avatar(r.s.name)}
+                            <div style={{ display: "flex", alignItems: "center" }}>
+                            <button type="button" onClick={() => onAttn(r)} style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 12, padding: "12px 4px 12px 14px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer" }}>
+                                {avatar(r.s)}
                                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                                     <span style={{ fontSize: 15, fontWeight: 700 }}>{r.s.name}</span>
                                     <span style={{ fontSize: 13, color: WARN.has(r.alert.k) ? C.accent : C.text3 }}>{r.alert.t}{r.alert.more ? " · +" + r.alert.more : ""}</span>
                                 </span>
                                 <span style={{ flex: "none", fontSize: 15, fontWeight: 700, color: C.text }}>{ACTION[r.alert.k] || "Ver"}</span>
                             </button>
+                            {/* Ignorar: o aviso some até a situação mudar (recado novo, treino novo...) */}
+                            {onIgnore && r.alert.sig && <button type="button" onClick={() => onIgnore(r)} aria-label={"Ignorar aviso de " + r.s.name} title="Ignorar"
+                                style={{ flex: "none", width: 44, alignSelf: "stretch", minHeight: 44, border: "none", background: "none", color: C.text4, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <svg width="16" height="16" viewBox="0 0 256 256" aria-hidden="true"><path fill="none" stroke="currentColor" strokeWidth="20" strokeLinecap="round" d="M200 56 56 200M200 200 56 56" /></svg>
+                            </button>}
+                            </div>
                             {/* reavaliação vencida (53a): duas ações na própria linha */}
                             {r.alert.k === "REAV" && onReav && (
                                 <div style={{ display: "flex", gap: 6, padding: "0 14px 12px 62px" }}>
@@ -176,19 +183,24 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
                             </div>
                         ))}
                     </div>
-                    {attn.length > 3 && <button type="button" onClick={() => setAttnAll(!attnAll)} style={{ marginTop: 6, minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer", textAlign: "left" }}>{attnAll ? "Mostrar menos" : "Ver todos · " + attn.length}</button>}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                        {attn.length > 2 ? <button type="button" onClick={() => setAttnAll(!attnAll)} style={{ marginTop: 6, minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, cursor: "pointer", textAlign: "left" }}>{attnAll ? "Mostrar menos" : "Ver mais " + (attn.length - 2)}</button> : <span />}
+                        {onIgnore && <span style={{ marginTop: 6, fontSize: 11, color: C.text4 }}>× ignora até mudar</span>}
+                    </div>
                 </>
             )}
 
-            <div style={{ marginTop: 22, display: "flex", gap: 6, alignItems: "center" }}>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
-                    {FILTERS.map(([k, l, n]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} style={chip(filter === k)}>{l + " · " + n}</button>)}
-                </div>
+            {/* filtros e Lista/Semana em linhas separadas: antes disputavam a mesma linha e o filtro ficava cortado */}
+            <div style={{ marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <span style={{ ...kicker, ...num }}>{list.length + (list.length === 1 ? " ALUNO" : " ALUNOS")}</span>
                 {!sel && (
-                    <div role="tablist" style={{ flex: "none", display: "flex", padding: 3, borderRadius: 999, background: C.panel }}>
-                        {[["lista", "Lista"], ["semana", "Semana"]].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{ minHeight: 38, padding: "0 12px", borderRadius: 999, border: "none", background: view === k ? C.text : "transparent", color: view === k ? C.bg : C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{l}</button>)}
+                    <div role="tablist" aria-label="Vista" style={{ flex: "none", display: "flex", gap: 2 }}>
+                        {[["lista", "Lista"], ["semana", "Semana"]].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{ minHeight: 44, padding: "0 10px", border: "none", background: "none", color: view === k ? C.text : C.text4, fontFamily: F.body, fontSize: 13, fontWeight: 700, textDecoration: view === k ? "underline" : "none", textUnderlineOffset: 6, textDecorationThickness: 2, cursor: "pointer" }}>{l}</button>)}
                     </div>
                 )}
+            </div>
+            <div role="radiogroup" aria-label="Filtro" style={{ marginTop: 4, display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 2, padding: 3, borderRadius: 12, background: C.panel }}>
+                {FILTERS.map(([k, l, n]) => <button key={k} type="button" role="radio" aria-checked={filter === k} onClick={() => setFilter(k)} style={{ minWidth: 0, minHeight: 40, padding: "0 6px", borderRadius: 9, border: "none", background: filter === k ? C.text : "transparent", color: filter === k ? C.bg : C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l}<span style={{ fontWeight: 500, opacity: 0.7 }}>{" " + n}</span></button>)}
             </div>
             {view === "semana" && !sel && <WeekGrid list={list} data={data} today={today} />}
             <div style={{ marginTop: 6, display: view === "semana" && !sel ? "none" : "flex", flexDirection: "column", paddingBottom: sel ? 90 : 0 }}>
@@ -198,7 +210,7 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
                     return (
                         <button key={r.s.id} type="button" aria-pressed={sel ? !!on : undefined} onClick={() => (sel ? setSel(on ? sel.filter((x) => x !== r.s.id) : [...sel, r.s.id]) : r.onPista ? onLive(r.s.id) : onOpen(r.s))}
                             style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 58, padding: "8px 0", border: "none", ...divider, color: C.text, textAlign: "left", cursor: "pointer" }}>
-                            {sel ? <span aria-hidden="true" style={{ width: 28, height: 28, flex: "none", margin: "0 4px", borderRadius: 8, background: on ? C.text : "transparent", boxShadow: on ? "none" : "inset 0 0 0 1.5px #3A404C", color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>{on ? "✓" : ""}</span> : avatar(r.s.name)}
+                            {sel ? <span aria-hidden="true" style={{ width: 28, height: 28, flex: "none", margin: "0 4px", borderRadius: 8, background: on ? C.text : "transparent", boxShadow: on ? "none" : "inset 0 0 0 1.5px #3A404C", color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>{on ? "✓" : ""}</span> : avatar(r.s)}
                             <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                                 <span style={{ fontSize: 15, fontWeight: 600 }}>{r.s.name}</span>
                                 {st.t && <span style={{ fontSize: 13, color: st.warn ? C.accent : st.strong ? C.text : C.text4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.t}</span>}

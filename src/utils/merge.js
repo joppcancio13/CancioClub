@@ -7,6 +7,7 @@ function splitGlobalForCloud(d) {
         library: d.library || [],
         templates: d.templates || [],
         quickReplies: d.quickReplies, // design v4 (50c): respostas rápidas do professor
+        profPhoto: d.profPhoto || null, // foto do professor (Mais › Sua foto)
         activeStudentId: d.activeStudentId,
     };
 }
@@ -25,6 +26,9 @@ function splitStudentForCloud(d, student) {
         freezes: (d.freezes && d.freezes[sid]) || { month: "", used: 0 },
         workouts: (d.workouts && d.workouts[sid]) || {},
         messages: (d.messages || []).filter((m) => m.studentId === sid),
+        // foto do professor vai junto na linha de cada aluno: é por ela (login/sync pela Edge Function)
+        // que o celular do aluno recebe a foto. Do lado do aluno, `d.profPhoto` não existe e fica a que veio.
+        profPhoto: d.profPhoto !== undefined ? d.profPhoto : (student.profPhoto || null),
     };
 }
 function mergeCloudRows(rows) {
@@ -44,13 +48,18 @@ function mergeCloudRows(rows) {
             out.library = rd.library || [];
             out.templates = rd.templates || [];
             out.quickReplies = rd.quickReplies;
+            out.profPhoto = rd.profPhoto || null;
             out.activeStudentId = rd.activeStudentId;
         }
         else if (String(r.id).indexOf("student_") === 0) {
             const sid = rd.id;
             if (!sid)
                 return;
-            out.students.push({ id: rd.id, name: rd.name, code: rd.code, goal: rd.goal, obs: rd.obs, ackAt: rd.ackAt, freqWeekly: rd.freqWeekly, targetDuration: rd.targetDuration, startDate: rd.startDate, clinicalAlert: rd.clinicalAlert, assessment: rd.assessment, assessmentAt: rd.assessmentAt, photo: rd.photo, reassessments: rd.reassessments, reassessEvery: rd.reassessEvery, consentAt: rd.consentAt, deletionRequestedAt: rd.deletionRequestedAt, memberNo: rd.memberNo, memberSince: rd.memberSince, goals: rd.goals, contactPhone: rd.contactPhone, contactEmail: rd.contactEmail });
+            // todos os campos de cadastro do aluno, menos as coleções (tratadas abaixo). Antes era uma lista
+            // fixa que não tinha pinnedNote, reassessSnoozeUntil, reassessDoneAt, removedEx nem attnIgnored:
+            // a cada atualização da nuvem esses campos sumiam do aparelho do professor.
+            const { checkins, bestStreak, archives, sessions, dayNames, cardio, cardioLog, recoveryLog, freezes, workouts, messages, updatedAt, profPhoto, ...fields } = rd;
+            out.students.push(fields);
             out.checkins[sid] = rd.checkins || [];
             out.bestStreak[sid] = rd.bestStreak || 0;
             out.archives[sid] = rd.archives || [];

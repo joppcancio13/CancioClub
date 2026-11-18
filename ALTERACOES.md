@@ -208,3 +208,16 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Barra de registro:** não cobre mais os últimos exercícios; ao rolar pra baixo vira uma linha (série + Feito); as abas só voltam com a tela no topo durante o treino, então a barra não sobe e desce.
 - **Login:** cabe em celular baixo (tamanhos acompanham a altura da tela).
 - Cache v63.
+
+## v64 — ajustes pedidos pelo professor (18/nov)
+- **Dados do aluno:** objetivo longo ("Força/Condicionamento") não passa mais por cima do card ao lado; quebra dentro do card.
+- **Conversa (professor e aluno):** a caixa de escrever fica sempre embaixo, logo acima das abas, com 1 ou 100 recados, e a conversa abre no recado mais novo. "Fixar um combinado" vazio virou um atalho de uma linha.
+- **Fotos:** a foto do aluno aparece nos Recados (lista, conversa, nova conversa) e na lista de Alunos. O professor põe a dele em Mais › Pôr sua foto; o aluno vê no topo dos Recados e nos balões do professor. A foto vai na linha de cada aluno (é por ela que chega no celular dele).
+- **Precisa de atenção:** mostra 2 (antes 3) e cada aviso tem × (Ignorar), com Desfazer. O aviso some até a situação mudar (recado novo, treino novo, outra reavaliação). Pedido de exclusão (LGPD) não se ignora.
+- **Alunos:** filtros (Todos · Hoje · Atenção) numa linha própria, ocupando a largura; Lista / Semana passou pra linha do título da lista.
+- **Biblioteca › Exercícios:** agora é o catálogo do cálculo de volume, por grupo muscular, com o que está em uso primeiro. Cada exercício mostra quanto conta no volume por grupo e aceita vídeo. Os criados por você são ligados ao catálogo (com sugestão pelo nome); "Sem vínculo" lista os que não contam. Aviso com os exercícios das fichas que não contam no volume e "Ligar pela sugestão" (com Desfazer).
+- **Evolução (aluno):** lista de exercícios com carga atual, quanto mudou e minigráfico; o detalhe tem eixo em kg, pontos e recordes, Carga × Volume, 1 mês / 3 meses / Tudo e a lista de treinos. Conta só séries válidas (sem aquecimento, reconhecimento e puladas).
+- **Corpo (aluno):** fotos primeiro — Antes × Agora por pose (frente, lado, costas), "+ Fotos de hoje" (não conta como reavaliação), medidas e histórico com as fotos; toque amplia. A reavaliação aceita 3 fotos. O professor vê todas em Dados › Reavaliações.
+- **Correção:** ao atualizar da nuvem, o aparelho do professor perdia campos do aluno que não estavam numa lista fixa (combinado fixado, adiar reavaliação, exercícios tirados). Agora vem tudo.
+- Função `push` (opcional publicar de novo): entrada só de fotos não adia o aviso de reavaliação vencida.
+- Cache v64.
