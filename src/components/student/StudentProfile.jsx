@@ -47,7 +47,7 @@ function Spark({ pts, h, stroke }) {
     return React.createElement("svg", { viewBox: `0 0 320 ${h}`, width: "100%", height: h, preserveAspectRatio: "none", "aria-hidden": "true" }, React.createElement("polyline", { points: d, fill: "none", stroke: C.silver, strokeWidth: stroke || 2.5, strokeLinejoin: "round", vectorEffect: "non-scaling-stroke" }));
 }
 
-function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone, diaryView, diaryCount, onOpenWeek }) {
+function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone, diaryView, diaryCount, onOpenWeek, onOpenAvisos }) {
     const [view, setView] = useState(null);
     const [evoIdx, setEvoIdx] = useState(0);
     const [contact, setContact] = useState(null);
@@ -198,7 +198,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
             row("Meu professor", "Prof. Cancio · mandar recado", onMessage),
             row("Minha anamnese", student.assessmentAt ? "Respondida em " + new Date(student.assessmentAt).toLocaleDateString("pt-BR") + " · só leitura" : "Ainda não respondida", () => setView("anamnese")),
             row("Contato", [phone, email].filter(Boolean).join(" · ") || "Adicionar telefone e e-mail", () => setView("editar")),
-            notifPerm !== "unsupported" && row("Notificações", notifPerm === "granted" ? "Ligadas" : notifPerm === "denied" ? "Bloqueadas nos ajustes do celular" : "Ligar recados e lembretes", notifPerm === "default" ? onAskNotify : undefined),
+            onOpenAvisos ? row("Avisos", "Recados, ficha, lembrete do treino e horários", onOpenAvisos) : notifPerm !== "unsupported" && row("Notificações", notifPerm === "granted" ? "Ligadas" : notifPerm === "denied" ? "Bloqueadas nos ajustes do celular" : "Ligar recados e lembretes", notifPerm === "default" ? onAskNotify : undefined),
             row("Meus dados", "LGPD · baixar ou pedir exclusão", onOpenMyData),
             row("Sair", null, onLogout, C.warn))));
 }

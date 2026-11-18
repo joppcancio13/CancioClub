@@ -84,3 +84,12 @@ Ele foi escrito sobre arquivos que a v55–v58 já trocou. Vale o que existe hoj
 - **Recado fixado:** um combinado por aluno (`pinnedNote` no cadastro, só o professor escreve; a Edge Function já entrega ao aluno). Fica no topo da conversa dos dois lados; o professor toca para escrever, trocar ou tirar.
 - **Cards com foto:** já existiam desde a v54 (Compartilhar › Escolher foto: Números e Pastilhas saem sobre a foto). Nada mudou.
 - **Card 3D / carteirinha:** a carteirinha que vira já existe (`MemberCard`) com número e "desde". O "plano" do protótipo não tem dado no app; ficou de fora.
+
+## Notas da fase 8 (avisos no celular)
+- **Servidor:** tabela `push_subscriptions` (RLS, só a função acessa), função `push` com inscrição, preferências, teste, eventos e agendados, e pg_cron a cada 15 min com o segredo no Vault. Passo a passo em `supabase/LEIA-ME.txt`.
+- **Quem pode mandar o quê:** o aluno (pelo código) só gera avisos para o professor ("dor", "recado", "fim"); o professor (pelo login) só gera avisos para um aluno ("resposta", "ficha"). O texto do aviso é montado no servidor com o nome do aluno.
+- **Na hora:** recado do aluno vira "Recado de Ana" ou, se fala de dor ("Senti dor", "dor", "doeu"), "Ana sentiu dor agora" (toca mesmo no silêncio). Treino finalizado vira "Ana terminou o treino · Superiores · 12 séries · 48 min". Resposta do professor vira "O professor respondeu". "Sua ficha mudou" sai uma vez quando o professor sai do Editar ficha e a ficha daquele aluno mudou.
+- **Agendados:** lembrete do treino no horário escolhido (padrão 07:30), só em dia com treino e se ainda não treinou; resumo de domingo às 18:00 se a semana teve treino; reavaliação vencida às 08:00 para o professor. Cada um no máximo uma vez por dia (`last_sent`).
+- **Tocar no aviso:** abre o lugar certo pelo endereço `?abrir=` (recados com o aluno, treino no dia, resumo da semana, ficha do aluno, lista de alunos).
+- **Telas:** Mais › Avisos e Perfil › Avisos, com interruptor por tipo, hora do lembrete, silêncio, aviso de teste e desligar. Preferências por aparelho.
+- **Fora:** "X dias sem treinar" e "começou o treino" (como no README). Na demonstração, nada é enviado.

@@ -26,3 +26,23 @@ CONFERIR DEPOIS
 
 A ordem entre publicar a função e subir o site (cancio-club-site-v51.zip) não importa:
 os dois funcionam com a versão antiga do outro.
+
+==========================================================================
+AVISOS NO CELULAR (design v4 · fase 8) — função `push`
+==========================================================================
+O que existe no Supabase:
+- Tabela public.push_subscriptions (uma linha por aparelho inscrito; RLS ligado, só a função mexe).
+- Função `push` (supabase/functions/push/index.ts): inscrição, preferências, eventos e agendados.
+- pg_cron "push-a-cada-15-min" chama a função a cada 15 min (lembrete 07:30, reavaliação 08:00,
+  resumo de domingo 18:00). O segredo da chamada fica no Vault (push_cron_secret), gerado no banco.
+- Migrations: supabase/migrations/20261118120000_push_subscriptions.sql e ..._push_cron.sql.
+
+Chaves VAPID:
+- A pública está no app (src/utils/push.js) e na função.
+- A privada NÃO fica no repositório. Ela vai em Supabase › Edge Functions › Secrets, com o nome
+  VAPID_PRIVATE_KEY. Sem ela a função responde "VAPID_PRIVATE_KEY não configurada" e nada é enviado.
+- Se um dia trocar o par de chaves: troque a pública nos dois arquivos, a privada no Secret, publique o
+  app e a função, e peça para todo mundo ligar os avisos de novo (as inscrições antigas param).
+
+Testar: no app, Mais › Avisos (professor) ou Perfil › Avisos (aluno) › Ligar › "Mandar um aviso de
+teste". No iPhone, só com o app instalado na tela inicial (iOS 16.4+).

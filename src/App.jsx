@@ -45,6 +45,8 @@ import { AulaRestV3 } from "./components/professor/AulaRestV3";
 import { QuickRepliesV3, repliesOf } from "./components/professor/QuickRepliesV3";
 import { MaisV3 } from "./components/professor/MaisV3";
 import { WeekSummary, weekSummary } from "./components/student/WeekSummary";
+import { AvisosV3 } from "./components/shared/AvisosV3";
+import { pushEvent } from "./utils/push";
 import { DemoPill, DemoEntry } from "./components/professor/DemoPill";
 import { buildDemo } from "./utils/demoData";
 import { DayToolsV3, VolumeFold } from "./components/professor/DayToolsV3";
@@ -111,7 +113,8 @@ function CancioClub() {
     const [undo, setUndo] = useState(null); // design v4 (33b): { label, before, sids, global, at } — a pílula das abas vira Desfazer por 8 s
     const [exSheet, setExSheet] = useState(null);
     const [creating, setCreating] = useState(null);
-    const [weekOpen, setWeekOpen] = useState(false); // design v4 (47b): Resumo da semana do aluno
+    const [weekOpen, setWeekOpen] = useState(false);
+    const [avisosOpen, setAvisosOpen] = useState(false); // design v4 (34a): Perfil › Avisos do aluno // design v4 (47b): Resumo da semana do aluno
     const [openExId, setOpenExId] = useState(null); // design v4 (42b): exercício aberto em página própria // design v4 (40b): "Criar do zero" em dois passos
     // demonstração (design v4 · 32b): troca os dados por alunos fictícios (isSeed: nunca salvos) e guarda os
     // de verdade pra voltar no Sair; enquanto isso a busca na nuvem fica parada
@@ -668,6 +671,41 @@ function CancioClub() {
     const reorderDay = (from, to) => { if (!focusId || from === to) return; setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; const arr = [...(w[day] || [])]; const [m] = arr.splice(from, 1); arr.splice(to, 0, m); w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }); };
     const duplicateExercise = (ex) => withUndo(ex.name + " duplicado", [focusId], false, () => setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; const arr = [...(w[day] || [])]; const i = arr.findIndex((e) => e.id === ex.id); const copy = { ...JSON.parse(JSON.stringify(ex)), id: uid(), history: [], setPlan: (ex.setPlan || []).map((x) => ({ ...x, id: uidShort() })) }; arr.splice(i + 1, 0, copy); w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }));
     useEffect(() => { setOpenExId(null); }, [day, profTab, profView, fichaTab, profId]);
+    // "Sua ficha mudou" (34a): ao sair do Editar ficha, se a ficha daquele aluno mudou, avisa o aluno uma vez
+    const fichaSnapRef = React.useRef(null);
+    useEffect(() => {
+        const prev = fichaSnapRef.current;
+        const editing = role === "prof" && profView === "aluno" && fichaTab === "treino" && profViewMode === "edit" && !!profId;
+        if (prev && (!editing || prev.sid !== profId)) {
+            const now = JSON.stringify((((useDataStore.getState().data || {}).workouts) || {})[prev.sid] || {});
+            if (now !== prev.snap && !demoRealRef.current) pushEvent("prof", { type: "ficha", studentId: prev.sid, text: "O professor atualizou o seu treino.", day: prev.day });
+            fichaSnapRef.current = null;
+        }
+        if (editing && !fichaSnapRef.current) fichaSnapRef.current = { sid: profId, day, snap: JSON.stringify(((data && data.workouts) || {})[profId] || {}) };
+    }, [role, profView, fichaTab, profViewMode, profId]);
+    // abrir pelo aviso (34a): ?abrir=recados|treino|hoje|semana|alunos|ficha[&aluno=id][&dia=k]
+    const deepLinkRef = React.useRef(null);
+    useEffect(() => { try { const q = new URLSearchParams(window.location.search); if (q.get("abrir")) { deepLinkRef.current = { abrir: q.get("abrir"), aluno: q.get("aluno"), dia: q.get("dia") }; window.history.replaceState(null, "", window.location.pathname); } } catch (e) { } }, []);
+    useEffect(() => {
+        const onMsg = (e) => { if (e.data && e.data.type === "cancio-abrir" && e.data.url) { try { const q = new URL(e.data.url).searchParams; deepLinkRef.current = { abrir: q.get("abrir"), aluno: q.get("aluno"), dia: q.get("dia") }; setLiveNow(Date.now()); } catch (err) { } } };
+        if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", onMsg);
+        return () => { if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", onMsg); };
+    }, []);
+    useEffect(() => {
+        const dl = deepLinkRef.current; if (!dl || !data) return;
+        if (role === "aluno" && alunoStudent) {
+            deepLinkRef.current = null; setProfileOpen(false);
+            if (dl.abrir === "recados") setAlunoTab("recados");
+            else if (dl.abrir === "treino") { if (dl.dia) setDay(dl.dia); setAlunoTab("treino"); }
+            else if (dl.abrir === "semana") { setAlunoTab("hoje"); setWeekOpen(true); }
+            else setAlunoTab("hoje");
+        } else if (role === "prof" && profUnlocked) {
+            deepLinkRef.current = null;
+            if (dl.abrir === "recados") { if (dl.aluno) { setInboxFocus(dl.aluno); markThreadRead(dl.aluno); } setProfTab("recados"); }
+            else if (dl.abrir === "ficha" && dl.aluno) { setActive(dl.aluno); setProfTab("alunos"); setProfView("aluno"); setFichaTab("resumo"); }
+            else { setProfTab("alunos"); setProfView("home"); }
+        }
+    });
     const archivePhaseU = () => { const lbl = "Fase até " + fmtDate(todayISO()); withUndo("Fase guardada · " + lbl, [profId], false, () => setData((p) => { const snap = JSON.parse(JSON.stringify((p.workouts && p.workouts[profId]) || emptyWeek())); const next = { ...p, archives: { ...(p.archives || {}), [profId]: [...(((p.archives || {})[profId]) || []), { id: uid(), label: lbl, date: new Date().toISOString(), week: snap }] } }; syncStudentToCloud(next, profId); return next; })); };
     const restoreArchiveU = (arc) => withUndo("Fase restaurada · " + arc.label, [profId], false, () => setData((p) => { const wk = JSON.parse(JSON.stringify(arc.week)); DAYS.forEach((d) => (wk[d.key] || []).forEach((e) => { e.id = uid(); })); const current = JSON.parse(JSON.stringify((p.workouts && p.workouts[profId]) || emptyWeek())); const backup = { id: uid(), label: "Antes de restaurar " + arc.label, date: new Date().toISOString(), week: current }; const next = { ...p, workouts: { ...p.workouts, [profId]: { ...emptyWeek(), ...wk } }, archives: { ...(p.archives || {}), [profId]: [...(((p.archives || {})[profId]) || []), backup] } }; syncStudentToCloud(next, profId); return next; }));
     const deleteArchiveU = (id) => { const arc = ((data.archives || {})[profId] || []).find((a) => a.id === id); withUndo((arc ? arc.label : "Fase") + " apagada", [profId], false, () => setData((p) => { const next = { ...p, archives: { ...(p.archives || {}), [profId]: (((p.archives || {})[profId]) || []).filter((a) => a.id !== id) } }; syncStudentToCloud(next, profId); return next; })); };
@@ -818,6 +856,8 @@ function CancioClub() {
         catch (e) { }
         setPseModal(null);
         const shareData = { name: focusStudent.name, workoutName: sWorkoutName, durationLabel: durationSec ? fmtDur(durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak: sStreak, tint: tier.tint, isRestDay: isRest, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) };
+        // aluno terminou → aviso pro professor (34a)
+        if (role === "aluno" && !isRest && focusStudent && focusStudent.code) { const sets = list.reduce((n, e) => n + (((e.history || []).find((h) => h.date === dayDate) || {}).entries || []).length, 0); pushEvent("student", { code: focusStudent.code, type: "fim", text: [sWorkoutName, sets ? sets + (sets === 1 ? " série" : " séries") : null, durationSec ? fmtDur(durationSec) : null].filter(Boolean).join(" · ") }); }
         // design v3: a tela Fim (FimV3) já mostrou o resumo — salva e devolve os dados do card, sem comemoração
         if (opts.silent) return shareData;
         if (isRest) {
@@ -834,8 +874,12 @@ function CancioClub() {
         }
     };
     const submitFeedback = (sid, text) => setData((p) => { const sess = { ...(p.sessions || {}) }; sess[focusId] = (sess[focusId] || []).map((s) => (s.id === sid ? { ...s, feedback: text } : s)); const next = { ...p, sessions: sess }; syncStudentToCloud(next, focusId); return next; });
-    const sendMessage = (text, sid) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid || focusId, text, date: new Date().toISOString(), read: false }] }; syncStudentToCloud(next, sid || focusId); return next; });
-    const replyMessage = (text, sid) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid, fromProf: true, text, date: new Date().toISOString(), read: false }] }; syncStudentToCloud(next, sid); return next; });
+    // aluno manda recado → aviso pro professor ("Sentiu dor" toca mesmo no silêncio)
+    const notifyStudentMsg = (text) => { if (role !== "aluno" || !alunoStudent) return; pushEvent("student", { code: alunoStudent.code, type: /senti dor|\bdor\b|doeu|doendo/i.test(text) ? "dor" : "recado", text }); };
+    const sendMessage = (text, sid) => { notifyStudentMsg(text); return sendMessageRaw(text, sid); };
+    const sendMessageRaw = (text, sid) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid || focusId, text, date: new Date().toISOString(), read: false }] }; syncStudentToCloud(next, sid || focusId); return next; });
+    const replyMessage = (text, sid) => { if (!demoRealRef.current) pushEvent("prof", { type: "resposta", studentId: sid, text }); return replyMessageRaw(text, sid); };
+    const replyMessageRaw = (text, sid) => setData((p) => { const next = { ...p, messages: [...(p.messages || []), { id: uid(), studentId: sid, fromProf: true, text, date: new Date().toISOString(), read: false }] }; syncStudentToCloud(next, sid); return next; });
     const markThreadRead = (sid) => setData((p) => { const next = { ...p, messages: (p.messages || []).map((m) => (m.studentId === sid && !m.fromProf ? { ...m, read: true } : m)) }; syncStudentToCloud(next, sid); return next; });
     const markProfRead = (sid) => setData((p) => { const next = { ...p, messages: (p.messages || []).map((m) => (m.studentId === sid && m.fromProf && !m.read ? { ...m, read: true } : m)) }; syncStudentToCloud(next, sid); return next; });
     const markRead = (id) => setData((p) => { const msg = (p.messages || []).find((m) => m.id === id); const next = { ...p, messages: (p.messages || []).map((m) => (m.id === id ? { ...m, read: true } : m)) }; if (msg)
@@ -1353,8 +1397,9 @@ function CancioClub() {
                 setShareCard(sd); }, onSkip: () => { const sd = feedbackModal.shareData; setFeedbackModal(null); if (sd)
                 setShareCard(sd); } }),
         shareCard && React.createElement(React.Suspense, { fallback: React.createElement("div", { className: "cc-fade-in", style: { position: "fixed", inset: 0, zIndex: 100, background: "rgba(5,6,10,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.mono, fontSize: 13, color: C.muted } }, "carregando…") }, React.createElement(ShareCard, { data: shareCard, onClose: () => setShareCard(null) })),
+        role === "aluno" && alunoStudent && avisosOpen && React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": "Avisos", style: { position: "fixed", inset: 0, zIndex: 130, background: C.bg, overflowY: "auto" } }, React.createElement("div", { style: { maxWidth: 620, margin: "0 auto", padding: "calc(16px + env(safe-area-inset-top, 0px)) 20px 40px" } }, React.createElement(AvisosV3, { kind: "student", auth: { code: alunoStudent.code }, backLabel: "Perfil", onBack: () => setAvisosOpen(false) }))),
         role === "aluno" && alunoStudent && weekOpen && React.createElement(WeekSummary, { studentName: alunoStudent.name, week, sessions: (data.sessions || {})[alunoId] || [], weeklyTarget, onClose: () => setWeekOpen(false) }),
-        role === "aluno" && alunoStudent && profileOpen && React.createElement(StudentProfile, { onOpenWeek: () => setWeekOpen(true), student: alunoStudent, diaryCount: (diary || []).length, diaryView: React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }), week: (data.workouts || {})[alunoId] || emptyWeek(), checkins: (data.checkins || {})[alunoId] || [], freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify: async () => setNotifPerm(await askNotify()), onUpdate: (patch) => updateStudent(alunoId, patch), onOpenCard: () => setMemberCardOpen(true), onOpenSelo: () => setLogoCard(true), onOpenMyData: () => setMyDataOpen(true), onOpenReassess: () => setReassessOpen(true), onMessage: () => { setProfileOpen(false); setAlunoTab("recados"); window.scrollTo(0, 0); }, onLogout: () => { setProfileOpen(false); logout(); }, onClose: () => setProfileOpen(false),
+        role === "aluno" && alunoStudent && profileOpen && React.createElement(StudentProfile, { onOpenWeek: () => setWeekOpen(true), onOpenAvisos: () => setAvisosOpen(true), student: alunoStudent, diaryCount: (diary || []).length, diaryView: React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth }), week: (data.workouts || {})[alunoId] || emptyWeek(), checkins: (data.checkins || {})[alunoId] || [], freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify: async () => setNotifPerm(await askNotify()), onUpdate: (patch) => updateStudent(alunoId, patch), onOpenCard: () => setMemberCardOpen(true), onOpenSelo: () => setLogoCard(true), onOpenMyData: () => setMyDataOpen(true), onOpenReassess: () => setReassessOpen(true), onMessage: () => { setProfileOpen(false); setAlunoTab("recados"); window.scrollTo(0, 0); }, onLogout: () => { setProfileOpen(false); logout(); }, onClose: () => setProfileOpen(false),
             todayDone: todaySessionAluno ? { name: ((data.dayNames || {})[alunoId] || {})[todaySessionAluno.day] || "Treino", onView: () => { setDay(todaySessionAluno.day); setAlunoTab("treino"); setProfileOpen(false); window.scrollTo(0, 0); } } : null }),
         logoCard && React.createElement(LogoCard, { onClose: () => setLogoCard(false) }),
         role === "aluno" && alunoStudent && memberCardOpen && React.createElement(MemberCard, { student: alunoStudent, trainedDays: memberTrainedDays, onClose: () => setMemberCardOpen(false) }),
@@ -1407,7 +1452,7 @@ function CancioClub() {
                             ["recados", React.createElement(React.Fragment, { key: "r" }, "Recados", unread > 0 && React.createElement("span", { style: { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 16, height: 16, marginLeft: 6, borderRadius: 999, background: profTab === "recados" ? C.ink : C.warn, color: profTab === "recados" ? "#fff" : C.ink, fontFamily: F.mono, fontSize: 11, fontWeight: 700, padding: "0 4px" } }, unread)), () => { setProfTab("recados"); setExpanded(null); }],
                             ["mais", "Mais", () => { setProfTab("painel"); setExpanded(null); }],
                         ].map(([key, label, onClick]) => {
-                            const active = key === "mais" ? (profTab === "painel" || profTab === "respostas") : key === "modelos" ? (profTab === "modelos" || profTab === "biblioteca") : profTab === key;
+                            const active = key === "mais" ? (profTab === "painel" || profTab === "respostas" || profTab === "avisos") : key === "modelos" ? (profTab === "modelos" || profTab === "biblioteca") : profTab === key;
                             return React.createElement("button", { key: key, className: "cc-tap", onClick, style: { minHeight: 44, flex: 1, fontFamily: F.display, fontWeight: active ? 700 : 600, fontSize: 13, padding: "11px 0", borderRadius: 16, border: "none", cursor: "pointer", color: active ? C.ink : C.muted, background: active ? C.text : "transparent" } }, label);
                         }))),
                 profTab === "alunos" && (React.createElement(React.Fragment, null,
@@ -1603,11 +1648,12 @@ function CancioClub() {
                         notifButton,
                         React.createElement(ProfInbox, { key: inboxFocus || "inbox", initialOpen: inboxFocus, messages, students, onReply: replyMessage, onOpen: markThreadRead, quickReplies: repliesOf(data), onPin: (sid, text) => updateStudent(sid, { pinnedNote: text ? { text, at: new Date().toISOString() } : undefined }),
                             onOpenFicha: (sid) => { setActive(sid); setProfTab("alunos"); setProfView("aluno"); setFichaTab("resumo"); setRendEx(null); setExpanded(null); window.scrollTo(0, 0); } })))),
+                profTab === "avisos" && React.createElement(AvisosV3, { kind: "prof", auth: null, backLabel: "Mais", onBack: () => setProfTab("painel") }),
                 profTab === "respostas" && React.createElement(QuickRepliesV3, { replies: repliesOf(data), onBack: () => setProfTab("painel"), onChange: (q) => setData((p) => { const next = { ...p, quickReplies: q }; syncGlobalToCloud(next); return next; }) }),
                 profTab === "painel" && (React.createElement(React.Fragment, null,
                     // design v4: Mais reorganizado — Respostas rápidas, demonstração, selo, backup e Sair da conta
                     React.createElement(MaisV3, { repliesCount: repliesOf(data).serie.length + repliesOf(data).geral.length, demo, advOpen,
-                        onReplies: () => setProfTab("respostas"), onDemo: enterDemo, onSelo: () => setLogoCard(true), onBackup: () => setAdvOpen((v) => !v), onLogout: lockProf },
+                        onAvisos: () => setProfTab("avisos"), onReplies: () => setProfTab("respostas"), onDemo: enterDemo, onSelo: () => setLogoCard(true), onBackup: () => setAdvOpen((v) => !v), onLogout: lockProf },
                     React.createElement(React.Fragment, null,
                     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
                         React.createElement("button", { onClick: exportData, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Exportar dados"),

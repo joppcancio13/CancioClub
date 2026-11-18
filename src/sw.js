@@ -79,14 +79,17 @@ self.addEventListener("fetch", (event) => {
 });
 
 // avisos: toque na notificação abre/foca o app; "push" já fica pronto pro servidor (Web Push/VAPID)
+// design v4 (34a): o aviso traz o lugar certo (url com ?abrir=…); com o app aberto, avisa a janela
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "./";
   event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
     const open = list.find((c) => "focus" in c);
-    return open ? open.focus() : self.clients.openWindow("./");
+    if (open) { open.postMessage({ type: "cancio-abrir", url }); return open.focus(); }
+    return self.clients.openWindow(url);
   }));
 });
 self.addEventListener("push", (event) => {
   let d = {}; try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data && event.data.text() }; }
-  event.waitUntil(self.registration.showNotification(d.title || "Cancio Club", { body: d.body || "Você tem um recado novo.", icon: "icon-192.png", badge: "favicon-32.png", tag: "cancio-recado", renotify: true }));
+  event.waitUntil(self.registration.showNotification(d.title || "Cancio Club", { body: d.body || "Você tem um aviso novo.", icon: "icon-192.png", badge: "favicon-32.png", tag: "cancio-" + (d.type || "aviso"), renotify: true, data: { url: d.url || "./" } }));
 });

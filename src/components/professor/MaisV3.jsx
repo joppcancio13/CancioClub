@@ -17,11 +17,12 @@ function Row({ title, sub, onClick, silver, open }) {
 }
 const group = { display: "flex", flexDirection: "column", gap: 2, borderRadius: 16, overflow: "hidden" };
 
-function MaisV3({ repliesCount, demo, advOpen, onReplies, onDemo, onSelo, onBackup, onLogout, children }) {
+function MaisV3({ repliesCount, demo, advOpen, onAvisos, onReplies, onDemo, onSelo, onBackup, onLogout, children }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", color: C.text, fontFamily: F.body }}>
             <span style={{ fontFamily: F.display, fontSize: 30, fontWeight: 900, fontStretch: "125%", lineHeight: 1 }}>MAIS</span>
             <div style={{ ...group, marginTop: 18 }}>
+                {onAvisos && <Row title="Avisos" sub="Dor, recados, fim de treino e reavaliação no celular" onClick={onAvisos} />}
                 <Row title="Respostas rápidas" sub={repliesCount + " respostas · aparecem na conversa"} onClick={onReplies} />
                 {!demo && <Row title="Ver demonstração" sub="Alunos fictícios pra testar ou mostrar o app. Nada é salvo." onClick={onDemo} silver />}
             </div>
