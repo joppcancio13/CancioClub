@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { AssessmentInicial } from "./components/assessment/AssessmentInicial";
-import { CardioSection } from "./components/professor/CardioSection";
-import { DadosV3 } from "./components/professor/DadosV3";
 import { PSEModal } from "./components/professor/PSEModal";
-import { RecoverySection } from "./components/professor/RecoverySection";
-import { BibliotecaV3 } from "./components/professor/BibliotecaV3";
-import { BulkLinkSheet } from "./components/professor/BulkLinkSheet";
-import { VolumeDashboard } from "./components/professor/VolumeDashboard";
 import { LogoCard } from "./components/share/LogoCard";
-import { SerieExport } from "./components/share/SerieExport";
 import { AddButton } from "./components/shared/AddButton";
-import { CatalogPicker } from "./components/shared/CatalogPicker";
 import { Celebration } from "./components/shared/Celebration";
 import { RecordCelebration } from "./components/shared/RecordCelebration";
 import { computeDayRecords } from "./utils/records";
-import { Disclaimer } from "./components/shared/Disclaimer";
-import { DiscoBall } from "./components/shared/DiscoBall";
 import { FeedbackModal } from "./components/shared/FeedbackModal";
 import { Field } from "./components/shared/FormFields";
 import { MirrorGlobe } from "./components/shared/MirrorGlobe";
@@ -23,48 +12,27 @@ import { Pill } from "./components/shared/Pill";
 import { PremiumEmptyState } from "./components/shared/PremiumEmptyState";
 import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
-import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
-import { DiaryCalendar } from "./components/student/DiaryCalendar";
-import { ExerciseCard } from "./components/student/ExerciseCard";
 import { WorkoutV3 } from "./components/student/WorkoutV3";
 import { HojeV3 } from "./components/student/HojeV3";
 import { TabBarV3 } from "./components/student/TabBarV3";
-import { FimV3 } from "./components/student/FimV3";
-import { AlunosV3 } from "./components/professor/AlunosV3";
-import { FichaV3, EditVolumeBlock } from "./components/professor/FichaV3";
-import { ExerciseSheet } from "./components/professor/ExerciseSheet";
 import { UndoPill } from "./components/shared/UndoPill";
-import { ForgotCode } from "./components/student/ForgotCode";
-import { CardioV3 } from "./components/student/CardioV3";
 import { RestDayV3 } from "./components/student/RestDayV3";
 import { BackButton } from "./components/shared/BackButton";
 import { Icon, Caret } from "./components/shared/Icon";
-import { CreateExercise } from "./components/professor/CreateExercise";
-import { ExercisePageV3 } from "./components/professor/ExercisePageV3";
-import { EditExerciseList } from "./components/professor/EditExerciseList";
-import { AulaRestV3 } from "./components/professor/AulaRestV3";
 import { QuickRepliesV3, repliesOf } from "./components/professor/QuickRepliesV3";
-import { MaisV3 } from "./components/professor/MaisV3";
 import { WeekSummary, weekSummary } from "./components/student/WeekSummary";
-import { AvisosV3 } from "./components/shared/AvisosV3";
 import { pushEvent } from "./utils/push";
 import { DemoPill, DemoEntry } from "./components/professor/DemoPill";
 import { buildDemo } from "./utils/demoData";
-import { DayToolsV3, VolumeFold } from "./components/professor/DayToolsV3";
 import { rendSummary } from "./utils/rendimento";
-import { RendimentoV3 } from "./components/professor/RendimentoV3";
-import { AulaV3 } from "./components/professor/AulaV3";
 import { StudentMessages } from "./components/student/StudentMessages";
-import { ProfInbox } from "./components/professor/ProfInbox";
 import { Reassessment, reassessDue, nextReassess } from "./components/student/Reassessment";
-import { MyData } from "./components/student/MyData";
-import { MemberCard } from "./components/student/MemberCard";
-import { StudentProfile, Avatar } from "./components/student/StudentProfile";
 import { assignMemberNumbers } from "./utils/members";
 import { ccConfirm, ccAlert } from "./utils/confirm";
 import { restrictionFor } from "./utils/restrictions";
-import { printStudent } from "./utils/printStudent";
+// impressão da ficha só do professor: o módulo (que puxa as perguntas da anamnese) vem sob demanda
+const printStudent = (...a) => import("./utils/printStudent").then((m) => m.printStudent(...a));
 import { askNotify, canNotify, notify, setBadge } from "./utils/notify";
 import { setActiveSet } from "./hooks/useActiveSet";
 import { LS_KEY, flushAllPendingSaves, loadData, saveLocal, throttle } from "./hooks/useLocalData";
@@ -80,6 +48,76 @@ import { seed } from "./utils/seedData";
 import { computeStreak, lastCheckinLabel, streakTier, trainingWds } from "./utils/streak";
 import { buildDiary, computeRecords, daySummary, defaultSetPlan, emptyWeek, sortedHistory, workingProgress } from "./utils/workout";
 import { buildWeeklyVolumeReport, plannedGroupVolume } from "./utils/volumeCalculator";
+import { lazyNamed, preloadWhenIdle } from "./utils/lazyNamed";
+// telas carregadas sob demanda (frente 3, 18/nov): o professor e o aluno só baixam o que usam
+const L_CardioSection = () => import("./components/professor/CardioSection");
+const CardioSection = lazyNamed(L_CardioSection, "CardioSection");
+const L_DadosV3 = () => import("./components/professor/DadosV3");
+const DadosV3 = lazyNamed(L_DadosV3, "DadosV3");
+const L_RecoverySection = () => import("./components/professor/RecoverySection");
+const RecoverySection = lazyNamed(L_RecoverySection, "RecoverySection");
+const L_BibliotecaV3 = () => import("./components/professor/BibliotecaV3");
+const BibliotecaV3 = lazyNamed(L_BibliotecaV3, "BibliotecaV3");
+const L_BulkLinkSheet = () => import("./components/professor/BulkLinkSheet");
+const BulkLinkSheet = lazyNamed(L_BulkLinkSheet, "BulkLinkSheet");
+const L_VolumeDashboard = () => import("./components/professor/VolumeDashboard");
+const VolumeDashboard = lazyNamed(L_VolumeDashboard, "VolumeDashboard");
+const L_SerieExport = () => import("./components/share/SerieExport");
+const SerieExport = lazyNamed(L_SerieExport, "SerieExport");
+const L_CatalogPicker = () => import("./components/shared/CatalogPicker");
+const CatalogPicker = lazyNamed(L_CatalogPicker, "CatalogPicker");
+const L_ExerciseCard = () => import("./components/student/ExerciseCard");
+const ExerciseCard = lazyNamed(L_ExerciseCard, "ExerciseCard");
+const L_AlunosV3 = () => import("./components/professor/AlunosV3");
+const AlunosV3 = lazyNamed(L_AlunosV3, "AlunosV3");
+const L_FichaV3 = () => import("./components/professor/FichaV3");
+const FichaV3 = lazyNamed(L_FichaV3, "FichaV3");
+const EditVolumeBlock = lazyNamed(L_FichaV3, "EditVolumeBlock");
+const L_ExerciseSheet = () => import("./components/professor/ExerciseSheet");
+const ExerciseSheet = lazyNamed(L_ExerciseSheet, "ExerciseSheet");
+const L_CreateExercise = () => import("./components/professor/CreateExercise");
+const CreateExercise = lazyNamed(L_CreateExercise, "CreateExercise");
+const L_ExercisePageV3 = () => import("./components/professor/ExercisePageV3");
+const ExercisePageV3 = lazyNamed(L_ExercisePageV3, "ExercisePageV3");
+const L_EditExerciseList = () => import("./components/professor/EditExerciseList");
+const EditExerciseList = lazyNamed(L_EditExerciseList, "EditExerciseList");
+const L_AulaRestV3 = () => import("./components/professor/AulaRestV3");
+const AulaRestV3 = lazyNamed(L_AulaRestV3, "AulaRestV3");
+const L_MaisV3 = () => import("./components/professor/MaisV3");
+const MaisV3 = lazyNamed(L_MaisV3, "MaisV3");
+const L_DayToolsV3 = () => import("./components/professor/DayToolsV3");
+const DayToolsV3 = lazyNamed(L_DayToolsV3, "DayToolsV3");
+const VolumeFold = lazyNamed(L_DayToolsV3, "VolumeFold");
+const L_RendimentoV3 = () => import("./components/professor/RendimentoV3");
+const RendimentoV3 = lazyNamed(L_RendimentoV3, "RendimentoV3");
+const L_AulaV3 = () => import("./components/professor/AulaV3");
+const AulaV3 = lazyNamed(L_AulaV3, "AulaV3");
+const L_ProfInbox = () => import("./components/professor/ProfInbox");
+const ProfInbox = lazyNamed(L_ProfInbox, "ProfInbox");
+const L_AssessmentInicial = () => import("./components/assessment/AssessmentInicial");
+const AssessmentInicial = lazyNamed(L_AssessmentInicial, "AssessmentInicial");
+const L_Disclaimer = () => import("./components/shared/Disclaimer");
+const Disclaimer = lazyNamed(L_Disclaimer, "Disclaimer");
+const L_DayEntryScreen = () => import("./components/student/DayEntryScreen");
+const DayEntryScreen = lazyNamed(L_DayEntryScreen, "DayEntryScreen");
+const L_FimV3 = () => import("./components/student/FimV3");
+const FimV3 = lazyNamed(L_FimV3, "FimV3");
+const L_ForgotCode = () => import("./components/student/ForgotCode");
+const ForgotCode = lazyNamed(L_ForgotCode, "ForgotCode");
+const L_CardioV3 = () => import("./components/student/CardioV3");
+const CardioV3 = lazyNamed(L_CardioV3, "CardioV3");
+const L_AvisosV3 = () => import("./components/shared/AvisosV3");
+const AvisosV3 = lazyNamed(L_AvisosV3, "AvisosV3");
+const L_MyData = () => import("./components/student/MyData");
+const MyData = lazyNamed(L_MyData, "MyData");
+const L_MemberCard = () => import("./components/student/MemberCard");
+const MemberCard = lazyNamed(L_MemberCard, "MemberCard");
+const L_StudentProfile = () => import("./components/student/StudentProfile");
+const StudentProfile = lazyNamed(L_StudentProfile, "StudentProfile");
+const L_DiaryCalendar = () => import("./components/student/DiaryCalendar");
+const DiaryCalendar = lazyNamed(L_DiaryCalendar, "DiaryCalendar");
+const PROF_SCREENS = [CardioSection, DadosV3, RecoverySection, BibliotecaV3, BulkLinkSheet, VolumeDashboard, SerieExport, CatalogPicker, ExerciseCard, AlunosV3, FichaV3, EditVolumeBlock, ExerciseSheet, CreateExercise, ExercisePageV3, EditExerciseList, AulaRestV3, MaisV3, DayToolsV3, VolumeFold, RendimentoV3, AulaV3, ProfInbox];
+const ALUNO_SCREENS = [AssessmentInicial, Disclaimer, DayEntryScreen, FimV3, ForgotCode, CardioV3, AvisosV3, MyData, MemberCard, StudentProfile, DiaryCalendar];
 
 // 652 linhas de desenho em canvas, só usadas quando o aluno termina um treino e vê a tela de
 // compartilhar — React.lazy adia esse download pro momento real de uso, não pro boot do app.
@@ -125,6 +163,8 @@ function CancioClub() {
     const enterDemo = () => { demoRealRef.current = useDataStore.getState().data; setUndo(null); setData(() => buildDemo()); setDemo(true); setProfTab("alunos"); setProfView("home"); setLiveStudentId(null); window.scrollTo(0, 0); };
     const exitDemo = () => { const real = demoRealRef.current; demoRealRef.current = null; setUndo(null); setDemo(false); if (real) setData(() => real); setProfTab("painel"); setProfView("home"); setLiveStudentId(null); window.scrollTo(0, 0); }; // design v3 · gavetas do Editar ficha: { mode: "add" } | { mode: "swap", ex }
     useEffect(() => { if (role !== "prof" && demoRealRef.current) exitDemo(); }, [role]); // sair do professor também sai da demonstração
+    // depois que a tela abriu, baixa em segundo plano as telas que esse papel vai usar (frente 3)
+    useEffect(() => { preloadWhenIdle(role === "prof" ? PROF_SCREENS.concat(ALUNO_SCREENS) : ALUNO_SCREENS); }, [role]);
     // swipe horizontal troca o dia — só dispara se o gesto for bem mais horizontal que vertical,
     // pra não atrapalhar a rolagem normal da lista
     const swipeStart = React.useRef(null);
@@ -1330,10 +1370,12 @@ function CancioClub() {
     if (!ready)
         // esqueleto do que vai aparecer, não um spinner genérico — dá a sensação de que o app já
         // sabe o formato do conteúdo e só está esperando os dados, não "pensando do zero"
-        return React.createElement("div", { className: "cc-full-h", style: { background: "#000000", display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 20px 40px", boxSizing: "border-box" } },
-            React.createElement(DiscoBall, { size: 40, seedN: 3 }),
-            React.createElement("div", { style: { width: "100%", maxWidth: 440, marginTop: 32, display: "flex", flexDirection: "column", gap: 12 } }, [0, 1, 2, 3].map((i) => React.createElement(SkeletonCard, { key: i }))));
-    return (React.createElement("div", { className: "cc-full-h", style: { background: "#000000", color: C.text, fontFamily: F.body } },
+        // mesma abertura do index.html (selo + brilho), pra não haver salto entre o HTML e o React
+        return React.createElement("div", { className: "cc-full-h", style: { display: "flex", alignItems: "center", justifyContent: "center", background: "#000000" } },
+            React.createElement("div", { style: { position: "relative", width: 96, height: 96 } },
+                React.createElement("div", { className: "cc-boot-glow" }),
+                React.createElement("img", { src: "icon-512.png?v=15", alt: "", width: 96, height: 96, style: { width: 96, height: 96, display: "block", position: "relative", borderRadius: "50%" } })));
+    return (React.createElement("div", { className: "cc-full-h cc-app-in", style: { background: "#000000", color: C.text, fontFamily: F.body } },
         React.createElement("style", null, `
         @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap');
         body { font-variant-numeric: tabular-nums; }
@@ -1369,6 +1411,7 @@ function CancioClub() {
         }
         input, textarea { transition: border-color .2s ease, box-shadow .2s ease; }
         .cc-view { animation: cc-fade .38s cubic-bezier(.2,.8,.2,1); }
+        .cc-tab-in { animation: cc-fadein .22s ease-out; }
         @keyframes cc-up { from { transform: translateY(110%) } to { transform: none } }
         @keyframes cc-fadein { from { opacity: 0 } to { opacity: 1 } }
         .cc-bar-in { animation: cc-up .34s cubic-bezier(.22,1.12,.36,1) both; }
@@ -1378,7 +1421,7 @@ function CancioClub() {
         @keyframes cc-sheen { 0% { transform: translateX(-60%) rotate(18deg); } 100% { transform: translateX(60%) rotate(18deg); } }
         .cc-sheen-wrap { position: relative; overflow: hidden; border-radius: 50%; }
         .cc-sheen { position: absolute; top: -40%; left: -20%; width: 40%; height: 180%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); display: none; mix-blend-mode: overlay; pointer-events: none; }
-        @media (prefers-reduced-motion: reduce) { .cc-amb { animation: none } .cc-view { animation: none } .cc-sheen { animation: none } }
+        @media (prefers-reduced-motion: reduce) { .cc-amb { animation: none } .cc-view { animation: none } .cc-tab-in { animation: none } .cc-sheen { animation: none } }
       `),
         null,
         null,
@@ -1716,6 +1759,8 @@ function CancioClub() {
             // parada enquanto a Edge Function busca o aluno pelo código
             // ===== aluno · design v3 (fase 2): abas Hoje / Treino / Recados / Perfil (TabBarV3) =====
             role === "aluno" && alunoStudent && (React.createElement(React.Fragment, null,
+                // troca de aba com um esmaecer curto (só opacidade: transform quebraria as barras fixas)
+                React.createElement("div", { key: "aba-" + (alunoTab === "diario" ? "diario" : alunoTab), className: "cc-tab-in" },
                 alunoTab === "hoje" && React.createElement(HojeV3, {
                     student: alunoStudent, greetWord, weekLine: weeklyLine, streak, todayKey, dayKey: hojeKey, dayDate: todayISO(),
                     sessions: (data.sessions || {})[alunoId] || [], recovery: ((data.recoveryLog || {})[alunoId] || {})[todayISO()] || { hydration: false, sleep: false, mobility: false },
@@ -1792,7 +1837,7 @@ function CancioClub() {
                             },
                         }))),
                 todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar resumo da semana")),
-                list.length > 0 && React.createElement("div", { style: { height: 200 } }))),
+                list.length > 0 && React.createElement("div", { style: { height: 200 } })))),
                 // abas: só depois do termo e da anamnese (senão ficariam por cima dessas telas)
                 alunoStudent.ackAt && alunoStudent.consentAt && alunoStudent.assessmentAt && !assessmentJustDone && React.createElement(TabBarV3, {
                     active: profileOpen ? "perfil" : alunoTab === "diario" ? "hoje" : alunoTab,

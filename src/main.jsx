@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { CancioClub } from "./App.jsx";
-import { AssessmentInicialScreen } from "./components/assessment/AssessmentInicialScreen.jsx";
 
 class Boundary extends React.Component {
   constructor(p) { super(p); this.state = { err: null }; }
@@ -29,8 +28,9 @@ function fail(msg) {
 }
 
 try {
-  const Entry = window.location.hash === "#assessment" ? AssessmentInicialScreen : CancioClub;
-  ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Boundary, null, React.createElement(Entry, null)));
+  // #assessment (tela de teste da anamnese) vem sob demanda, fora do pacote principal
+  const Entry = window.location.hash === "#assessment" ? React.lazy(() => import("./components/assessment/AssessmentInicialScreen.jsx").then((m) => ({ default: m.AssessmentInicialScreen }))) : CancioClub;
+  ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Boundary, null, React.createElement(React.Suspense, { fallback: null }, React.createElement(Entry, null))));
 } catch (e) {
   console.error(e);
   fail(
