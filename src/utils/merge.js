@@ -129,7 +129,21 @@ function mergeHistoryArrays(localHist, cloudHist) {
     (localHist || []).forEach((h) => byDate.set(h.date, mergeHistoryDay(h, byDate.get(h.date) || null)));
     return sortedHistory(Array.from(byDate.values()));
 }
-function mergeExerciseArray(localList, cloudList) {
+// Exercício tirado da ficha (correção 18/nov): antes, um exercício que existia só num lado era mantido
+// ("adicionado sem internet") — então qualquer aparelho com uma cópia antiga devolvia o exercício que o
+// professor tinha acabado de tirar. Agora cada aluno guarda `removedEx` { idDoExercício: carimbo }:
+// carimbo > 0 = tirado; < 0 = voltou (Desfazer, restaurar). Entre dois lados vale o carimbo mais novo.
+function mergeTombstones(a, b) {
+    const out = { ...(a || {}) };
+    Object.entries(b || {}).forEach(([id, t]) => { if (out[id] === undefined || Math.abs(t) > Math.abs(out[id])) out[id] = t; });
+    return out;
+}
+const removedSet = (tomb) => new Set(Object.entries(tomb || {}).filter(([, t]) => t > 0).map(([id]) => id));
+function mergeExerciseArray(localList, cloudList, removed) {
+    const gone = removed || new Set();
+    return mergeExerciseArrayRaw((localList || []).filter((e) => !gone.has(e.id)), (cloudList || []).filter((e) => !gone.has(e.id)));
+}
+function mergeExerciseArrayRaw(localList, cloudList) {
     const byId = new Map();
     (cloudList || []).forEach((ex) => byId.set(ex.id, ex));
     const order = (cloudList || []).map((ex) => ex.id);
@@ -146,11 +160,11 @@ function mergeExerciseArray(localList, cloudList) {
     });
     return order.map((id) => byId.get(id)).filter(Boolean);
 }
-function mergeWorkoutsForStudent(localWorkouts, cloudWorkouts) {
+function mergeWorkoutsForStudent(localWorkouts, cloudWorkouts, removed) {
     const dayKeys = new Set([...Object.keys(localWorkouts || {}), ...Object.keys(cloudWorkouts || {})]);
     const merged = {};
     dayKeys.forEach((day) => {
-        merged[day] = mergeExerciseArray((localWorkouts || {})[day], (cloudWorkouts || {})[day]);
+        merged[day] = mergeExerciseArray((localWorkouts || {})[day], (cloudWorkouts || {})[day], removed);
     });
     return merged;
 }
@@ -195,4 +209,4 @@ function applyGlobalToLocal(local, globalData) {
         activeStudentId: globalData.activeStudentId !== undefined ? globalData.activeStudentId : base.activeStudentId,
     };
 }
-export { splitGlobalForCloud, splitStudentForCloud, mergeCloudRows, mergeEntriesBySetId, mergeHistoryDay, mergeHistoryArrays, mergeExerciseArray, mergeWorkoutsForStudent, mergeLocalActivityInto, applyGlobalToLocal };
+export { mergeTombstones, removedSet, splitGlobalForCloud, splitStudentForCloud, mergeCloudRows, mergeEntriesBySetId, mergeHistoryDay, mergeHistoryArrays, mergeExerciseArray, mergeWorkoutsForStudent, mergeLocalActivityInto, applyGlobalToLocal };

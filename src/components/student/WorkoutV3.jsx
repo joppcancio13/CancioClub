@@ -157,6 +157,23 @@ function Stepper({ value, unit, onMinus, onPlus, onType, label }) {
 
 function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinalize, onFinalize, onAddLoad, onSkipSet, onMessage, restrictionOf, bottomOffset = 0, onPickDay }) {
     const [vidId, setVidId] = useState(null); // exercício com a prévia de execução aberta
+    // correção 18/nov: a barra de registro cobria os últimos exercícios (o espaço no fim da lista era de
+    // 40 px). Agora o espaço acompanha a altura real da barra, e ao rolar pra baixo ela encolhe numa linha
+    // (série + Feito); volta inteira ao rolar pra cima ou ao tocar nela.
+    const barRef = useRef(null);
+    const [barH, setBarH] = useState(240);
+    const [compact, setCompact] = useState(false);
+    useEffect(() => {
+        const el = barRef.current; if (!el || typeof ResizeObserver === "undefined") return;
+        const ro = new ResizeObserver(() => setBarH(el.getBoundingClientRect().height)); ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+    useEffect(() => {
+        let last = window.scrollY;
+        const onScroll = () => { const y = window.scrollY; if (y > last + 30) { setCompact(true); last = y; } else if (y < last - 30) { setCompact(false); last = y; } };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
     // salvamento (design v4 · 35b): a série é sempre gravada no aparelho; ✓ quando já chegou na nuvem,
     // girando enquanto envia, nuvem cortada em laranja quando ficou só no aparelho
     // (o envio sai com um pequeno atraso depois do toque: nos primeiros 4 s com rede conta como "salvando")
@@ -363,7 +380,7 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
                     );
                 })}
             </div>
-            <div style={{ height: 40 }} />
+            <div style={{ height: barH + 24 }} aria-hidden="true" />
 
             {collapsed && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 30, background: C.bg, boxShadow: `inset 0 -1px 0 ${C.line}`, paddingTop: "calc(12px + env(safe-area-inset-top, 0px))", paddingBottom: 12, paddingLeft: "max(20px, env(safe-area-inset-left, 0px))", paddingRight: "max(20px, env(safe-area-inset-right, 0px))" }}>
@@ -379,9 +396,21 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
 
             <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
                 {/* bottomOffset: com as abas à mostra, a barra ganha esse espaço embaixo pra elas caberem por cima (DECISOES.md · 4) */}
-                <div style={{ pointerEvents: "auto", width: "100%", maxWidth: 660, background: C.panel, borderRadius: "24px 24px 0 0", padding: `14px 12px calc(${14 + bottomOffset}px + env(safe-area-inset-bottom, 0px))`, transition: "padding .25s ease", display: "flex", flexDirection: "column", gap: 10, boxShadow: `inset 0 1px 0 ${C.line}` }}>
+                <div ref={barRef} style={{ pointerEvents: "auto", width: "100%", maxWidth: 660, background: C.panel, borderRadius: "24px 24px 0 0", padding: `14px 12px calc(${14 + bottomOffset}px + env(safe-area-inset-bottom, 0px))`, transition: "padding .25s ease", display: "flex", flexDirection: "column", gap: 10, boxShadow: `inset 0 1px 0 ${C.line}` }}>
                     {pendingN > 0 && <div role="status" style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 4px", fontSize: 13, color: C.text3 }}><IconCloudOff /><span>{(save && save.online ? "Ainda não chegou na nuvem. " : "Sem internet. ") + pendingN + (pendingN === 1 ? " série salva quando voltar." : " séries salvam quando voltar.")}</span></div>}
-                    {rest ? (
+                    {compact && (rest || (cur && draft)) ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <button type="button" onClick={() => setCompact(false)} aria-label="Abrir a barra de registro" style={{ flex: 1, minWidth: 0, minHeight: 48, display: "flex", alignItems: "center", gap: 10, padding: "0 4px", border: "none", background: "none", color: C.text, textAlign: "left", cursor: "pointer", fontFamily: F.body }}>
+                                <span aria-hidden="true" style={{ color: C.text3, fontSize: 18 }}>⌃</span>
+                                {rest
+                                    ? <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}><span style={{ ...colLabel, color: C.text2 }}>DESCANSO</span><span style={{ fontFamily: F.display, fontSize: 24, fontWeight: 900, ...num }}>{mmss((rest.end - now) / 1000)}</span></span>
+                                    : <span style={{ minWidth: 0, display: "flex", flexDirection: "column" }}><span style={{ ...colLabel, color: C.text2, overflow: "hidden", textOverflow: "ellipsis" }}>{cur.r.ex.name.toUpperCase() + " · " + cur.s.label}</span><span style={{ fontSize: 15, fontWeight: 700, ...num }}>{br(draft.load) + " kg × " + draft.reps}</span></span>}
+                            </button>
+                            {rest
+                                ? <button type="button" style={{ ...btnSecondary, width: "auto", flex: "none", padding: "0 16px" }} onClick={() => setRest(null)}>Pular</button>
+                                : <button type="button" style={{ ...btnMain, width: "auto", flex: "none", padding: "0 22px" }} onClick={registerSet}>{cur.fixing ? "Salvar" : "Feito"}</button>}
+                        </div>
+                    ) : rest ? (
                         <>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "0 4px" }}>
                                 <span style={{ ...colLabel, color: C.text2 }}>DESCANSO</span>

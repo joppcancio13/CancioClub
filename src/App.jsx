@@ -72,7 +72,7 @@ import { BALL_URL, SIL_URL, C, DAYS, EASE, F, JS2KEY, MIRROR_GRID, NON_COUNTING_
 import { mapAnamneseToFicha } from "./utils/assessment";
 import { playDisco, playFinishChime } from "./utils/audio";
 import { fmtDate, fmtDateTime, fmtDur, fmtVolume, isThisWeek, isoOf, parseWeeklyTarget, todayISO } from "./utils/date";
-import { mergeCloudRows, mergeLocalActivityInto, mergeWorkoutsForStudent, splitGlobalForCloud, splitStudentForCloud } from "./utils/merge";
+import { mergeCloudRows, mergeLocalActivityInto, mergeWorkoutsForStudent, splitGlobalForCloud, splitStudentForCloud, mergeTombstones, removedSet } from "./utils/merge";
 import { genCode, greeting, haptic, noop, pickDailyPhrase, uid, uidShort } from "./utils/misc";
 import { seed } from "./utils/seedData";
 import { computeStreak, lastCheckinLabel, streakTier, trainingWds } from "./utils/streak";
@@ -203,7 +203,7 @@ function CancioClub() {
     const [tabsPeek, setTabsPeek] = useState(false);
     useEffect(() => {
         let last = window.scrollY;
-        const onScroll = () => { const y = window.scrollY; if (y < last - 24) { setTabsPeek(true); last = y; } else if (y > last + 24) { setTabsPeek(false); last = y; } };
+        const onScroll = () => { const y = window.scrollY; setTabsPeek(y < 80); last = y; };
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
@@ -301,9 +301,19 @@ function CancioClub() {
             return; // dados de exemplo nunca vão pra nuvem (o caminho do aluno, pela Edge Function, não checava)
         if (deletedStudentIdsRef.current.has(sid))
             return; // aluno removido — não deixa um sync atrasado (snapshot de antes da remoção) recriar a linha
-        const student = (next.students || []).find((s) => s.id === sid);
+        let student = (next.students || []).find((s) => s.id === sid);
         if (!student)
             return;
+        if (role === "prof") {
+            const idsOf = (wk) => { const o = new Set(); Object.values(wk || {}).forEach((l) => Array.isArray(l) && l.forEach((e) => e && e.id && o.add(e.id))); return o; };
+            const before = idsOf((((useDataStore.getState().data || {}).workouts) || {})[sid]);
+            const now = idsOf((next.workouts || {})[sid]);
+            const tomb = { ...(student.removedEx || {}) }; let changed = false; const t = Date.now();
+            before.forEach((id) => { if (!now.has(id) && !(tomb[id] > 0)) { tomb[id] = t; changed = true; } });
+            now.forEach((id) => { if (tomb[id] > 0) { tomb[id] = -t; changed = true; } });
+            Object.keys(tomb).forEach((id) => { if (t - Math.abs(tomb[id]) > 120 * 864e5) { delete tomb[id]; changed = true; } }); // marca velha (120 dias) sai
+            if (changed) { student = { ...student, removedEx: tomb }; next.students = next.students.map((x) => (x.id === sid ? student : x)); }
+        }
         const payload = splitStudentForCloud(next, student);
         // aluno nunca autentica -> grava só através da Edge Function, que confere o código antes de
         // tocar no banco. professor autentica de verdade -> continua indo direto pra tabela (RLS cobre).
@@ -504,6 +514,9 @@ function CancioClub() {
     const markWorkoutStarted = React.useCallback(() => {
         if (workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO())
             return;
+        // correção 18/nov: com o app fechado e aberto de novo, o início guardado não era lido e a próxima
+        // série marcava um início novo — o tempo do treino ficava só do retorno até o fim
+        try { const sv = JSON.parse(localStorage.getItem(SESS_KEY) || "null"); if (sv && sv.studentId === focusId && sv.date === todayISO()) { setWorkoutStart(sv); return; } } catch (e) { }
         const s = { studentId: focusId, date: todayISO(), startedAt: Date.now() };
         setWorkoutStart(s);
         try {
@@ -672,6 +685,10 @@ function CancioClub() {
     const duplicateExercise = (ex) => withUndo(ex.name + " duplicado", [focusId], false, () => setData((p) => { const w = { ...(p.workouts[focusId] || emptyWeek()) }; const arr = [...(w[day] || [])]; const i = arr.findIndex((e) => e.id === ex.id); const copy = { ...JSON.parse(JSON.stringify(ex)), id: uid(), history: [], setPlan: (ex.setPlan || []).map((x) => ({ ...x, id: uidShort() })) }; arr.splice(i + 1, 0, copy); w[day] = arr; const next = { ...p, workouts: { ...p.workouts, [focusId]: w } }; syncStudentToCloud(next, focusId); return next; }));
     useEffect(() => { setOpenExId(null); }, [day, profTab, profView, fichaTab, profId]);
     // "Sua ficha mudou" (34a): ao sair do Editar ficha, se a ficha daquele aluno mudou, avisa o aluno uma vez
+    useEffect(() => {
+        if (role !== "aluno" || !alunoId || (workoutStart && workoutStart.studentId === alunoId && workoutStart.date === todayISO())) return;
+        try { const sv = JSON.parse(localStorage.getItem(SESS_KEY) || "null"); if (sv && sv.studentId === alunoId && sv.date === todayISO()) setWorkoutStart(sv); } catch (e) { }
+    }, [role, alunoId]);
     const fichaSnapRef = React.useRef(null);
     useEffect(() => {
         const prev = fichaSnapRef.current;
@@ -827,7 +844,10 @@ function CancioClub() {
         // atrasado (dayDate de outro dia), o tempo decorrido é só "quanto levei digitando agora", e
         // mostrar isso como duração do treino é o que parecia "bugado, tipo em segundos".
         const isToday = dayDate === todayISO();
-        const durationSec = isToday && workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO() ? Math.max(1, Math.round((Date.now() - workoutStart.startedAt) / 1000)) : null;
+        const firstSetAt = list.reduce((m, e) => { const h = (e.history || []).find((x) => x.date === dayDate && Array.isArray(x.entries)); return h ? h.entries.reduce((mm, en) => (typeof en.at === "number" && en.at < mm ? en.at : mm), m) : m; }, Infinity);
+        const savedStart = workoutStart && workoutStart.studentId === focusId && workoutStart.date === todayISO() ? workoutStart.startedAt : Infinity;
+        const startAt = Math.min(savedStart, firstSetAt);
+        const durationSec = isToday && Number.isFinite(startAt) ? Math.max(1, Math.round((Date.now() - startAt) / 1000)) : null;
         const sWorkoutName = dayName || dayFull;
         const sStreak = computeStreak(trainingWeekdays, new Set([...focusCheckins, dayDate]));
         // daySummary já lida com os dois formatos de histórico (achatado antigo / entries novo) —
@@ -1036,7 +1056,7 @@ function CancioClub() {
             // mesmo raciocínio do Problema 2 (fetchAllStudentsAfterAuth): treino nunca escolhe um lado
             // só. Sem isso, um set registrado localmente segundos antes desse merge rodar podia ser
             // apagado por uma foto da nuvem que ainda não tinha recebido aquele set.
-            workouts: { ...(p.workouts || {}), [found.id]: mergeWorkoutsForStudent((p.workouts && p.workouts[found.id]) || {}, found.workouts || {}) },
+            workouts: { ...(p.workouts || {}), [found.id]: mergeWorkoutsForStudent((p.workouts && p.workouts[found.id]) || {}, found.workouts || {}, removedSet(found.removedEx)) },
             messages: [...(p.messages || []).filter((m) => m.studentId !== found.id), ...(found.messages || [])],
         };
     };
@@ -1151,9 +1171,12 @@ function CancioClub() {
                     // pra nuvem quem de fato ganhou algo novo na mescla (evita 1 request por aluno do
                     // roster inteiro toda vez que o professor loga, quando quase sempre já está tudo igual).
                     const needsCloudSync = [];
+                    merged.students = merged.students.map((s) => { const ls = (local.students || []).find((x) => x.id === s.id); const tomb = mergeTombstones(ls && ls.removedEx, s.removedEx); return Object.keys(tomb).length ? { ...s, removedEx: tomb } : s; });
                     merged.students.forEach((s) => {
                         const cloudWk = cloud.workouts[s.id] || {};
-                        const mergedWk = mergeWorkoutsForStudent((local.workouts && local.workouts[s.id]) || {}, cloudWk);
+                        const cloudSt = cloud.students.find((x) => x.id === s.id);
+                        if (cloudSt && JSON.stringify(cloudSt.removedEx || {}) !== JSON.stringify(s.removedEx || {})) needsCloudSync.push(s.id);
+                        const mergedWk = mergeWorkoutsForStudent((local.workouts && local.workouts[s.id]) || {}, cloudWk, removedSet(s.removedEx));
                         merged.workouts[s.id] = mergedWk;
                         if (activityAdded.has(s.id) || JSON.stringify(mergedWk) !== JSON.stringify(cloudWk))
                             needsCloudSync.push(s.id);
@@ -1383,7 +1406,10 @@ function CancioClub() {
             const hs = list.map((e) => { const day = (e.history || []).filter((h) => h.date === dayDate); return day.find((h) => Array.isArray(h.entries) && h.entries.length) || day[0]; }).filter(Boolean);
             const validSets = hs.reduce((n, h) => n + (h.entries ? h.entries.filter((en) => !NON_COUNTING_KINDS.has(en.kind)).length : 0), 0);
             const volume = hs.reduce((n, h) => n + daySummary(h).volume, 0);
-            const t0 = workoutStart && workoutStart.studentId === alunoId && workoutStart.date === todayISO() ? workoutStart.startedAt : null;
+            // mesmo cálculo do finalizeWorkout: no mínimo desde a primeira série registrada hoje
+            const firstAt = list.reduce((m, e) => { const h = (e.history || []).find((x) => x.date === dayDate && Array.isArray(x.entries)); return h ? h.entries.reduce((mm, en) => (typeof en.at === "number" && en.at < mm ? en.at : mm), m) : m; }, Infinity);
+            const t00 = Math.min(workoutStart && workoutStart.studentId === alunoId && workoutStart.date === todayISO() ? workoutStart.startedAt : Infinity, firstAt);
+            const t0 = Number.isFinite(t00) ? t00 : null;
             return React.createElement(FimV3, {
                 title: String(dayName || dayFull || "Treino").split("·")[0].trim().toUpperCase(),
                 durationLabel: t0 ? fmtDur(Math.max(1, Math.round((Date.now() - t0) / 1000))) : null,
@@ -1670,18 +1696,18 @@ function CancioClub() {
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, restorePicker.candidates.map((s) => React.createElement("button", { key: s.id, onClick: () => restoreStudentFromBackup(s.id), style: { minHeight: 44, textAlign: "left", fontFamily: F.body, fontSize: 13, color: C.text, background: C.panel2, border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer" } }, s.name))),
                         React.createElement("button", { onClick: () => setRestorePicker(null), style: { minHeight: 44, marginTop: 10, fontFamily: F.mono, fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 } }, "Cancelar")))))))),
             role === "aluno" && !alunoStudent && (() => {
-                const boxes = [0, 1, 2, 3].map((i) => React.createElement("span", { key: i, style: { width: 60, height: 72, borderRadius: 16, background: codeInput[i] && !codeErr ? C.text : "transparent", transition: "background .15s ease", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 38, color: codeInput[i] && !codeErr ? C.ink : C.text, boxShadow: codeErr ? "inset 0 0 0 1.5px " + C.warn : codeInput[i] ? "none" : i === codeInput.length ? "inset 0 0 0 1.5px " + C.silver : "inset 0 0 0 1px #2A2E37" } }, codeInput[i] || ""));
+                const boxes = [0, 1, 2, 3].map((i) => React.createElement("span", { key: i, style: { width: 60, height: "clamp(54px, 9.5vh, 72px)", borderRadius: 16, background: codeInput[i] && !codeErr ? C.text : "transparent", transition: "background .15s ease", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 38, color: codeInput[i] && !codeErr ? C.ink : C.text, boxShadow: codeErr ? "inset 0 0 0 1.5px " + C.warn : codeInput[i] ? "none" : i === codeInput.length ? "inset 0 0 0 1.5px " + C.silver : "inset 0 0 0 1px #2A2E37" } }, codeInput[i] || ""));
                 const press = (k) => { if (loginBusy) return; haptic("tick"); setCodeErr(false); if (k === "\u232B") setCodeInput((c) => c.slice(0, -1)); else setCodeInput((c) => (c.length >= 4 ? c : c + k)); };
-                const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "\u232B"].map((k, i) => React.createElement("button", { key: i, className: "cc-tap", onClick: () => k && press(k), style: { visibility: k ? "visible" : "hidden", height: 58, borderRadius: 16, border: "none", cursor: "pointer", background: "transparent", boxShadow: k === "\u232B" ? "none" : "inset 0 0 0 1px #1E222A", color: k === "\u232B" ? C.muted : C.text, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: k === "\u232B" ? 20 : 26 } }, k));
+                const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "\u232B"].map((k, i) => React.createElement("button", { key: i, className: "cc-tap", onClick: () => k && press(k), style: { visibility: k ? "visible" : "hidden", height: "clamp(46px, 7.4vh, 58px)", borderRadius: 16, border: "none", cursor: "pointer", background: "transparent", boxShadow: k === "\u232B" ? "none" : "inset 0 0 0 1px #1E222A", color: k === "\u232B" ? C.muted : C.text, fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: k === "\u232B" ? 20 : 26 } }, k));
                 return React.createElement("div", { className: "cc-full-h", style: { display: "flex", flexDirection: "column", alignItems: "center", maxWidth: 400, margin: "-44px auto 0", padding: "calc(40px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom))", boxSizing: "border-box" } },
                     React.createElement("div", { "aria-hidden": "true", style: { position: "fixed", inset: 0, background: "radial-gradient(60% 34% at 50% 22%, rgba(198,210,228,.12), transparent 70%)", pointerEvents: "none" } }),
-                    React.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", gap: 14, marginTop: 96 } },
+                    React.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", gap: 14, marginTop: "clamp(16px, 9vh, 96px)" } },
                         React.createElement("img", { src: SIL_URL, alt: "", width: 84, height: 84, style: { width: 84, height: 84 } }),
                         React.createElement("div", { style: { display: "flex", flexDirection: "column", fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 38, letterSpacing: "-0.01em" } }, React.createElement("span", { style: { lineHeight: "35px" } }, "CANCIO"), React.createElement("span", { style: { lineHeight: "35px", color: C.silver } }, "CLUB"))),
-                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: codeErr ? C.warn : C.muted, marginTop: "auto", paddingTop: 28, textAlign: "center" } }, loginBusy ? "Buscando sua ficha\u2026" : codeErr ? "C\u00F3digo n\u00E3o encontrado. Confira com seu professor." : "Digite o c\u00F3digo que o professor te passou"),
+                    React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: codeErr ? C.warn : C.muted, marginTop: "auto", paddingTop: "clamp(12px, 3.5vh, 28px)", textAlign: "center" } }, loginBusy ? "Buscando sua ficha\u2026" : codeErr ? "C\u00F3digo n\u00E3o encontrado. Confira com seu professor." : "Digite o c\u00F3digo que o professor te passou"),
                     React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 12 } }, boxes),
                     React.createElement(ForgotCode, null), // design v4 (46a): Esqueci o código
-                    React.createElement("div", { style: { width: "100%", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 28, padding: "0 24px", boxSizing: "border-box" } }, keys),
+                    React.createElement("div", { style: { width: "100%", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: "clamp(10px, 3vh, 28px)", padding: "0 24px", boxSizing: "border-box" } }, keys),
                     React.createElement("button", { className: "cc-tap", onClick: () => switchRole("prof"), style: { minHeight: 44, marginTop: 10, fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 10, cursor: "pointer" } }, "Sou professor \u203A"));
             })(),
             // esqueleto do que está prestes a aparecer (resumo + treino), em vez de deixar a tela

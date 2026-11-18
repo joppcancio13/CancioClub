@@ -18,7 +18,7 @@ function ForgotCode() {
     };
     return (
         <>
-            <button type="button" onClick={() => setOpen(true)} style={{ marginTop: 14, minHeight: 44, padding: "0 12px", border: "none", background: "none", color: C.text, fontFamily: F.body, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Esqueci o código</button>
+            <button type="button" onClick={() => setOpen(true)} style={{ marginTop: "clamp(4px, 1.5vh, 14px)", minHeight: 44, padding: "0 12px", border: "none", background: "none", color: C.text, fontFamily: F.body, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Esqueci o código</button>
             {open && (
                 <div role="dialog" aria-modal="true" aria-label="Pedir o código ao professor" style={{ position: "fixed", inset: 0, zIndex: 120, color: C.text, fontFamily: F.body }}>
                     <div onClick={() => setOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(5,6,10,.72)" }} />
