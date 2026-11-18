@@ -201,3 +201,10 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - Tocar no aviso abre o lugar certo. No iPhone, só com o app na tela inicial (iOS 16.4+).
 - Servidor: função `push`, tabela `push_subscriptions` e agendamento a cada 15 min no Supabase (ver `supabase/LEIA-ME.txt`). Precisa do segredo VAPID_PRIVATE_KEY.
 - Cache v62.
+
+## v63 — correções
+- **Exercício tirado voltava:** com dois aparelhos (ou a atualização de 30 s no meio do caminho), uma cópia antiga devolvia o exercício. Agora cada aluno guarda a marca de "tirado" (`removedEx`) e todas as mesclas respeitam; o Desfazer continua trazendo de volta. Atualize o app em todos os aparelhos do professor.
+- **Tempo do treino:** saindo e voltando pro app, o tempo contava só do retorno. Agora o início guardado é lido ao abrir e a duração conta no mínimo desde a primeira série do dia.
+- **Barra de registro:** não cobre mais os últimos exercícios; ao rolar pra baixo vira uma linha (série + Feito); as abas só voltam com a tela no topo durante o treino, então a barra não sobe e desce.
+- **Login:** cabe em celular baixo (tamanhos acompanham a altura da tela).
+- Cache v63.
