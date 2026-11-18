@@ -184,3 +184,12 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Editar ficha (54a, 42b, 40b):** Trocar treino com 5 opções e menu ⋯ (modelo, PDF, série, nova fase); linhas que se arrastam pra reordenar; exercício em página própria (Prescrição e Histórico, Duplicar, Tirar); criar do zero em dois passos com parecidos do catálogo.
 - **Modo aula** também em dia de cardio e de descanso.
 - Detalhes em `design/v4/DECISOES.md`. Cache v60.
+
+## v61 — design v4, fases 6 e 7
+- **Modelos (41d):** editor com Para quem (Iniciante / Intermediário / Avançado), aviso de quantos alunos usam e tempo estimado; "+ Novo modelo" começa de um dia de um aluno, de outro modelo ou em branco.
+- **Fases (38b):** linha do tempo em Dados do aluno, com Arquivar e começar nova fase, Restaurar e Apagar (com Desfazer).
+- **Respostas rápidas (50c):** editáveis em Mais, em dois grupos; a conversa mostra o grupo certo pro último recado.
+- **Mais** reorganizado, com Sair da conta separado.
+- **Resumo da semana (47b):** tela e card pra compartilhar; aviso "Sua semana fechou" no Hoje aos domingos e entrada no Perfil.
+- **Recado fixado:** o combinado do professor no topo da conversa, dos dois lados.
+- Detalhes em `design/v4/DECISOES.md`. Cache v61.
