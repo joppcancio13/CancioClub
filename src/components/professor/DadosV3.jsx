@@ -98,9 +98,9 @@ function DadosV3({ student: st, onSave, onPrint, onDelete, archives = [], onArch
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
                 {cells.map(([l, v, k]) => (
                     <button key={l} type="button" disabled={!k} onClick={() => (k === "anam" ? setAnamOpen(true) : open(k))}
-                        style={{ minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 6, padding: "12px 14px", borderRadius: 14, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line}`, color: C.text, textAlign: "left", cursor: k ? "pointer" : "default" }}>
+                        style={{ minWidth: 0, minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 6, padding: "12px 14px", borderRadius: 14, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line}`, color: C.text, textAlign: "left", cursor: k ? "pointer" : "default" }}>
                         <span style={kicker}>{l}</span>
-                        <span style={{ fontSize: 16, fontWeight: 700, fontStretch: "110%", fontVariantNumeric: "tabular-nums" }}>{v}</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, fontStretch: "110%", fontVariantNumeric: "tabular-nums", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.25 }}>{typeof v === "string" ? v.split("/").join("/​") : v}</span>
                     </button>
                 ))}
             </div>

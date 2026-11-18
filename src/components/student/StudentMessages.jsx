@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { C, F, SILVER, KICKER } from "../../styles/tokens";
+import { PersonAvatar } from "../shared/PersonAvatar";
 
 // Conversa aluno ↔ professor — design v3 (README · Recados: balões, faixa de contexto da série,
 // eventos de treino na linha do tempo, respostas rápidas). Usada dos dois lados (`side`).
@@ -11,11 +12,20 @@ const time = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit
 const splitContext = (text) => { const m = String(text || "").match(/^(.+? · .+?) — ([\s\S]+)$/); return m ? { link: m[1], body: m[2] } : { link: null, body: text }; };
 const kicker = KICKER;
 
-function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyText, events = [], quick, pinned, onEditPin }) {
+// other: { name, photo } de quem está do outro lado · docked: campo de digitar preso embaixo da tela
+// (acima das abas), como em qualquer app de conversa — antes ele descia junto com as mensagens
+function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyText, events = [], quick, pinned, onEditPin, other, docked = true }) {
     const [text, setText] = useState("");
+    const dockRef = useRef(null);
+    const [dockH, setDockH] = useState(140);
+    useLayoutEffect(() => { if (!docked || !dockRef.current || typeof ResizeObserver === "undefined") return; const ro = new ResizeObserver(() => setDockH(dockRef.current ? dockRef.current.offsetHeight : 140)); ro.observe(dockRef.current); return () => ro.disconnect(); }, [docked]);
+    // abre na última mensagem e acompanha as novas
+    const count = messages.length + events.length;
+    useEffect(() => { if (!docked) return; const t = setTimeout(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: count ? "smooth" : "auto" }), 60); return () => clearTimeout(t); }, [count, docked]);
     const send = (t) => { const v = (t ?? text).trim(); if (!v) return; onSend(v); setText(""); };
     const items = [...messages.map((m) => ({ kind: "msg", date: m.date, m })), ...events.map((e) => ({ kind: "event", date: e.date, e }))].sort((a, b) => (a.date < b.date ? -1 : 1));
     let lastDay = null;
+    const isMine = (it) => it && it.kind === "msg" && (side === "prof" ? !!it.m.fromProf : !it.m.fromProf);
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {/* recado fixado (v4): o combinado do professor fica no topo da conversa, dos dois lados */}
@@ -26,7 +36,7 @@ function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyT
                 </button>
             )}
             {items.length === 0 && <div style={{ fontFamily: F.body, fontSize: 13, color: C.text3, textAlign: "center", padding: "18px 0" }}>{emptyText ?? "Conte ao professor como foi: dor, carga, falta."}</div>}
-            {items.map((it) => {
+            {items.map((it, idx) => {
                 const dl = dayLabel(it.date); const head = dl !== lastDay; lastDay = dl;
                 const headEl = head && <div style={{ ...kicker, textAlign: "center", color: C.text4, paddingTop: 4 }}>{dl}</div>;
                 if (it.kind === "event") return (
@@ -43,17 +53,23 @@ function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyT
                 return (
                     <React.Fragment key={m.id}>
                         {headEl}
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", gap: 4 }}>
-                            <div style={{ maxWidth: "84%", borderRadius: mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", overflow: "hidden", ...(mine ? { background: C.text, color: C.bg } : { background: C.panel, color: C.text }) }}>
+                        <div style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: mine ? "flex-end" : "flex-start" }}>
+                        {!mine && other && (() => { const nx = items[idx + 1]; const lastOfRun = !nx || nx.kind !== "msg" || isMine(nx) || dayLabel(nx.date) !== dl; return lastOfRun ? <PersonAvatar photo={other.photo} name={other.name} size={28} style={{ marginBottom: 20 }} /> : <span style={{ width: 28, flex: "none" }} />; })()}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", gap: 4, maxWidth: "84%", minWidth: 0 }}>
+                            <div style={{ maxWidth: "100%", borderRadius: mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", overflow: "hidden", ...(mine ? { background: C.text, color: C.bg } : { background: C.panel, color: C.text }) }}>
                                 {link && <div style={{ ...kicker, padding: "8px 14px", background: "#DCE4F0", color: C.bg, fontVariantNumeric: "tabular-nums" }}>{link}</div>}
                                 <div style={{ padding: "11px 14px", fontFamily: F.body, fontSize: 15, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{body}</div>
                             </div>
                             <span style={{ fontFamily: F.body, fontSize: 11, color: C.text3 }}>{time(m.date) + (mine && side === "aluno" ? (m.read ? " · lido" : " · enviado") : "")}</span>
                         </div>
+                        </div>
                     </React.Fragment>
                 );
             })}
-            <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", paddingTop: 6 }}>
+            {docked && <div aria-hidden="true" style={{ height: dockH + 92 }} />}
+            <div ref={dockRef} style={docked ? { position: "fixed", left: 0, right: 0, bottom: "calc(env(safe-area-inset-bottom, 0px) + 86px)", zIndex: 90, padding: "14px 20px 8px", background: `linear-gradient(180deg, transparent, ${C.bg} 22%)` } : undefined}>
+            <div style={{ maxWidth: 620, margin: "0 auto", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", paddingTop: docked ? 0 : 6 }}>
                 {(quick || QUICK[side]).map((q) => (
                     <button key={q} type="button" onClick={() => (side === "prof" ? send(q) : setText((t) => (t ? t + " " : "") + q + ". "))}
                         style={{ flex: "none", minHeight: 44, padding: "0 12px", borderRadius: 999, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${q === "Senti dor" ? C.accentLine : C.outline}`, color: q === "Senti dor" ? C.accent : C.text, fontFamily: F.body, fontSize: 13, cursor: "pointer" }}>{q}</button>
@@ -62,11 +78,13 @@ function StudentMessages({ messages, onSend, side = "aluno", placeholder, emptyT
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <textarea value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} rows={1}
                     placeholder={placeholder ?? "Escreva um recado"} aria-label={placeholder ?? "Escreva um recado"}
-                    style={{ flex: 1, boxSizing: "border-box", minHeight: 48, padding: 13, borderRadius: 10, border: "none", outline: "none", resize: "none", background: C.panel, color: C.text, fontFamily: F.body, fontSize: 15, lineHeight: 1.4 }} />
+                    style={{ flex: 1, boxSizing: "border-box", minHeight: 48, padding: 13, borderRadius: 10, border: "none", outline: "none", resize: "none", background: C.panel, color: C.text, fontFamily: F.body, fontSize: 16, lineHeight: 1.4, maxHeight: 140, fieldSizing: "content", boxShadow: `inset 0 0 0 1px ${C.line}` }} />
                 <button type="button" onClick={() => send()} disabled={!text.trim()} aria-label="Enviar"
                     style={{ width: 48, height: 48, flex: "none", borderRadius: 10, border: "none", background: text.trim() ? C.text : C.raised, color: text.trim() ? C.bg : C.text4, cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="20" height="20" viewBox="0 0 256 256" aria-hidden="true"><path fill="none" stroke="currentColor" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" d="M128 216V40M56 112l72-72 72 72" /></svg>
                 </button>
+            </div>
+            </div>
             </div>
         </div>
     );

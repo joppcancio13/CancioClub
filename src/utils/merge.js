@@ -7,6 +7,8 @@ function splitGlobalForCloud(d) {
         library: d.library || [],
         templates: d.templates || [],
         quickReplies: d.quickReplies, // design v4 (50c): respostas rápidas do professor
+        profPhoto: d.profPhoto, // 18/nov: foto do professor (o aluno recebe pela função student)
+        attnIgnored: d.attnIgnored, // 18/nov: avisos de atenção ignorados { sid: { k, until } }
         activeStudentId: d.activeStudentId,
     };
 }
@@ -44,6 +46,8 @@ function mergeCloudRows(rows) {
             out.library = rd.library || [];
             out.templates = rd.templates || [];
             out.quickReplies = rd.quickReplies;
+            out.profPhoto = rd.profPhoto;
+            out.attnIgnored = rd.attnIgnored;
             out.activeStudentId = rd.activeStudentId;
         }
         else if (String(r.id).indexOf("student_") === 0) {
@@ -206,6 +210,8 @@ function applyGlobalToLocal(local, globalData) {
         library: globalData.library || [],
         templates: globalData.templates || [],
         quickReplies: globalData.quickReplies !== undefined ? globalData.quickReplies : base.quickReplies,
+        profPhoto: globalData.profPhoto !== undefined ? globalData.profPhoto : base.profPhoto,
+        attnIgnored: globalData.attnIgnored !== undefined ? globalData.attnIgnored : base.attnIgnored,
         activeStudentId: globalData.activeStudentId !== undefined ? globalData.activeStudentId : base.activeStudentId,
     };
 }

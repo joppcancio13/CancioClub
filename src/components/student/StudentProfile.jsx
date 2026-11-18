@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { C, F, SIL_URL, KICKER } from "../../styles/tokens";
 import { Icon, Caret } from "../shared/Icon";
 import { BackButton } from "../shared/BackButton";
+import { EvolutionV3, evolutionSeries } from "./EvolutionV3";
+import { BodyPhotos } from "./BodyPhotos";
 import { fmtMemberNo, fmtSince } from "../../utils/members";
 import { todayISO } from "../../utils/date";
 import { computeDayRecords } from "../../utils/records";
@@ -58,12 +60,11 @@ function Spark({ pts, h, stroke }) {
 
 function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTarget, bestStreak, notifPerm, onAskNotify, onUpdate, onOpenCard, onOpenSelo, onOpenMyData, onOpenReassess, onMessage, onLogout, onClose, todayDone, diaryView, diaryCount, onOpenWeek, onOpenAvisos }) {
     const [view, setView] = useState(null);
-    const [evoIdx, setEvoIdx] = useState(0);
     const [contact, setContact] = useState(null);
     const [goalForm, setGoalForm] = useState(null);
     const series = useMemo(() => loadSeries(week), [week]);
     const records = useMemo(() => series.map((s) => { const b = s.pts.reduce((m, p) => (p.v > m.v ? p : m), s.pts[0]); return { name: s.name, best: b.v, date: b.date }; }).sort((a, b) => b.best - a.best), [series]);
-    const evo = useMemo(() => [...series].sort((a, b) => b.pts.length - a.pts.length), [series]);
+    const evo = useMemo(() => evolutionSeries(week).map((x) => ({ name: x.name, pts: x.pts.map((p) => ({ date: p.date, v: p.best })) })), [week]);
     // recordes DE VERDADE: quantas vezes o aluno bateu a própria melhor marca, dia a dia, com a mesma
     // regra da comemoração no fim do treino (computeDayRecords: salto > 12 kg é tratado como erro).
     // `records` (acima) continua sendo a melhor carga por exercício, usada no bloco e na lista.
@@ -108,14 +109,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
         React.createElement("span", { style: { display: "flex", alignItems: "baseline", gap: 8, flexShrink: 0 } }, React.createElement("span", { style: { fontSize: 13, color: C.muted } }, dShort(r.date)), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24 } }, kgs(r.best)), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, "kg")))))
         : React.createElement("div", { style: small }, "Seus recordes aparecem aqui assim que você registrar carga."));
 
-    if (view === "evolucao") {
-        const s = evo[Math.min(evoIdx, evo.length - 1)];
-        return shell("EVOLUÇÃO", !s ? React.createElement("div", { style: small }, "Registre carga em mais de um dia pra ver a evolução.") : React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 } }, evo.map((x, i) => React.createElement("button", { key: x.name, className: "cc-tap", onClick: () => setEvoIdx(i), style: { flexShrink: 0, minHeight: 44, padding: "0 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: F.body, fontWeight: 600, fontSize: 13, background: i === evoIdx ? C.text : C.panel, color: i === evoIdx ? C.ink : "#AEB7C6", boxShadow: i === evoIdx ? "none" : `inset 0 0 0 1px ${C.line}` } }, x.name))),
-            React.createElement("div", { style: { ...block, cursor: "default", padding: "16px 16px 10px" } }, React.createElement(Spark, { pts: s.pts, h: 160 }),
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, color: C.muted } }, React.createElement("span", null, dShort(s.pts[0].date)), React.createElement("span", null, dShort(s.pts[s.pts.length - 1].date)))),
-            React.createElement("div", { style: { fontSize: 15, color: "#AEB7C6" } }, "De ", React.createElement("b", { style: { color: C.text } }, kgs(s.pts[0].v) + " kg"), " pra ", React.createElement("b", { style: { color: C.text } }, kgs(s.pts[s.pts.length - 1].v) + " kg"), ` em ${s.pts.length} ${s.pts.length === 1 ? "registro" : "registros"}`)));
-    }
+    if (view === "evolucao") return shell("EVOLUÇÃO", React.createElement(EvolutionV3, { week }));
 
     if (view === "metas") {
         const opts = records.map((r) => r.name);
@@ -137,7 +131,12 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
 
     if (view === "corpo") {
         const keys = [["peso", "Peso", "kg"], ["cintura", "Cintura", "cm"], ["quadril", "Quadril", "cm"], ["braco", "Braço", "cm"], ["coxa", "Coxa", "cm"]];
+        // fotos: as da reavaliação + as tiradas aqui (bodyPhotos)
+        const photos = [...(student.reassessments || []).filter((r) => r.foto && r.date).map((r, i) => ({ id: "reav" + i, date: String(r.date).slice(0, 10), img: r.foto, source: "reav" })),
+            ...(student.bodyPhotos || []).map((b) => ({ ...b, source: "own" }))];
         return shell("CORPO", React.createElement(React.Fragment, null,
+            React.createElement(BodyPhotos, { photos, onAdd: (img) => onUpdate({ bodyPhotos: [...(student.bodyPhotos || []), { id: "bp" + Date.now().toString(36), date: todayISO(), img }].slice(-12) }), onRemove: (id) => onUpdate({ bodyPhotos: (student.bodyPhotos || []).filter((b) => b.id !== id) }) }),
+            React.createElement("span", { style: { ...label, marginTop: 6 } }, "MEDIDAS"),
             lastM ? React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 } }, keys.filter(([k]) => lastM[k] != null).map(([k, l, u]) => { const d = prevM && prevM[k] != null ? lastM[k] - prevM[k] : null; return React.createElement("div", { key: k, style: { ...block, cursor: "default", padding: 12, gap: 2 } }, React.createElement("span", { style: { fontSize: 11, color: C.muted } }, l), React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 24 } }, kgs(lastM[k])), React.createElement("span", { style: { fontSize: 11, color: "#AEB7C6" } }, d == null ? u : `${d > 0 ? "+" : d < 0 ? "\u2212" : ""}${kgs(Math.abs(d))} ${u}`)); })) : React.createElement("div", { style: small }, "Sem medidas ainda."),
             React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, [...measures].reverse().map((m, i) => React.createElement("div", { key: i, style: { minHeight: 52, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.line}` } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, m.base ? "Anamnese" : "Reavaliação"), React.createElement("span", { style: { fontSize: 13, color: C.muted } }, new Date(m.date).toLocaleDateString("pt-BR") + (m.peso ? ` · ${kgs(m.peso)} kg` : ""))))),
             React.createElement("button", { className: "cc-tap", onClick: onOpenReassess, style: { minHeight: 52, borderRadius: 16, border: "none", background: "transparent", boxShadow: `inset 0 0 0 1px ${C.line2}`, color: C.silver, fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "Fazer reavaliação")));

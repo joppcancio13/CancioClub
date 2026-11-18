@@ -121,7 +121,13 @@ Deno.serve(async (req: Request) => {
   await recordLoginSuccess(admin, ip);
 
   if (action === "login") {
-    return json({ data: publicStudentView(row.data) });
+    // 18/nov: a foto do professor (linha global) vai junto, pro aluno ver nos recados
+    let prof: { photo: string | null } | undefined;
+    try {
+      const { data: g } = await admin.from("cancio").select("photo:data->>profPhoto").eq("id", "global").maybeSingle();
+      prof = { photo: (g && typeof g.photo === "string" && g.photo) ? g.photo : null };
+    } catch (_) { /* sem a foto, o login segue normal */ }
+    return json({ data: publicStudentView(row.data), prof });
   }
 
   if (action === "sync") {

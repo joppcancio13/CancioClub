@@ -11,7 +11,7 @@
 // puro (sem tipos) pra rodar igual no Deno da Edge Function e num teste no navegador.
 
 // campos do cadastro que o PRÓPRIO aluno edita no app — o resto do cadastro é do professor
-const STUDENT_PROFILE_FIELDS = ["ackAt", "consentAt", "photo", "goals", "contactPhone", "contactEmail", "reassessments", "deletionRequestedAt"];
+const STUDENT_PROFILE_FIELDS = ["ackAt", "consentAt", "photo", "goals", "contactPhone", "contactEmail", "reassessments", "deletionRequestedAt", "bodyPhotos"];
 // campos que a anamnese inicial (respondida pelo aluno) preenche — só entram quando chega uma anamnese NOVA
 const ASSESSMENT_FIELDS = ["assessment", "assessmentAt", "goal", "freqWeekly", "targetDuration", "obs"];
 

@@ -42,7 +42,7 @@ function Ring({ pct, label }) {
     );
 }
 
-function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, onReav, onBatch, templates = [], liveId, onLive, onMessage }) {
+function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, onReav, onBatch, templates = [], liveId, onLive, onMessage, onIgnore }) {
     const [view, setView] = useState("lista"); // Lista | Semana (51a)
     const [sel, setSel] = useState(null); // seleção em lote (49a): null = desligada; senão os ids marcados
     const [batch, setBatch] = useState(null); // gaveta do lote: { kind: "model" | "copy", pick, mode, dayKey }
@@ -106,7 +106,10 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
     const d = new Date(now);
     const q = search.trim().toLowerCase();
     const pista = enriched.filter((r) => r.onPista);
-    const attn = enriched.filter((r) => r.alert);
+    // "Ignorar" (18/nov): some da lista de atenção até o motivo mudar ou passar 7 dias — vale em todos os aparelhos
+    const ignored = (data && data.attnIgnored) || {};
+    const isIgnored = (r) => { const ig = ignored[r.s.id]; return !!(ig && r.alert && ig.k === r.alert.k && ig.until > now); };
+    const attn = enriched.filter((r) => r.alert && !isIgnored(r));
     const ACTION = { RECADO: "Responder", SUMIDO: "Chamar", LGPD: "Ver", FADIGA: "Ver", ANAMNESE: "Revisar", "REAVALIAÇÃO": "Ver", REAV: "Ver" };
     const WARN = new Set(["SUMIDO", "LGPD", "FADIGA", "REAV"]);
     const trainsToday = (r) => !!(r.done || r.wait || r.live);
@@ -166,6 +169,9 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
                                 </span>
                                 <span style={{ flex: "none", fontSize: 15, fontWeight: 700, color: C.text }}>{ACTION[r.alert.k] || "Ver"}</span>
                             </button>
+                            {onIgnore && (
+                                <button type="button" onClick={() => onIgnore(r.s.id, r.alert.k)} style={{ alignSelf: "flex-start", minHeight: 36, margin: "-8px 0 6px 62px", padding: "0 2px", border: "none", background: "none", color: C.text4, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ignorar por 7 dias</button>
+                            )}
                             {/* reavaliação vencida (53a): duas ações na própria linha */}
                             {r.alert.k === "REAV" && onReav && (
                                 <div style={{ display: "flex", gap: 6, padding: "0 14px 12px 62px" }}>
@@ -180,12 +186,14 @@ function AlunosV3({ rows, data, now, search, onSearch, onAdd, onOpen, onAttn, on
                 </>
             )}
 
-            <div style={{ marginTop: 22, display: "flex", gap: 6, alignItems: "center" }}>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
-                    {FILTERS.map(([k, l, n]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} style={chip(filter === k)}>{l + " · " + n}</button>)}
-                </div>
+            {/* filtros numa linha só; Lista/Semana na linha de baixo (antes os dois disputavam o mesmo espaço) */}
+            <div style={{ margin: "22px -20px 0", padding: "0 20px", display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+                {FILTERS.map(([k, l, n]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} style={chip(filter === k)}>{l + " · " + n}</button>)}
+            </div>
+            <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <span style={{ ...kicker, ...num }}>{list.length + (list.length === 1 ? " aluno" : " alunos")}</span>
                 {!sel && (
-                    <div role="tablist" style={{ flex: "none", display: "flex", padding: 3, borderRadius: 999, background: C.panel }}>
+                    <div role="tablist" aria-label="Ver como" style={{ flex: "none", display: "flex", padding: 3, borderRadius: 999, background: C.panel }}>
                         {[["lista", "Lista"], ["semana", "Semana"]].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{ minHeight: 38, padding: "0 12px", borderRadius: 999, border: "none", background: view === k ? C.text : "transparent", color: view === k ? C.bg : C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{l}</button>)}
                     </div>
                 )}

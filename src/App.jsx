@@ -20,6 +20,7 @@ import { UndoPill } from "./components/shared/UndoPill";
 import { RestDayV3 } from "./components/student/RestDayV3";
 import { BackButton } from "./components/shared/BackButton";
 import { Icon, Caret } from "./components/shared/Icon";
+import { PersonAvatar } from "./components/shared/PersonAvatar";
 import { QuickRepliesV3, repliesOf } from "./components/professor/QuickRepliesV3";
 import { WeekSummary, weekSummary } from "./components/student/WeekSummary";
 import { MonthRecap, monthSummary, lastMonthOf } from "./components/student/MonthRecap";
@@ -433,7 +434,22 @@ function CancioClub() {
         sc[dk] = true; cd[sid] = sc; const next = { ...p, cardio: cd }; syncStudentToCloud(next, sid); return next; });
     const setCardioPlan = (sid, dk, patch) => setData((p) => { const cd = { ...(p.cardio || {}) }; const sc = { ...(cd[sid] || {}) }; const cur = sc[dk] && typeof sc[dk] === "object" ? sc[dk] : {}; sc[dk] = { ...cur, ...patch }; cd[sid] = sc; const next = { ...p, cardio: cd }; syncStudentToCloud(next, sid); return next; });
     const [cardioAuto, setCardioAuto] = useState(false); // "Começar cardio" no Hoje já liga o cronômetro
-    const addLibrary = (name, url, tag) => setData((p) => { const next = { ...p, library: [...(p.library || []), { id: uid(), name, url: url || "", tag: tag || "" }] }; syncGlobalToCloud(next); return next; });
+    const addLibrary = (name, url, tag, catalogId) => setData((p) => { const next = { ...p, library: [...(p.library || []), { id: uid(), name, url: url || "", tag: tag || "", ...(catalogId ? { catalogId } : {}) }] }; syncGlobalToCloud(next); return next; });
+    // Biblioteca (18/nov): ligar um nome ao catálogo do volume vale pra biblioteca e pra todas as fichas com esse nome
+    const linkCatalogByName = (name, catalogId, lib) => setData((p) => {
+        const nn = String(name || "").trim().toLowerCase();
+        const workouts = { ...(p.workouts || {}) }; const changed = [];
+        Object.keys(workouts).forEach((sid) => {
+            let hit = false; const wk = {};
+            Object.entries(workouts[sid] || {}).forEach(([dk, list]) => { wk[dk] = (list || []).map((e) => { if (String(e.name || "").trim().toLowerCase() !== nn || e.catalogId === catalogId) return e; hit = true; const { catalogId: _old, ...rest } = e; return catalogId ? { ...rest, catalogId } : rest; }); });
+            if (hit) { workouts[sid] = wk; changed.push(sid); }
+        });
+        const library = lib ? (p.library || []).map((e) => (e.id === lib.id ? { ...e, catalogId } : e)) : p.library;
+        const next = { ...p, workouts, library };
+        if (lib) syncGlobalToCloud(next);
+        changed.forEach((sid) => syncStudentToCloud(next, sid));
+        return next;
+    });
     const updateLibrary = (id, patch) => setData((p) => { const next = { ...p, library: (p.library || []).map((e) => (e.id === id ? { ...e, ...patch } : e)) }; syncGlobalToCloud(next); return next; });
     const removeLibrary = (id) => setData((p) => { const next = { ...p, library: (p.library || []).filter((e) => e.id !== id) }; syncGlobalToCloud(next); return next; });
     const focusId = role === "prof" ? profId : alunoId;
@@ -1119,7 +1135,8 @@ function CancioClub() {
             // este aqui é um tablet da academia usado antes) — só atualiza se a nuvem for de fato mais nova.
             (async () => {
                 try {
-                    const { data: found } = await callStudentApi("login", { code });
+                    const { data: found, prof } = await callStudentApi("login", { code });
+                    if (prof && prof.photo !== undefined) setData((p) => (p.profPhoto === prof.photo ? p : { ...p, profPhoto: prof.photo }));
                     // só se for o MESMO aluno (mesmo id): a aluna de exemplo usa o código 1234, que pode
                     // coincidir com o de um aluno real na nuvem — aí não é atualização, é outra pessoa
                     if (found && found.id === s.id)
@@ -1134,9 +1151,9 @@ function CancioClub() {
             // não achou local -> busca só ESSE aluno específico na nuvem pelo código (nunca baixa a lista inteira)
             setLoginBusy(true);
             try {
-                const { data: found } = await callStudentApi("login", { code });
+                const { data: found, prof } = await callStudentApi("login", { code });
                 if (found) {
-                    setData((p) => mergeFoundStudentInto(p, found));
+                    setData((p) => { const n = mergeFoundStudentInto(p, found); return prof && prof.photo !== undefined ? { ...n, profPhoto: prof.photo } : n; });
                     s = { id: found.id, code: found.code };
                 }
             }
@@ -1197,7 +1214,7 @@ function CancioClub() {
                     // biblioteca/modelos/som: os deste aparelho continuam valendo (é onde o professor edita);
                     // só num aparelho com dados de exemplo é que vêm da linha global da nuvem
                     const g = p && !p.isSeed ? p : cloud;
-                    const merged = { ...cloud, profKey: g.profKey, soundOn: g.soundOn, library: g.library, templates: g.templates, quickReplies: g.quickReplies, activeStudentId: local.activeStudentId || (cloud.students[0] && cloud.students[0].id), students: [...cloud.students, ...localOnly] };
+                    const merged = { ...cloud, profKey: g.profKey, soundOn: g.soundOn, library: g.library, templates: g.templates, quickReplies: g.quickReplies, profPhoto: g.profPhoto, attnIgnored: g.attnIgnored, activeStudentId: local.activeStudentId || (cloud.students[0] && cloud.students[0].id), students: [...cloud.students, ...localOnly] };
                     const activityAdded = new Set();
                     cloud.students.forEach((s) => { if (mergeLocalActivityInto(merged, local, s.id)) activityAdded.add(s.id); });
                     localOnly.forEach((s) => {
@@ -1568,7 +1585,7 @@ function CancioClub() {
                             const list = rows.filter((r) => r.s.name.toLowerCase().includes(q)).sort((a, b) => a.order - b.order || a.s.name.localeCompare(b.s.name));
                             // design v3 (fase 4a): AlunosV3 — na pista, precisa de atenção com ação na linha, treinam hoje, outros e Ao vivo
                             return React.createElement(React.Fragment, null,
-                                React.createElement(AlunosV3, { rows, data, now: liveNow, search: studentSearch, onSearch: setStudentSearch, onAdd: () => setAddStudentOpen(true), onOpen: (s) => { setLiveStudentId(null); open(s); },
+                                React.createElement(AlunosV3, { onIgnore: demo ? undefined : (sid, k) => setData((p) => { const next = { ...p, attnIgnored: { ...(p.attnIgnored || {}), [sid]: { k, until: Date.now() + 7 * 864e5 } } }; syncGlobalToCloud(next); return next; }), rows, data, now: liveNow, search: studentSearch, onSearch: setStudentSearch, onAdd: () => setAddStudentOpen(true), onOpen: (s) => { setLiveStudentId(null); open(s); },
                                     onAttn: (r) => { if (r.alert.k === "RECADO" || r.alert.k === "SUMIDO") { setInboxFocus(r.s.id); setProfTab("recados"); markThreadRead(r.s.id); } else open(r.s); },
                                     onReav: (sid, act) => { const st = students.find((x) => x.id === sid); if (!st) return; const patch = act === "done" ? { reassessDoneAt: new Date().toISOString(), reassessSnoozeUntil: undefined } : { reassessSnoozeUntil: new Date(Date.now() + 7 * 864e5).toISOString() }; const nx = nextReassess({ ...st, ...patch }); const lbl = "Próxima em " + new Date(nx).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(/\./g, ""); withUndo(lbl, [sid], false, () => updateStudent(sid, patch)); },
                                     onBatch: runBatch, templates,
@@ -1717,10 +1734,10 @@ function CancioClub() {
                                 else
                                     setPseModal(true); }, disabled: !hasLoggedSomething || dayDone, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: hasLoggedSomething && !dayDone ? C.ink : C.muted, background: hasLoggedSomething && !dayDone ? C.text : C.panel2, boxShadow: hasLoggedSomething && !dayDone ? "inset 0 0 0 1px rgba(255,255,255,0.06)" : "none", border: "none", borderRadius: 16, padding: "17px", cursor: hasLoggedSomething && !dayDone ? "pointer" : "default", marginBottom: 6, transition: `transform .18s ${EASE.spring}` } }, dayDone ? (isRestDay ? "✓ Recuperação registrada" : "✓ Treino finalizado") : (isRestDay ? "✓ Salvar recuperação" : "Finalizar treino")),
                             !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.body, fontSize: 13, color: C.muted, marginBottom: 14 } }, "Registre ao menos 1 s\u00E9rie ou o cardio pra finalizar."),
-                            React.createElement(StudentMessages, { messages: messages.filter((m) => m.studentId === profId), onSend: (text) => sendMessage(text, profId) }))))))),
+                            React.createElement(StudentMessages, { docked: false, messages: messages.filter((m) => m.studentId === profId), onSend: (text) => sendMessage(text, profId) }))))))),
                 (profTab === "modelos" || profTab === "biblioteca") && React.createElement(BibliotecaV3, { templates, library, students, workouts: data.workouts, dayNames: data.dayNames, defaultStudent: profId || undefined,
                     onApplyTemplate: (t, sid, dk) => { const st = students.find((x) => x.id === sid); withUndo(t.name + " entrou na ficha de " + (st ? st.name.split(" ")[0] : "aluno"), [sid], false, () => applyTemplate(t, dk, sid)); },
-                    onAddTemplate: addTemplate, onUpdateTemplate: updateTemplate, onRemoveTemplate: (id) => { const t = templates.find((x) => x.id === id); withUndo((t ? t.name : "Modelo") + " foi apagado", [], true, () => deleteTemplate(id)); }, onAddLib: addLibrary, onUpdateLib: updateLibrary, onRemoveLib: (id) => { const it = library.find((x) => x.id === id); withUndo((it ? it.name : "Exercício") + " saiu da biblioteca", [], true, () => removeLibrary(id)); } }),
+                    onAddTemplate: addTemplate, onUpdateTemplate: updateTemplate, onRemoveTemplate: (id) => { const t = templates.find((x) => x.id === id); withUndo((t ? t.name : "Modelo") + " foi apagado", [], true, () => deleteTemplate(id)); }, onAddLib: addLibrary, onLinkCatalog: linkCatalogByName, onUpdateLib: updateLibrary, onRemoveLib: (id) => { const it = library.find((x) => x.id === id); withUndo((it ? it.name : "Exercício") + " saiu da biblioteca", [], true, () => removeLibrary(id)); } }),
                 profTab === "recados" && (React.createElement(React.Fragment, null,
                     // design v3: o título (não lidos + RECADOS) agora vem do próprio ProfInbox
                     React.createElement("div", { style: { marginBottom: 26 } },
@@ -1732,7 +1749,8 @@ function CancioClub() {
                 profTab === "painel" && (React.createElement(React.Fragment, null,
                     // design v4: Mais reorganizado — Respostas rápidas, demonstração, selo, backup e Sair da conta
                     React.createElement(MaisV3, { repliesCount: repliesOf(data).serie.length + repliesOf(data).geral.length, demo, advOpen,
-                        onAvisos: () => setProfTab("avisos"), onReplies: () => setProfTab("respostas"), onDemo: enterDemo, onSelo: () => setLogoCard(true), onBackup: () => setAdvOpen((v) => !v), onLogout: lockProf },
+                        onAvisos: () => setProfTab("avisos"), onReplies: () => setProfTab("respostas"), onDemo: enterDemo, onSelo: () => setLogoCard(true), onBackup: () => setAdvOpen((v) => !v), onLogout: lockProf,
+                        profPhoto: data.profPhoto, onProfPhoto: demo ? undefined : (ph) => setData((p) => { const next = { ...p, profPhoto: ph }; syncGlobalToCloud(next); return next; }) },
                     React.createElement(React.Fragment, null,
                     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
                         React.createElement("button", { onClick: exportData, style: { minHeight: 44, fontFamily: F.mono, fontSize: 13, color: C.ink, background: C.silver, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer" } }, "Exportar dados"),
@@ -1803,9 +1821,13 @@ function CancioClub() {
                 alunoTab === "diario" && React.createElement("div", { style: { paddingBottom: 110 } },
                     React.createElement(BackButton, { onClick: () => setAlunoTab("hoje"), label: "Hoje", style: { marginBottom: 8 } }),
                     React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth })),
-                alunoTab === "recados" && React.createElement("div", { id: "cc-chat", style: { paddingBottom: 110 } },
-                    React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, marginBottom: 18 } }, "RECADOS"),
-                    React.createElement(StudentMessages, { pinned: alunoStudent.pinnedNote ? alunoStudent.pinnedNote.text : null, messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
+                alunoTab === "recados" && React.createElement("div", { id: "cc-chat" },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 18 } },
+                        React.createElement(PersonAvatar, { photo: data.profPhoto, name: "Prof Cancio", size: 44 }),
+                        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } },
+                            React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1 } }, "RECADOS"),
+                            React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.text3 } }, "Conversa com o Prof. Cancio"))),
+                    React.createElement(StudentMessages, { other: { name: "Prof Cancio", photo: data.profPhoto }, pinned: alunoStudent.pinnedNote ? alunoStudent.pinnedNote.text : null, messages: messages.filter((m) => m.studentId === alunoId), onSend: (t) => { markProfRead(alunoId); sendMessage(t); } })),
                 alunoTab === "treino" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { onTouchStart: onDaySwipeStart, onTouchEnd: onDaySwipeEnd, style: { display: "flex", gap: 14, marginBottom: 14 } },
                     React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 } },
