@@ -208,3 +208,9 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Barra de registro:** não cobre mais os últimos exercícios; ao rolar pra baixo vira uma linha (série + Feito); as abas só voltam com a tela no topo durante o treino, então a barra não sobe e desce.
 - **Login:** cabe em celular baixo (tamanhos acompanham a altura da tela).
 - Cache v63.
+
+## v64 — refinamento: cortes, um app só, acabamento
+- **Cortes (aluno):** Perfil com uma grade (Recordes, Evolução, Corpo, Conquistas) e uma lista; o resto foi pra Ajustes (Contato, Minha anamnese, Avisos, Selo, Meus dados, Sair). Hoje com uma linha de resumo e "Ver os exercícios"; recado do professor só quando não lido. Recados sem subtítulo.
+- **Um app só:** dia sem exercício no Treino virou tela própria (cardio feito, recuperação, "Fechar o dia"); o bloco antigo de cardio saiu de baixo do treino de musculação. Botão de voltar único e ícones de verdade no lugar de ›, ✓, ★ e ×. Campos no padrão atual (16 px, sem zoom no iPhone).
+- **Acabamento:** o aluno não baixa mais as telas do professor e as telas ocasionais chegam em segundo plano (pacote principal 253 → 181 KB comprimido). Abertura única (selo que surge, sem anel girando) e troca de abas com esmaecer curto.
+- Cache v64.
