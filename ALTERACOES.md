@@ -193,3 +193,11 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Resumo da semana (47b):** tela e card pra compartilhar; aviso "Sua semana fechou" no Hoje aos domingos e entrada no Perfil.
 - **Recado fixado:** o combinado do professor no topo da conversa, dos dois lados.
 - Detalhes em `design/v4/DECISOES.md`. Cache v61.
+
+## v62 — design v4, fase 8 (avisos no celular)
+- **Avisos (34a):** Mais › Avisos (professor) e Perfil › Avisos (aluno), com um interruptor por tipo, hora do lembrete, silêncio (padrão 22:00–07:00), aviso de teste e desligar.
+- **Professor recebe:** "Sentiu dor" (toca mesmo no silêncio), recado novo, terminou o treino e reavaliação vencida (08:00).
+- **Aluno recebe:** o professor respondeu, sua ficha mudou, lembrete do treino (07:30 por padrão) e resumo de domingo (18:00).
+- Tocar no aviso abre o lugar certo. No iPhone, só com o app na tela inicial (iOS 16.4+).
+- Servidor: função `push`, tabela `push_subscriptions` e agendamento a cada 15 min no Supabase (ver `supabase/LEIA-ME.txt`). Precisa do segredo VAPID_PRIVATE_KEY.
+- Cache v62.
