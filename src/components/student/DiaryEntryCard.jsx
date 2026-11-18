@@ -1,6 +1,7 @@
 import React from "react";
 import { C, DIARY_EFFORT_LABELS, F, PILL_ON } from "../../styles/tokens";
 import { fmtDur } from "../../utils/date";
+import { Icon } from "../shared/Icon";
 
 const EFFORTS = ["facil", "medida", "destruidor"];
 const WD = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
@@ -21,7 +22,7 @@ function DiaryEntryCard({ entry: e, bare }) {
         e.effort === "descanso" && React.createElement("span", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, "Dia de descanso"),
         e.exercises.length > 0 && React.createElement("div", { style: { display: "flex", flexDirection: "column" } },
             e.exercises.map((ex, i) => React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "5px 10px", padding: "9px 0", borderBottom: "1px solid #171B22" } },
-                React.createElement("span", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 15, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, ex.name + (ex.isRecord ? " \u2605" : "")),
+                React.createElement("span", { style: { fontFamily: F.body, fontWeight: 500, fontSize: 15, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 } }, ex.name, ex.isRecord && React.createElement(Icon, { name: "star", size: 12, stroke: 12, fill: true, color: C.text2, title: "Recorde" })),
                 React.createElement("span", { style: { fontFamily: F.display, fontWeight: 700, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 15, color: C.text, whiteSpace: "nowrap" } }, `${kg(ex.load)} kg${ex.reps ? ` × ${ex.reps}` : ""}`),
                 ex.sets > 0 && React.createElement("span", { style: { gridColumn: "1 / -1", display: "flex", gap: 3 } }, Array.from({ length: ex.sets }).map((_, k) => React.createElement("span", { key: k, style: { width: 14, height: 6, borderRadius: 1.5, background: PILL_ON } })))))),
         e.cardio.length > 0 && React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted } }, e.cardio.map((c) => `${c.activity} · ${c.minutes} min`).join(" · ")),

@@ -23,7 +23,6 @@ import { Pill } from "./components/shared/Pill";
 import { PremiumEmptyState } from "./components/shared/PremiumEmptyState";
 import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
-import { BottomActionBar } from "./components/student/BottomActionBar";
 import { DayEntryScreen } from "./components/student/DayEntryScreen";
 import { DayTabs } from "./components/student/DayTabs";
 import { DiaryCalendar } from "./components/student/DiaryCalendar";
@@ -38,6 +37,9 @@ import { ExerciseSheet } from "./components/professor/ExerciseSheet";
 import { UndoPill } from "./components/shared/UndoPill";
 import { ForgotCode } from "./components/student/ForgotCode";
 import { CardioV3 } from "./components/student/CardioV3";
+import { RestDayV3 } from "./components/student/RestDayV3";
+import { BackButton } from "./components/shared/BackButton";
+import { Icon, Caret } from "./components/shared/Icon";
 import { CreateExercise } from "./components/professor/CreateExercise";
 import { ExercisePageV3 } from "./components/professor/ExercisePageV3";
 import { EditExerciseList } from "./components/professor/EditExerciseList";
@@ -1442,7 +1444,7 @@ function CancioClub() {
         role === "aluno" && alunoStudent && dayEntryOpen && React.createElement(DayEntryScreen, { week: week, todayKey: todayKey, dayNames: (data?.dayNames && data.dayNames[focusId]) || {}, cardio: cardioFocus, onBegin: () => { setDay(todayKey); setExpanded(null); setDayEntryOpen(false); setAlunoTab("treino"); }, onPickOther: (k) => { setDay(k); setExpanded(null); setDayEntryOpen(false); setAlunoTab("treino"); }, onClose: () => setDayEntryOpen(false) }),
         role === "aluno" && !isStandalone && (React.createElement("div", { style: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 10, background: C.panel2, padding: "9px 16px" } },
             React.createElement("span", { style: { flex: 1, fontFamily: F.mono, fontSize: 11, color: C.silver, lineHeight: 1.5 } }, "Para experi\u00EAncia VIP em tela cheia, adicione o Cancio Club \u00E0 sua Tela de In\u00EDcio (Compartilhar \u2192 Adicionar \u00E0 Tela de In\u00EDcio)"),
-            React.createElement("button", { onClick: () => { setIsStandalone(true); try { localStorage.setItem("cancio:installHintSeen", "1"); } catch (e) { } }, "aria-label": "Dispensar", style: { minHeight: 44, flexShrink: 0, fontFamily: F.mono, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px" } }, "\u00D7"))),
+            React.createElement("button", { onClick: () => { setIsStandalone(true); try { localStorage.setItem("cancio:installHintSeen", "1"); } catch (e) { } }, "aria-label": "Dispensar", style: { minHeight: 44, flexShrink: 0, fontFamily: F.mono, fontSize: 15, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px" } }, React.createElement(Icon, { name: "x", size: 16, stroke: 22 })))),
         React.createElement("div", { key: role + "-" + day, className: "cc-view", style: { position: "relative", zIndex: 1, maxWidth: 660, margin: "0 auto", padding: "calc(28px + env(safe-area-inset-top)) 20px 190px" } },
             !cloudSynced && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.panel2, borderRadius: 999, padding: "7px 14px", marginBottom: 18, width: "fit-content" } },
                 React.createElement("span", { style: { width: 7, height: 7, borderRadius: "50%", background: C.warn, flexShrink: 0 } }),
@@ -1708,7 +1710,7 @@ function CancioClub() {
                     React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 12 } }, boxes),
                     React.createElement(ForgotCode, null), // design v4 (46a): Esqueci o código
                     React.createElement("div", { style: { width: "100%", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: "clamp(10px, 3vh, 28px)", padding: "0 24px", boxSizing: "border-box" } }, keys),
-                    React.createElement("button", { className: "cc-tap", onClick: () => switchRole("prof"), style: { minHeight: 44, marginTop: 10, fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 10, cursor: "pointer" } }, "Sou professor \u203A"));
+                    React.createElement("button", { className: "cc-tap", onClick: () => switchRole("prof"), style: { minHeight: 44, marginTop: 10, fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.muted, background: "none", border: "none", padding: 10, cursor: "pointer" } }, "Sou professor", React.createElement(Caret, null)));
             })(),
             // esqueleto do que está prestes a aparecer (resumo + treino), em vez de deixar a tela
             // parada enquanto a Edge Function busca o aluno pelo código
@@ -1735,13 +1737,13 @@ function CancioClub() {
                             React.createElement("div", { style: { flex: 1 } },
                                 React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15 } }, "Hora da reavaliação"),
                                 React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, color: C.muted, marginTop: 2 } }, "Peso e medidas, 2 minutos. Seu professor compara com o início.")),
-                            React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, "Fazer ›")),
+                            React.createElement("span", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 13, color: C.silver } }, "Fazer", React.createElement(Caret, null))),
                         // o aluno vê só a observação do professor: os trechos que a anamnese acrescenta em `obs`
                         // ("... (relatado pelo aluno): ...") são anotação pro professor, escrita na 3ª pessoa
                         alunoObs && React.createElement("div", { style: { position: "relative", marginTop: 20 } }, obsChip(alunoObs))),
                 }),
                 alunoTab === "diario" && React.createElement("div", { style: { paddingBottom: 110 } },
-                    React.createElement("button", { className: "cc-tap", onClick: () => setAlunoTab("hoje"), style: { minHeight: 44, padding: 0, marginBottom: 8, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontWeight: 600, fontSize: 15, cursor: "pointer" } }, "‹ Hoje"),
+                    React.createElement(BackButton, { onClick: () => setAlunoTab("hoje"), label: "Hoje", style: { marginBottom: 8 } }),
                     React.createElement(DiaryCalendar, { diary: diary, records: records, month: diaryMonth, onMonthChange: changeDiaryMonth })),
                 alunoTab === "recados" && React.createElement("div", { id: "cc-chat", style: { paddingBottom: 110 } },
                     React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1, marginBottom: 18 } }, "RECADOS"),
@@ -1752,8 +1754,27 @@ function CancioClub() {
                         list.length === 0 && !!cardioFocus[day] && !dayDone && React.createElement(CardioV3, { key: day + "|" + dayDate, weekday: (["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"])[new Date(dayDate + "T12:00:00").getDay()], plan: cardioFocus[day], autoStart: cardioAuto,
                             last: [...focusCardioLog].reverse().find((c) => c.date < dayDate) || null, bottomOffset: tabsHidden ? 0 : 84,
                             onExit: () => { setCardioAuto(false); setAlunoTab("hoje"); window.scrollTo(0, 0); }, onDone: finishCardio }),
-                        list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 30, lineHeight: 1 } }, "TREINO"),
-                        list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(PremiumEmptyState, { icon: "rest", title: "O salão está livre hoje. Dia de recuperação ou cardio?", sub: "Sem problema — registre seu cardio abaixo, se fez." }),
+                        // dia sem exercício e sem cardio planejado: tela própria no padrão v3 (frente 2, 18/nov)
+                        list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(RestDayV3, {
+                            weekday: (["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"])[new Date(dayDate + "T12:00:00").getDay()],
+                            entries: dayCardioEntries, form: cardioForm, onFormChange: setCardioForm, onAddCardio: addCardio,
+                            recovery: dayRecovery, onToggleRecovery: toggleRecovery,
+                            dayDone, canFinalize: hasLoggedSomething || dayDone,
+                            label: dayDone ? "Compartilhar o dia" : "Fechar o dia",
+                            onFinalize: () => {
+                        flushAllPendingSaves();
+                        if (dayDone) {
+                            setShareCard({ name: focusStudent.name, workoutName: dayName || dayFull, durationLabel: daySession && daySession.durationSec ? fmtDur(daySession.durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak, tint: tier.tint, isRestDay, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
+                            return;
+                        }
+                        if (!hasLoggedSomething)
+                            return;
+                        if (isRestDay)
+                            finalizeWorkout("descanso");
+                        else
+                            setPseModal(true);
+                            },
+                        }),
                         // treino v3 (design/v3): lista corrida + registro só na barra de baixo
                         list.length > 0 && React.createElement(WorkoutV3, {
                             key: day + "|" + dayDate, list, dayDate, title: String(dayName || dayFull || "Treino").split("·")[0].trim().toUpperCase(),
@@ -1771,31 +1792,6 @@ function CancioClub() {
                             },
                         }))),
                 todayKey === "dom" && freqWeek > 0 && (React.createElement("button", { onClick: buildWeeklySummary, style: { minHeight: 44, width: "100%", fontFamily: F.mono, fontWeight: 700, fontSize: 15, letterSpacing: "0.04em", color: C.amber, background: C.panel2, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", border: "none", borderRadius: 16, padding: "16px", cursor: "pointer", marginBottom: 14 } }, "Gerar resumo da semana")),
-                !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(CardioSection, { entries: dayCardioEntries, form: cardioForm, onChange: setCardioForm, onAdd: addCardio }),
-                list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(RecoverySection, { state: dayRecovery, onToggle: toggleRecovery }),
-                // dia sem exercício (cardio/recuperação) continua com a barra antiga, erguida acima das abas
-                list.length === 0 && !(list.length === 0 && !!cardioFocus[day] && !dayDone) && React.createElement(BottomActionBar, {
-                    progress: workingProgress(list, dayDate),
-                    label: dayDone ? "Compartilhar treino" : isRestDay ? "Salvar recuperação" : "Finalizar treino",
-                    canFinalize: hasLoggedSomething || dayDone,
-                    promote: hasLoggedSomething || dayDone,
-                    hidden: typingActive,
-                    lift: !tabsHidden,
-                    onFinalize: () => {
-                        flushAllPendingSaves();
-                        if (dayDone) {
-                            setShareCard({ name: focusStudent.name, workoutName: dayName || dayFull, durationLabel: daySession && daySession.durationSec ? fmtDur(daySession.durationSec) : "—", dateLabel: fmtDate(dayDate), targetDate: dayDate, streak, tint: tier.tint, isRestDay, exercises: list.map((e) => ({ id: e.id, name: e.name, history: e.history, sets: e.sets, setPlan: e.setPlan })) });
-                            return;
-                        }
-                        if (!hasLoggedSomething)
-                            return;
-                        if (isRestDay)
-                            finalizeWorkout("descanso");
-                        else
-                            setPseModal(true);
-                    },
-                }),
-                list.length === 0 && !hasLoggedSomething && !dayDone && React.createElement("div", { style: { textAlign: "center", fontFamily: F.body, fontSize: 13, color: C.muted, marginBottom: 180 } }, "Registre o cardio ou a recuperação pra finalizar."),
                 list.length > 0 && React.createElement("div", { style: { height: 200 } }))),
                 // abas: só depois do termo e da anamnese (senão ficariam por cima dessas telas)
                 alunoStudent.ackAt && alunoStudent.consentAt && alunoStudent.assessmentAt && !assessmentJustDone && React.createElement(TabBarV3, {

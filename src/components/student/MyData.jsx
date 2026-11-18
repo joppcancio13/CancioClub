@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { C, F } from "../../styles/tokens";
+import { BackButton } from "../shared/BackButton";
 
 // LGPD: o aluno vê o que é guardado, baixa uma cópia e pode pedir a exclusão.
 // A exclusão em si é feita pelo professor (controlador dos dados), que recebe o pedido como alerta.
@@ -15,7 +16,7 @@ function MyData({ student, onDownload, onRequestDelete, onClose }) {
     const btn = { minHeight: 52, borderRadius: 16, border: "none", fontFamily: F.body, fontWeight: 700, fontSize: 15, cursor: "pointer" };
     return React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 98, background: C.ink, overflowY: "auto" } },
         React.createElement("div", { style: { maxWidth: 540, margin: "0 auto", padding: "calc(env(safe-area-inset-top) + 28px) 22px calc(env(safe-area-inset-bottom) + 24px)", display: "flex", flexDirection: "column", gap: 18 } },
-            React.createElement("button", { onClick: onClose, style: { alignSelf: "flex-start", minHeight: 44, background: "none", border: "none", color: C.muted, fontFamily: F.body, fontSize: 13, cursor: "pointer", padding: 0 } }, "\u2190 Voltar"),
+            React.createElement(BackButton, { onClick: onClose, label: "Ajustes" }),
             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, color: C.text } }, "MEUS DADOS"),
             React.createElement("div", null, ITEMS.map(([t, d]) => React.createElement("div", { key: t, style: { padding: "14px 0", borderTop: `1px solid ${C.line}` } },
                 React.createElement("div", { style: { fontFamily: F.body, fontWeight: 700, fontSize: 15, color: C.text } }, t),

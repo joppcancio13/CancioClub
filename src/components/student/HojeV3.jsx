@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { C, DAYS, F, NON_COUNTING_KINDS, KICKER, COL_LABEL } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
+import { Icon, Caret } from "../shared/Icon";
 import { describe } from "./WorkoutV3";
 
 // Tela "Hoje" do aluno — design v3 (design/v3/README.md · "Hoje"; decisões em design/v3/DECISOES.md).
@@ -89,7 +90,7 @@ function HojeV3({ student, greetWord, weekLine, streak, todayKey, dayKey, dayDat
                         {REC.map(([key, t, d]) => { const on = !!recovery[key]; return (
                             <button key={key} type="button" aria-pressed={on} onClick={() => { haptic("tick"); onToggleRecovery(key); }}
                                 style={{ display: "flex", alignItems: "center", gap: 14, minHeight: 60, padding: 0, border: "none", background: "none", boxShadow: `inset 0 -1px 0 ${C.line}`, color: on ? C.text3 : C.text, textAlign: "left", cursor: "pointer", fontFamily: F.body }}>
-                                <span aria-hidden="true" style={{ flex: "none", width: 28, height: 28, borderRadius: 8, background: on ? C.text : "transparent", boxShadow: on ? "none" : "inset 0 0 0 1.5px #3A404C", color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>{on ? "✓" : ""}</span>
+                                <span aria-hidden="true" style={{ flex: "none", width: 28, height: 28, borderRadius: 8, background: on ? C.text : "transparent", boxShadow: on ? "none" : "inset 0 0 0 1.5px #3A404C", color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>{on ? <Icon name="check" size={16} stroke={30} color={C.bg} /> : null}</span>
                                 <span style={{ flex: 1, fontSize: 15, fontWeight: 600 }}>{t}</span>
                                 <span style={{ fontSize: 13, color: C.text3 }}>{d}</span>
                             </button>
@@ -101,7 +102,7 @@ function HojeV3({ student, greetWord, weekLine, streak, todayKey, dayKey, dayDat
                 {(state === "train" || state === "done") && rows.length > 0 && (
                     <>
                         <span style={{ fontSize: 15, color: C.text2, ...num }}>{[rows.length + (rows.length === 1 ? " exercício" : " exercícios"), (state === "done" || inProgress ? doneSets + " de " + totalSets : totalSets) + " séries", estimateMinutes(rows, student.targetDuration)].join(" · ")}</span>
-                        <button type="button" onClick={() => setListOpen(!listOpen)} aria-expanded={listOpen} style={{ alignSelf: "flex-start", minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{listOpen ? "Esconder os exercícios" : "Ver os exercícios ›"}</button>
+                        <button type="button" onClick={() => setListOpen(!listOpen)} aria-expanded={listOpen} style={{ alignSelf: "flex-start", minHeight: 40, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{listOpen ? "Esconder os exercícios" : "Ver os exercícios"}<Caret dir={listOpen ? "up" : "down"} /></button>
                         {listOpen && <div style={{ display: "flex", flexDirection: "column" }}>
                             {rows.map((r, i) => (
                                 <div key={r.ex.id} style={{ display: "flex", gap: 12, alignItems: "baseline", padding: "9px 0", ...divider }}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { PremiumEmptyState } from "../shared/PremiumEmptyState";
 import { DiaryEntryCard } from "./DiaryEntryCard";
+import { Icon, Caret } from "../shared/Icon";
 import { C, CALENDAR_WEEKDAY_SHORT, F } from "../../styles/tokens";
 import { todayISO } from "../../utils/date";
 
@@ -37,8 +38,8 @@ function DiaryCalendar({ diary, records, month, onMonthChange }) {
                 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
                     React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1, color: C.text } }, monthName),
                     React.createElement("div", { style: { display: "flex", gap: 4, marginLeft: -10 } },
-                        React.createElement("button", { className: "cc-tap", onClick: () => onMonthChange(-1), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "0 10px" } }, "\u2039 " + navName(-1)),
-                        React.createElement("button", { className: "cc-tap", onClick: () => onMonthChange(1), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "0 10px" } }, navName(1) + " \u203A"))),
+                        React.createElement("button", { className: "cc-tap", onClick: () => onMonthChange(-1), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "0 10px" } }, React.createElement(Caret, { dir: "left" }), navName(-1)),
+                        React.createElement("button", { className: "cc-tap", onClick: () => onMonthChange(1), style: { minHeight: 44, fontFamily: F.body, fontSize: 13, color: C.muted, background: "transparent", border: "none", cursor: "pointer", padding: "0 10px" } }, navName(1), React.createElement(Caret, null)))),
                 React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", paddingBottom: 10 } },
                     React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 40, lineHeight: 0.9, color: C.text } }, monthEntries.length),
                     React.createElement("span", { style: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 } }, (monthEntries.length === 1 ? "treino" : "treinos") + (monthRecords ? ` · ${monthRecords} \u2605` : "")))),
@@ -52,7 +53,7 @@ function DiaryCalendar({ diary, records, month, onMonthChange }) {
                 const isSelected = iso === selectedDate;
                 return React.createElement("button", { key: i, className: entry ? "cc-tap" : undefined, onClick: () => entry && setSelectedDate(isSelected ? null : iso), disabled: !entry, style: { minHeight: 44, aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 6, border: "none", background: entry ? "linear-gradient(135deg,#FFFFFF,#AEB9CB 55%,#6E7889)" : "transparent", boxShadow: isSelected ? "0 0 0 2px #05060A, 0 0 0 3.5px #F2F5FA" : entry ? "none" : isToday ? "inset 0 0 0 1.5px " + C.silver : "none", color: entry ? C.ink : isToday ? C.text : "#5A6273", position: "relative", fontFamily: F.display, fontWeight: entry ? 800 : 500, fontStretch: entry ? "75%" : "100%", fontSize: 13, cursor: entry ? "pointer" : "default", padding: 0, transition: "box-shadow .2s ease" } },
                     d,
-                    entry && entry.hasRecord && React.createElement("span", { style: { position: "absolute", top: 1, right: 3, fontSize: 11, lineHeight: 1 } }, "★"));
+                    entry && entry.hasRecord && React.createElement("span", { style: { position: "absolute", top: 3, right: 3 } }, React.createElement(Icon, { name: "star", size: 9, stroke: 10, fill: true, color: "currentColor" })));
             }))),
         selectedEntry
             ? React.createElement("div", { style: { borderTop: `1px solid ${C.line}`, paddingTop: 14 } }, React.createElement(DiaryEntryCard, { entry: selectedEntry, bare: true }))

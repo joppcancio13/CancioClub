@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { C, F } from "../../styles/tokens";
+import { BackButton } from "../shared/BackButton";
+import { Icon } from "../shared/Icon";
 
 const FIELDS = [["peso", "Peso (kg)", "decimal"], ["cintura", "Cintura (cm)", "decimal"], ["quadril", "Quadril (cm)", "decimal"], ["braco", "Bra\u00E7o (cm)", "decimal"], ["coxa", "Coxa (cm)", "decimal"]];
 const readPhoto = (file) => new Promise((res, rej) => { const r = new FileReader(); r.onerror = rej; r.onload = () => { const img = new Image(); img.onerror = rej; img.onload = () => { const S = 480, c = document.createElement("canvas"); const k = Math.min(1, S / Math.max(img.width, img.height)); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", 0.8)); }; img.src = r.result; }; r.readAsDataURL(file); });
@@ -23,10 +25,10 @@ function Reassessment({ onSubmit, onClose }) {
     const [f, setF] = useState({});
     const [busy, setBusy] = useState(false);
     const ok = !!String(f.peso || "").trim();
-    const input = { width: "100%", boxSizing: "border-box", minHeight: 48, padding: "12px 14px", borderRadius: 10, border: "none", outline: "none", background: C.panel, boxShadow: "inset 0 0 0 1px #2A2E37", color: C.text, fontFamily: F.body, fontSize: 15 };
+    const input = { width: "100%", boxSizing: "border-box", minHeight: 48, padding: "12px 14px", borderRadius: 12, border: "none", outline: "none", background: C.panel, boxShadow: `inset 0 0 0 1px ${C.outline}`, color: C.text, fontFamily: F.body, fontSize: 16 };
     return React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 98, background: C.ink, overflowY: "auto" } },
         React.createElement("div", { style: { maxWidth: 540, margin: "0 auto", padding: "calc(env(safe-area-inset-top) + 28px) 22px calc(env(safe-area-inset-bottom) + 24px)", display: "flex", flexDirection: "column", gap: 18 } },
-            React.createElement("button", { onClick: onClose, style: { alignSelf: "flex-start", minHeight: 44, background: "none", border: "none", color: C.muted, fontFamily: F.body, fontSize: 13, cursor: "pointer", padding: 0 } }, "\u2190 Agora n\u00E3o"),
+            React.createElement(BackButton, { onClick: onClose, label: "Agora n\u00E3o" }),
             React.createElement("div", null,
                 React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1.05, color: C.text } }, "REAVALIA\u00C7\u00C3O"),
                 React.createElement("div", { style: { fontFamily: F.body, fontSize: 13, lineHeight: 1.5, color: C.muted, marginTop: 8 } }, "Leva 2 minutos. Seu professor compara com a anamnese e ajusta o treino. S\u00F3 o peso \u00E9 obrigat\u00F3rio.")),
@@ -34,7 +36,7 @@ function Reassessment({ onSubmit, onClose }) {
                 React.createElement("span", { style: { fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.muted } }, l),
                 React.createElement("input", { inputMode: m, value: f[k] || "", onChange: (e) => setF({ ...f, [k]: e.target.value.replace(/[^0-9.,]/g, "") }), style: input })))),
             React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 12, minHeight: 56, padding: "0 14px", borderRadius: 16, boxShadow: "inset 0 0 0 1px #2A2E37", cursor: "pointer" } },
-                f.foto ? React.createElement("img", { src: f.foto, alt: "", style: { width: 40, height: 40, objectFit: "cover", borderRadius: 10 } }) : React.createElement("span", { style: { fontFamily: F.body, fontSize: 18, color: C.silver } }, "+"),
+                f.foto ? React.createElement("img", { src: f.foto, alt: "", style: { width: 40, height: 40, objectFit: "cover", borderRadius: 10 } }) : React.createElement(Icon, { name: "plus", size: 18, color: C.silver }),
                 React.createElement("span", { style: { fontFamily: F.body, fontSize: 15, color: C.text } }, f.foto ? "Trocar foto" : "Foto de corpo (opcional)"),
                 React.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: async (e) => { const file = e.target.files[0]; if (file) setF({ ...f, foto: await readPhoto(file) }); } })),
             React.createElement("button", { className: "cc-tap", disabled: !ok || busy, onClick: () => { setBusy(true); const num = (v) => (v ? Number(String(v).replace(",", ".")) || undefined : undefined); onSubmit({ date: new Date().toISOString(), peso: num(f.peso), cintura: num(f.cintura), quadril: num(f.quadril), braco: num(f.braco), coxa: num(f.coxa), foto: f.foto || undefined }); }, style: { height: 54, borderRadius: 16, border: "none", background: ok ? C.text : "#1E222A", color: ok ? C.ink : "#5A6273", fontFamily: F.body, fontWeight: 800, fontSize: 15, cursor: ok ? "pointer" : "default" } }, "Enviar pro professor")));

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { C, F, KICKER } from "../../styles/tokens";
 import { haptic } from "../../utils/misc";
+import { BackButton } from "./BackButton";
 import { pushSupported, isIOS, isStandalone, currentSubscription, subscribePush, updatePushPrefs, unsubscribePush, sendTestPush, loadPrefs } from "../../utils/push";
 
 // Avisos — design v4 (34a): um interruptor por tipo, horário do lembrete (aluno) e silêncio.
@@ -38,7 +39,7 @@ function AvisosV3({ kind, auth, onBack, backLabel }) {
     const group = { display: "flex", flexDirection: "column", gap: 2, borderRadius: 16, overflow: "hidden" };
     return (
         <div style={{ display: "flex", flexDirection: "column", color: C.text, fontFamily: F.body }}>
-            <button type="button" onClick={onBack} style={{ alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text3, fontFamily: F.body, fontSize: 15, cursor: "pointer" }}>{"‹ " + (backLabel || "Voltar")}</button>
+            <BackButton onClick={onBack} label={backLabel || "Voltar"} />
             <span style={{ fontFamily: F.display, fontSize: 30, fontWeight: 900, fontStretch: "125%", lineHeight: 1 }}>AVISOS</span>
             {state === "ios" && <span style={{ marginTop: 12, fontSize: 15, lineHeight: 1.45, color: C.text2 }}>No iPhone, os avisos só funcionam com o app na tela inicial: toque em Compartilhar › "Adicionar à Tela de Início", abra o Cancio Club por lá e volte aqui.</span>}
             {state === "unsupported" && <span style={{ marginTop: 12, fontSize: 15, lineHeight: 1.45, color: C.text2 }}>Este navegador não recebe avisos. Abra o app pelo Chrome (Android) ou instale na tela inicial (iPhone).</span>}

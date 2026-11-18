@@ -5,7 +5,9 @@ import React from "react";
 /* ================================================================== */
 const C = {
     ink: "#05060A", panel: "#0E1015", panel2: "#171B22", line: "#1E222A", line2: "#2E333D",
-    text: "#F2F5FA", muted: "#7D8698", silver: "#C6D2E4", amber: "#DCE4F0", amberDim: "#2A303B", warn: "#E8794B",
+    // muted era #7D8698 (o mesmo do text4); na v4 (55a) texto que precisa ser lido é #AEB7C6 — as telas
+    // antigas que usam `muted` passaram a seguir isso de uma vez (frente 2 do refinamento, 18/nov)
+    text: "#F2F5FA", muted: "#AEB7C6", silver: "#C6D2E4", amber: "#DCE4F0", amberDim: "#2A303B", warn: "#E8794B",
     // ---- v3 (design/v3/README.md · tokens). Nomes novos; os de cima continuam valendo pras telas
     // ainda não redesenhadas. `amber` é um prata (nome antigo) — nas telas v3 use text2/text3/text4.
     bg: "#05060A", raised: "#171B22", pending: "#1A1D24", border: "#2A2E37", outline: "#2E333D", dim: "#3A404C",

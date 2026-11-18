@@ -1,17 +1,24 @@
 import React from "react";
-import { C, F } from "../../styles/tokens";
+import { C, F, KICKER } from "../../styles/tokens";
+
+// Campos de formulário no padrão atual (frente 2 do refinamento, 18/nov): rótulo em KICKER, campo
+// chapado com fio, raio 12, 48 px de altura. Usados na anamnese, reavaliação, contato e telas do professor.
+const fieldBox = { width: "100%", boxSizing: "border-box", minHeight: 48, fontFamily: F.body, fontSize: 16, color: C.text, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.outline}`, border: "none", borderRadius: 12, padding: "12px 14px", outline: "none", colorScheme: "dark" };
 
 function Field({ label, flex, ...props }) {
-    const isDate = props.type === "date";
-    return (React.createElement("label", { style: { minHeight: 44, display: "flex", flexDirection: "column", gap: 5, flex: flex || "1 1 auto" } },
-        React.createElement("span", { style: { fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.muted } }, label),
-        React.createElement("div", { style: { position: "relative" } },
-            isDate && React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", width: 6, height: 6, borderRadius: "50%", background: C.amber, pointerEvents: "none" } }),
-            React.createElement("input", { ...props, style: { fontFamily: props.type === "text" ? F.body : F.mono, fontSize: 15, color: C.text, background: "rgba(255,255,255,0.04)", boxShadow: isDate ? `inset 0 0 0 1px ${C.amber}2a` : "none", border: "none", borderRadius: 16, padding: isDate ? "12px 14px 12px 26px" : "12px 14px", outline: "none", width: "100%", boxSizing: "border-box", colorScheme: "dark" } }))));
+    return (
+        <label style={{ display: "flex", flexDirection: "column", gap: 8, flex: flex || "1 1 auto", minWidth: 0 }}>
+            <span style={KICKER}>{label}</span>
+            <input {...props} style={{ ...fieldBox, ...(props.style || {}) }} />
+        </label>
+    );
 }
 function TextArea({ label, ...props }) {
-    return (React.createElement("label", { style: { minHeight: 44, display: "block", marginTop: 12 } },
-        React.createElement("span", { style: { fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.muted } }, label),
-        React.createElement("textarea", { ...props, style: { marginTop: 5, width: "100%", boxSizing: "border-box", fontFamily: F.body, fontSize: 15, color: C.text, background: "rgba(255,255,255,0.04)", border: "none", borderRadius: 16, padding: "12px 14px", outline: "none", resize: "vertical", lineHeight: 1.5 } })));
+    return (
+        <label style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            <span style={KICKER}>{label}</span>
+            <textarea {...props} style={{ ...fieldBox, resize: "vertical", lineHeight: 1.45, ...(props.style || {}) }} />
+        </label>
+    );
 }
 export { Field, TextArea };

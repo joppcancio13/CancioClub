@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from "react";
-import { C, F, SIL_URL } from "../../styles/tokens";
+import { C, F, SIL_URL, KICKER } from "../../styles/tokens";
+import { Icon, Caret } from "../shared/Icon";
+import { BackButton } from "../shared/BackButton";
 import { fmtMemberNo, fmtSince } from "../../utils/members";
 import { todayISO } from "../../utils/date";
 import { computeDayRecords } from "../../utils/records";
@@ -12,7 +14,7 @@ const MO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out"
 const num = (v) => { const n = Number(String(v ?? "").replace(",", ".")); return Number.isFinite(n) && n > 0 ? n : null; };
 const kgs = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
 const dShort = (iso) => { if (!iso) return ""; const [y, m, d] = iso.slice(0, 10).split("-").map(Number); return `${d} ${MO[m - 1]}`; };
-const label = { fontFamily: F.body, fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: C.muted };
+const label = KICKER; // frente 2 (18/nov): o mesmo rótulo do resto do app
 const block = { padding: 16, borderRadius: 16, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.line}`, display: "flex", flexDirection: "column", gap: 6, border: "none", textAlign: "left", cursor: "pointer", color: C.text, fontFamily: F.body };
 const big = { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 36, lineHeight: 1, marginTop: "auto" };
 const small = { fontSize: 13, color: "#AEB7C6" };
@@ -28,7 +30,7 @@ function Avatar({ src, name, size }) {
 }
 const row = (t, s, onClick, color) => React.createElement("button", { key: t, className: "cc-tap", onClick, style: { minHeight: 56, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "none", borderBottom: `1px solid ${C.line}`, background: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: F.body, color: color || C.text } },
     React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2 } }, React.createElement("span", { style: { fontSize: 15, fontWeight: 600 } }, t), s && React.createElement("span", { style: { fontSize: 13, color: C.muted } }, s)),
-    !color && React.createElement("span", { "aria-hidden": "true", style: { fontSize: 18, color: "#7D8698" } }, "\u203A"));
+    !color && React.createElement(Icon, { name: "caretRight", size: 16, color: C.text3 }));
 
 // melhor carga por data, por exercício (agrupado pelo nome) — base de recordes e evolução
 function loadSeries(week) {
@@ -87,7 +89,7 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
     const shell = (title, body) => React.createElement("div", { role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, zIndex: 96, background: C.ink, overflowY: "auto" } },
         React.createElement("div", { style: { maxWidth: 540, margin: "0 auto", padding: "calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 32px)", display: "flex", flexDirection: "column", gap: 20, color: C.text, fontFamily: F.body } },
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                React.createElement("button", { className: "cc-tap", onClick: () => (view ? setView(null) : onClose()), style: { minHeight: 44, padding: 0, border: "none", background: "none", color: C.muted, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, view ? "\u2039 Perfil" : "\u2039 Treino"),
+                React.createElement(BackButton, { onClick: () => (view ? setView(null) : onClose()), label: view ? "Perfil" : "Treino" }),
                 !view && React.createElement("button", { className: "cc-tap", onClick: () => setView("editar"), style: { minHeight: 44, padding: 0, border: "none", background: "none", color: C.silver, fontWeight: 600, fontFamily: F.body, fontSize: 15, cursor: "pointer" } }, "Editar")),
             title && React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 24, lineHeight: 1 } }, title),
             body));
@@ -173,14 +175,14 @@ function StudentProfile({ student, week, checkins, freqTotal, freqWeek, weeklyTa
             React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2, minWidth: 0 } },
                 React.createElement("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: "#3A404C" } }, "TREINO DE HOJE FEITO"),
                 React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: 18, lineHeight: 1.05, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, todayDone.name)),
-            React.createElement("span", { style: { marginLeft: "auto", flexShrink: 0, fontSize: 13, fontWeight: 700 } }, "Ver e compartilhar \u203A")),
+            React.createElement("span", { style: { marginLeft: "auto", flexShrink: 0, fontSize: 13, fontWeight: 700 } }, "Ver e compartilhar", React.createElement(Caret, null))),
         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16, paddingBottom: 20, borderBottom: `1px solid ${C.line}` } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } }, React.createElement(Avatar, { src: student.photo, name: student.name, size: 72 }),
                 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, React.createElement("span", { style: label }, "MEMBRO Nº " + fmtMemberNo(student.memberNo)), React.createElement("span", { style: { fontSize: 13, color: "#AEB7C6" } }, "desde " + fmtSince(student.memberSince || student.startDate) + " · Prof. Cancio"))),
             React.createElement("div", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "125%", fontSize: nameLines.some((l) => l.length > 9) ? 40 : 52, lineHeight: 0.88, letterSpacing: "-0.02em", textTransform: "uppercase", overflowWrap: "anywhere" } },
                 nameLines[0], nameLines[1] && React.createElement("br"), nameLines[1], React.createElement("img", { src: SIL_URL, alt: "", style: { width: "0.58em", height: "0.58em", marginLeft: "0.1em", verticalAlign: "baseline" } })),
             React.createElement("div", { style: { display: "flex", gap: 28 } }, [[freqTotal, freqTotal === 1 ? "TREINO" : "TREINOS"], [bestStreak, "MAIOR SEQ."], [prCount, prCount === 1 ? "RECORDE" : "RECORDES"]].map(([v, l]) => React.createElement("div", { key: l, style: { display: "flex", flexDirection: "column", gap: 2 } }, React.createElement("span", { style: { fontFamily: F.display, fontWeight: 900, fontStretch: "75%", fontVariantNumeric: "tabular-nums", fontSize: 40, lineHeight: 1 } }, v), React.createElement("span", { style: { fontSize: 11, letterSpacing: "0.12em", color: C.muted } }, l)))),
-            React.createElement("button", { className: "cc-tap", onClick: onOpenCard, style: { alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text2, fontFamily: F.body, fontWeight: 700, fontSize: 15, cursor: "pointer" } }, "Ver carteirinha \u203A")),
+            React.createElement("button", { className: "cc-tap", onClick: onOpenCard, style: { alignSelf: "flex-start", minHeight: 44, padding: 0, border: "none", background: "none", color: C.text2, fontFamily: F.body, fontWeight: 700, fontSize: 15, cursor: "pointer" } }, "Ver carteirinha", React.createElement(Caret, null))),
         React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 } },
             React.createElement("button", { className: "cc-tap", onClick: () => setView("recordes"), style: { ...block, minHeight: 124 } }, React.createElement("span", { style: label }, "RECORDES"),
                 top ? React.createElement(React.Fragment, null, React.createElement("span", { style: big }, kgs(top.best), React.createElement("span", { style: unit }, " kg")), React.createElement("span", { style: small }, `${top.name} · sua maior carga`)) : React.createElement("span", { style: { ...small, marginTop: "auto" } }, "Ainda sem carga registrada")),
