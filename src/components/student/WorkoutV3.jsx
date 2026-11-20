@@ -171,7 +171,11 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
     }, []);
     useEffect(() => {
         let last = window.scrollY;
-        const onScroll = () => { const y = window.scrollY; if (y > last + 30) { setCompact(true); last = y; } else if (y < last - 30) { setCompact(false); last = y; } };
+        // correção 20/nov: ao tocar na carga pra digitar, o teclado sobe e o celular rola a tela sozinho —
+        // isso encolhia a barra e o campo sumia no meio da edição. Enquanto houver um campo da barra em
+        // foco (ou o teclado estiver mexendo na tela), a rolagem não encolhe a barra.
+        const editing = () => { const a = document.activeElement; return !!(a && barRef.current && barRef.current.contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName)); };
+        const onScroll = () => { const y = window.scrollY; if (editing()) { last = y; return; } if (y > last + 30) { setCompact(true); last = y; } else if (y < last - 30) { setCompact(false); last = y; } };
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
     }, []);

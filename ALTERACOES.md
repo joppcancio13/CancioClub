@@ -231,3 +231,7 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 - **Evolução:** recorde em destaque, linha do recorde (só sobe), carga de cada treino (sem aquecimento), escala honesta e últimos treinos com a diferença.
 - **Corpo:** fotos de corpo (antes e agora, galeria, "Adicionar foto de hoje"), junto com as da reavaliação.
 - Cache v66.
+
+## v67 — correção
+- **Treino:** tocar na carga (ou nas repetições) pra digitar fazia o teclado rolar a tela, a barra de registro encolhia e o campo sumia no meio da edição. Agora a barra não encolhe enquanto um campo dela está aberto.
+- Cache v67.
