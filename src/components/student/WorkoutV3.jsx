@@ -483,4 +483,4 @@ function WorkoutV3({ list, dayDate, title, workoutStart, save, dayDone, canFinal
     );
 }
 
-export { WorkoutV3, describe };
+export { WorkoutV3, describe, VideoPreview, lastTech, SaveMark, IconCheck, IconPin, IconChat, IconCloudOff, QUICK_REPLIES, REST_KEY, NON_WORKING_REST };

@@ -235,3 +235,10 @@ Supabase: nada mudou. (Naquela época o site pronto carregava React/Supabase/gr�
 ## v67 — correção
 - **Treino:** tocar na carga (ou nas repetições) pra digitar fazia o teclado rolar a tela, a barra de registro encolhia e o campo sumia no meio da edição. Agora a barra não encolhe enquanto um campo dela está aberto.
 - Cache v67.
+
+## v68 — treino com registro na própria série
+- **Treino do aluno:** cada série é uma linha com KG, REPS e ✓, já preenchida com o que o aluno fez naquela série no último treino (frase curta explica). Tocou no ✓, registrou; mudou o número de uma série feita, corrigiu. Sem a coluna "última" e sem o modo "corrigindo".
+- **Descanso:** uma linha só flutuando acima das abas (tempo, +15s, Pular).
+- **Ações à vista:** Recado, Pular série e Pular exercício embaixo das séries (sem "Mais opções").
+- A tela anterior (WorkoutV3) continua no projeto, caso precise voltar.
+- Cache v68.

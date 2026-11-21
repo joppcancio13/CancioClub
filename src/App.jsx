@@ -14,6 +14,7 @@ import { SkeletonCard } from "./components/shared/SkeletonCard";
 import { Sparkles } from "./components/shared/Sparkles";
 import { DayTabs } from "./components/student/DayTabs";
 import { WorkoutV3 } from "./components/student/WorkoutV3";
+import { WorkoutInline } from "./components/student/WorkoutInline";
 import { HojeV3 } from "./components/student/HojeV3";
 import { TabBarV3 } from "./components/student/TabBarV3";
 import { UndoPill } from "./components/shared/UndoPill";
@@ -1856,7 +1857,8 @@ function CancioClub() {
                             },
                         }),
                         // treino v3 (design/v3): lista corrida + registro só na barra de baixo
-                        list.length > 0 && React.createElement(WorkoutV3, {
+                        // 20/nov: registro na própria série (WorkoutInline); o WorkoutV3 fica no projeto caso precise voltar
+                        list.length > 0 && React.createElement(WorkoutInline, {
                             key: day + "|" + dayDate, list, dayDate, title: String(dayName || dayFull || "Treino").split("·")[0].trim().toUpperCase(),
                             workoutStart, save: { syncedAt, syncing, online }, dayDone, canFinalize: hasLoggedSomething || dayDone,
                             bottomOffset: tabsHidden ? 0 : 84,
